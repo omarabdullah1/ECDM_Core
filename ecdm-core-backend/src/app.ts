@@ -18,6 +18,9 @@ import stockMovementRoutes from './features/inventory/stock-movement/stock-movem
 
 const app: Application = express();
 
+// ── Trust proxy (required for rate limiting behind reverse proxy) ────
+app.set('trust proxy', 1);
+
 // ── Security ────────────────────────────────────────────────────────
 app.use(helmet());
 const allowedOrigins = [

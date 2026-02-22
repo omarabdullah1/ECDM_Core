@@ -19,7 +19,6 @@ const productSchema = new Schema<IProductDocument>(
 
 productSchema.index({ name: 'text', description: 'text' });
 productSchema.index({ category: 1 });
-productSchema.index({ sku: 1 });
 
 productSchema.virtual('stockStatus').get(function (this: IProductDocument) {
     if (this.currentStock <= 0) return 'Out of Stock';

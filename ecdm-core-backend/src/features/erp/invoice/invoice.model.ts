@@ -39,7 +39,6 @@ invoiceSchema.pre<IInvoiceDocument>('save', function (next) {
 
 invoiceSchema.index({ status: 1 });
 invoiceSchema.index({ client: 1 });
-invoiceSchema.index({ invoiceNumber: 1 });
 invoiceSchema.index({ issueDate: -1 });
 
 const Invoice: Model<IInvoiceDocument> = mongoose.model<IInvoiceDocument>('Invoice', invoiceSchema);
