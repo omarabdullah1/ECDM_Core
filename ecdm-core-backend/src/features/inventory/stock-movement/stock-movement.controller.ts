@@ -20,14 +20,14 @@ export const getAll = async (req: Request, res: Response, next: NextFunction) =>
 
 export const getById = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const movement = await service.getStockMovementById(req.params.id);
+        const movement = await service.getStockMovementById(req.params.id as string);
         res.json({ success: true, data: movement, message: 'OK' });
     } catch (err) { next(err); }
 };
 
 export const remove = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        await service.deleteStockMovement(req.params.id);
+        await service.deleteStockMovement(req.params.id as string);
         res.json({ success: true, data: null, message: 'Stock movement deleted' });
     } catch (err) { next(err); }
 };

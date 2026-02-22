@@ -20,21 +20,21 @@ export const getAll = async (req: Request, res: Response, next: NextFunction) =>
 
 export const getById = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const product = await service.getProductById(req.params.id);
+        const product = await service.getProductById(req.params.id as string);
         res.json({ success: true, data: product, message: 'OK' });
     } catch (err) { next(err); }
 };
 
 export const update = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const product = await service.updateProduct(req.params.id, req.body);
+        const product = await service.updateProduct(req.params.id as string, req.body);
         res.json({ success: true, data: product, message: 'Product updated' });
     } catch (err) { next(err); }
 };
 
 export const remove = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        await service.deleteProduct(req.params.id);
+        await service.deleteProduct(req.params.id as string);
         res.json({ success: true, data: null, message: 'Product deleted' });
     } catch (err) { next(err); }
 };

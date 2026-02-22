@@ -20,21 +20,21 @@ export const getAll = async (req: Request, res: Response, next: NextFunction) =>
 
 export const getById = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const cat = await service.getCategoryById(req.params.id);
+        const cat = await service.getCategoryById(req.params.id as string);
         res.json({ success: true, data: cat, message: 'OK' });
     } catch (err) { next(err); }
 };
 
 export const update = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const cat = await service.updateCategory(req.params.id, req.body);
+        const cat = await service.updateCategory(req.params.id as string, req.body);
         res.json({ success: true, data: cat, message: 'Category updated' });
     } catch (err) { next(err); }
 };
 
 export const remove = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        await service.deleteCategory(req.params.id);
+        await service.deleteCategory(req.params.id as string);
         res.json({ success: true, data: null, message: 'Category deleted' });
     } catch (err) { next(err); }
 };
