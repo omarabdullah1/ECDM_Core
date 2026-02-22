@@ -2,7 +2,6 @@ import express, { Application } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
-import { env } from './config/env';
 import { errorHandler } from './middlewares/errorHandler.middleware';
 
 // ── Feature routes ──────────────────────────────────────────────────
@@ -21,9 +20,20 @@ const app: Application = express();
 
 // ── Security ────────────────────────────────────────────────────────
 app.use(helmet());
+const allowedOrigins = [
+    'https://ecdmfront-g54vn7na.b4a.run',
+    'https://ecdmfront-x0httuwt.b4a.run',
+    'http://localhost:3000',
+];
 app.use(
     cors({
-        origin: 'https://ecdmfront-g54vn7na.b4a.run',
+        origin: (origin, callback) => {
+            if (!origin || allowedOrigins.includes(origin)) {
+                callback(null, true);
+            } else {
+                callback(new Error(`CORS blocked: ${origin}`));
+            }
+        },
         methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
         credentials: true,
     }),
