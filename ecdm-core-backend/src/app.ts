@@ -23,7 +23,8 @@ const app: Application = express();
 app.use(helmet());
 app.use(
     cors({
-        origin: 'https://ecdmfront-x0httuwt.b4a.run',
+        origin: 'https://ecdmfront-g54vn7na.b4a.run',
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
         credentials: true,
     }),
 );
