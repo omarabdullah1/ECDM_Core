@@ -27,15 +27,27 @@ const allowedOrigins = [
     'https://ecdmfront-g54vn7na.b4a.run',
     'https://ecdmfront-x0httuwt.b4a.run',
     'http://localhost:3000',
+    // add any other known frontend hosts here
 ];
+
 app.use(
     cors({
         origin: (origin, callback) => {
-            if (!origin || allowedOrigins.includes(origin)) {
-                callback(null, true);
-            } else {
-                callback(new Error(`CORS blocked: ${origin}`));
+            // allow server-to-server or tools without origin
+            if (!origin) return callback(null, true);
+
+            // allow exact matches
+            if (allowedOrigins.includes(origin)) return callback(null, true);
+
+            // allow any back4app frontend subdomain (quick, safe for this deployment)
+            try {
+                const url = new URL(origin);
+                if (url.hostname.endsWith('.b4a.run')) return callback(null, true);
+            } catch (e) {
+                // fallthrough to block
             }
+
+            callback(new Error(`CORS blocked: ${origin}`));
         },
         methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
         credentials: true,
