@@ -44,7 +44,7 @@ export default function PendingFollowups({ data }: Props) {
                         return (
                             <div key={f._id}
                                 className={`flex items-center justify-between gap-3 rounded-xl px-3 py-2.5 transition-colors
-                                    ${overdue ? 'bg-red-500/8 border border-red-500/20' : 'hover:bg-white/4'}`}>
+                                    ${overdue ? 'bg-red-500/8 border border-red-500/20' : 'hover:bg-[hsl(var(--foreground))]/4'}`}>
                                 <div className="min-w-0 flex-1">
                                     <p className="text-sm font-medium truncate">{customerName}</p>
                                     <p className="text-xs text-[hsl(var(--muted-foreground))] truncate">

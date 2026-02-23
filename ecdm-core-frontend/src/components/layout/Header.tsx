@@ -3,6 +3,7 @@
 import { useAuthStore } from '@/features/auth/useAuth';
 import { LogOut, Bell, Search } from 'lucide-react';
 import LangSwitcher from '@/components/ui/LangSwitcher';
+import ThemeSwitcher from '@/components/ui/ThemeSwitcher';
 import { useT } from '@/i18n/useT';
 
 export default function Header() {
@@ -21,9 +22,10 @@ export default function Header() {
 
             {/* Right section */}
             <div className="flex items-center gap-3">
+                <ThemeSwitcher variant="icon" />
                 <LangSwitcher variant="icon" />
 
-                <button className="relative rounded-xl p-2 text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--secondary))] hover:text-white transition-all">
+                <button className="relative rounded-xl p-2 text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--secondary))] hover:text-[hsl(var(--foreground))] transition-all">
                     <Bell size={18} />
                     <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-[hsl(var(--primary))]" />
                 </button>

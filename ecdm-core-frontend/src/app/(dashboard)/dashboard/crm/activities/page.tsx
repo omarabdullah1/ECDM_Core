@@ -8,7 +8,7 @@ import { useT } from '@/i18n/useT';
 
 interface Activity { _id: string; type: string; subject: string; description?: string; relatedClient?: { companyName: string }; relatedLead?: { title: string }; performedBy?: { firstName: string; lastName: string }; date: string; duration?: number; }
 
-const TYPE_META: Record<string, { color: string; Icon: typeof Phone }> = { Call: { color: 'bg-blue-500/15 text-blue-400', Icon: Phone }, Email: { color: 'bg-amber-500/15 text-amber-400', Icon: Mail }, Meeting: { color: 'bg-purple-500/15 text-purple-400', Icon: CalendarCheck }, Note: { color: 'bg-emerald-500/15 text-emerald-400', Icon: StickyNote }, Other: { color: 'bg-gray-500/15 text-gray-400', Icon: MoreHorizontal } };
+const TYPE_META: Record<string, { color: string; Icon: typeof Phone }> = { Call: { color: 'bg-blue-500/15 text-blue-400', Icon: Phone }, Email: { color: 'bg-amber-500/15 text-amber-400', Icon: Mail }, Meeting: { color: 'bg-purple-500/15 text-purple-400', Icon: CalendarCheck }, Note: { color: 'bg-emerald-500/15 text-emerald-400', Icon: StickyNote }, Other: { color: 'bg-[hsl(var(--muted))]/50 text-[hsl(var(--muted-foreground))]', Icon: MoreHorizontal } };
 const inputCls = cn('w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-4 py-3 text-sm', 'placeholder:text-[hsl(var(--muted-foreground))] focus:border-[hsl(var(--primary))]', 'focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/20 transition-all');
 
 export default function ActivitiesPage() {
@@ -110,7 +110,7 @@ export default function ActivitiesPage() {
                                         <td className="px-4 py-3 text-[hsl(var(--muted-foreground))]">{a.performedBy ? `${a.performedBy.firstName} ${a.performedBy.lastName}` : '—'}</td>
                                         <td className="px-4 py-3 text-end">
                                             <div className="flex items-center justify-end gap-1">
-                                                <button onClick={() => openEdit(a)} className="rounded-lg p-2 text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--secondary))] hover:text-white transition-all"><Edit2 size={15} /></button>
+                                                <button onClick={() => openEdit(a)} className="rounded-lg p-2 text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--secondary))] hover:text-[hsl(var(--foreground))] transition-all"><Edit2 size={15} /></button>
                                                 <button onClick={() => setDeleteId(a._id)} className="rounded-lg p-2 text-[hsl(var(--muted-foreground))] hover:bg-red-500/10 hover:text-red-400 transition-all"><Trash2 size={15} /></button>
                                             </div>
                                         </td>

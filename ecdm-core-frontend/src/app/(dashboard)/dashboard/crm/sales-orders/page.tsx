@@ -12,7 +12,7 @@ const iCls = 'w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(-
 const Q_STATUSES = ['Accepted','Rejected','Negotiation','Pending','Expired'];
 const F_STATUSES = ['Won','Lost','Pending'];
 const blank = { customer:'', salesLead:'', issueDescription:'', siteInspectionDate:'', technicalInspection:'false', technicalInspectionDetails:'', quotationNumber:'', quotationStatus:'', finalStatus:'', notes:'' };
-const qColor: Record<string,string> = { Accepted:'bg-green-500/20 text-green-400', Rejected:'bg-red-500/20 text-red-400', Negotiation:'bg-yellow-500/20 text-yellow-400', Pending:'bg-blue-500/20 text-blue-400', Expired:'bg-gray-500/20 text-gray-400' };
+const qColor: Record<string,string> = { Accepted:'bg-green-500/20 text-green-400', Rejected:'bg-red-500/20 text-red-400', Negotiation:'bg-yellow-500/20 text-yellow-400', Pending:'bg-blue-500/20 text-blue-400', Expired:'bg-[hsl(var(--muted))]/50 text-[hsl(var(--muted-foreground))]' };
 
 export default function SalesOrdersPage() {
   const t = useT();
@@ -97,11 +97,11 @@ export default function SalesOrdersPage() {
                   <td className="px-4 py-3 font-medium">{r.customer?.name??'—'}</td>
                   <td className="px-4 py-3 text-[hsl(var(--muted-foreground))] max-w-44 truncate">{r.issueDescription}</td>
                   <td className="px-4 py-3 text-xs text-[hsl(var(--muted-foreground))]">
-                    <span className={`px-2 py-1 rounded-lg font-medium ${r.technicalInspection?'bg-green-500/20 text-green-400':'bg-gray-500/20 text-gray-400'}`}>{r.technicalInspection?t.common.yes:t.common.no}</span>
+                    <span className={`px-2 py-1 rounded-lg font-medium ${r.technicalInspection?'bg-green-500/20 text-green-400':'bg-[hsl(var(--muted))]/50 text-[hsl(var(--muted-foreground))]'}`}>{r.technicalInspection?t.common.yes:t.common.no}</span>
                     {r.siteInspectionDate&&<div className="mt-1">{new Date(r.siteInspectionDate).toLocaleDateString()}</div>}
                   </td>
                   <td className="px-4 py-3 text-[hsl(var(--muted-foreground))]">{r.quotationNumber??'—'}</td>
-                  <td className="px-4 py-3">{r.quotationStatus?<span className={`px-2 py-1 rounded-lg text-xs font-medium ${qColor[r.quotationStatus]??'bg-gray-500/20 text-gray-400'}`}>{r.quotationStatus}</span>:'—'}</td>
+                  <td className="px-4 py-3">{r.quotationStatus?<span className={`px-2 py-1 rounded-lg text-xs font-medium ${qColor[r.quotationStatus]??'bg-[hsl(var(--muted))]/50 text-[hsl(var(--muted-foreground))]'}`}>{r.quotationStatus}</span>:'—'}</td>
                   <td className="px-4 py-3 text-[hsl(var(--muted-foreground))]">{r.finalStatus??'—'}</td>
                   <td className="px-4 py-3 max-w-[160px] truncate text-[hsl(var(--muted-foreground))]">{r.notes??'—'}</td>
                   <td className="px-4 py-3"><div className="flex gap-2">

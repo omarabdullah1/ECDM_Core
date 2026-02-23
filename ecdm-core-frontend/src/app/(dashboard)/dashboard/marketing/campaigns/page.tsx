@@ -10,7 +10,7 @@ const iCls = 'w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(-
 const PLATFORMS = ['Google','Facebook','Instagram','LinkedIn','TikTok','Twitter','Email','SMS','Other'];
 const STATUSES  = ['Previous','Current','Future'];
 const blank = { name:'',platform:'',status:'',impressions:'',conversions:'',salesRevenue:'',budget:'',startDate:'',endDate:'',notes:'' };
-const sColor: Record<string,string> = { Current:'bg-green-500/20 text-green-400', Future:'bg-blue-500/20 text-blue-400', Previous:'bg-gray-500/20 text-gray-400' };
+const sColor: Record<string,string> = { Current:'bg-green-500/20 text-green-400', Future:'bg-blue-500/20 text-blue-400', Previous:'bg-[hsl(var(--muted))]/50 text-[hsl(var(--muted-foreground))]' };
 
 export default function CampaignsPage() {
   const t = useT();
@@ -104,7 +104,7 @@ export default function CampaignsPage() {
                 <tr key={r._id} className="border-b border-[hsl(var(--border))]/50 hover:bg-[hsl(var(--muted))]/20">
                   <td className="px-4 py-3 font-medium">{r.name}</td>
                   <td className="px-4 py-3 text-[hsl(var(--muted-foreground))]">{r.platform}</td>
-                  <td className="px-4 py-3"><span className={`px-2 py-1 rounded-lg text-xs font-medium ${sColor[r.status]??'bg-gray-500/20 text-gray-400'}`}>{r.status}</span></td>
+                  <td className="px-4 py-3"><span className={`px-2 py-1 rounded-lg text-xs font-medium ${sColor[r.status]??'bg-[hsl(var(--muted))]/50 text-[hsl(var(--muted-foreground))]'}`}>{r.status}</span></td>
                   <td className="px-4 py-3 text-[hsl(var(--muted-foreground))]"><span className="flex items-center gap-1"><DollarSign size={13}/>{r.budget?.toLocaleString()??'—'}</span></td>
                   <td className="px-4 py-3 text-[hsl(var(--muted-foreground))] text-xs whitespace-nowrap">
                     {r.startDate?new Date(r.startDate).toLocaleDateString():'?'} → {r.endDate?new Date(r.endDate).toLocaleDateString():'?'}

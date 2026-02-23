@@ -94,7 +94,7 @@ export default function LoginPage() {
                                 />
                                 <button type="button" onClick={() => setShowPassword(!showPassword)}
                                     title={showPassword ? t.auth.hidePassword : t.auth.showPassword}
-                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[hsl(var(--muted-foreground))] hover:text-white">
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]">
                                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                                 </button>
                             </div>

@@ -181,6 +181,7 @@ export interface Translations {
     };
   };
   lang: { en: string; ar: string; };
+  theme: { light: string; dark: string; };
 }
 
 const en: Translations = {
@@ -653,6 +654,10 @@ const en: Translations = {
   lang: {
     en: 'English',
     ar: 'العربية',
+  },
+  theme: {
+    light: 'Light',
+    dark: 'Dark',
   },
 };
 

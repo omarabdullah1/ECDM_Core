@@ -11,7 +11,7 @@ const TYPES    = ['Google','Facebook','Instagram','LinkedIn','TikTok','YouTube',
 const STATUSES = ['New','In progress','Published','Paused'];
 const SECTORS  = ['B2B','B2C','B2G'];
 const blank = { name:'',type:'',status:'',sector:'',postDate:'',notes:'' };
-const sColor: Record<string,string> = { Published:'bg-green-500/20 text-green-400', 'In progress':'bg-yellow-500/20 text-yellow-400', New:'bg-blue-500/20 text-blue-400', Paused:'bg-gray-500/20 text-gray-400' };
+const sColor: Record<string,string> = { Published:'bg-green-500/20 text-green-400', 'In progress':'bg-yellow-500/20 text-yellow-400', New:'bg-blue-500/20 text-blue-400', Paused:'bg-[hsl(var(--muted))]/50 text-[hsl(var(--muted-foreground))]' };
 
 export default function ContentTrackerPage() {
   const t = useT();
@@ -79,7 +79,7 @@ export default function ContentTrackerPage() {
                 <tr key={r._id} className="border-b border-[hsl(var(--border))]/50 hover:bg-[hsl(var(--muted))]/20">
                   <td className="px-4 py-3 font-medium">{r.name}</td>
                   <td className="px-4 py-3 text-[hsl(var(--muted-foreground))]">{r.type}</td>
-                  <td className="px-4 py-3"><span className={`px-2 py-1 rounded-lg text-xs font-medium ${sColor[r.status]??'bg-gray-500/20 text-gray-400'}`}>{r.status}</span></td>
+                  <td className="px-4 py-3"><span className={`px-2 py-1 rounded-lg text-xs font-medium ${sColor[r.status]??'bg-[hsl(var(--muted))]/50 text-[hsl(var(--muted-foreground))]'}`}>{r.status}</span></td>
                   <td className="px-4 py-3 text-[hsl(var(--muted-foreground))]">{r.sector??'—'}</td>
                   <td className="px-4 py-3 text-[hsl(var(--muted-foreground))]">{r.postDate?new Date(r.postDate).toLocaleDateString():'—'}</td>
                   <td className="px-4 py-3 max-w-[180px] truncate text-[hsl(var(--muted-foreground))]">{r.notes??'—'}</td>

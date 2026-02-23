@@ -94,7 +94,7 @@ export default function Sidebar() {
                                     'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all',
                                     isActive
                                         ? 'bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))]'
-                                        : 'text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--secondary))] hover:text-white',
+                                        : 'text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--secondary))] hover:text-[hsl(var(--foreground))]',
                                 )}>
                                 {Icon && <Icon size={18} />}
                                 {label(item.labelKey)}
@@ -106,7 +106,7 @@ export default function Sidebar() {
                     return (
                         <div key={item.labelKey}>
                             <button onClick={() => toggle(item.labelKey)}
-                                className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--secondary))] hover:text-white transition-all">
+                                className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--secondary))] hover:text-[hsl(var(--foreground))] transition-all">
                                 {Icon && <Icon size={18} />}
                                 <span className="flex-1 text-start">{label(item.labelKey)}</span>
                                 <ChevronDown size={14} className={cn('transition-transform', isOpen && 'rotate-180')} />
@@ -123,7 +123,7 @@ export default function Sidebar() {
                                                     'flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] transition-all',
                                                     isActive
                                                         ? 'bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))] font-medium'
-                                                        : 'text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--secondary))] hover:text-white',
+                                                        : 'text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--secondary))] hover:text-[hsl(var(--foreground))]',
                                                 )}>
                                                 {ChildIcon && <ChildIcon size={15} />}
                                                 {label(child.labelKey)}

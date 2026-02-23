@@ -12,7 +12,7 @@ const iCls = 'w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(-
 const PLATFORMS  = ['Online','Phone','In-Side','Out-Side'];
 const ORDER_TYPES = ['Maintenance','General supplies','Supply and installation'];
 const blank = { customer:'', salesPerson:'', platform:'', typeOfOrder:'', followUpRequired:'false', followUpDate:'', notes:'' };
-const fuColor: Record<string,string> = { true:'bg-yellow-500/20 text-yellow-400', false:'bg-gray-500/20 text-gray-400' };
+const fuColor: Record<string,string> = { true:'bg-yellow-500/20 text-yellow-400', false:'bg-[hsl(var(--muted))]/50 text-[hsl(var(--muted-foreground))]' };
 
 export default function SalesLeadsPage() {
   const t = useT();
@@ -92,7 +92,7 @@ export default function SalesLeadsPage() {
                   <td className="px-4 py-3 text-[hsl(var(--muted-foreground))]">{r.salesPerson?`${r.salesPerson.firstName} ${r.salesPerson.lastName}`:'—'}</td>
                   <td className="px-4 py-3 text-[hsl(var(--muted-foreground))]">{r.platform}</td>
                   <td className="px-4 py-3 text-[hsl(var(--muted-foreground))]">{r.typeOfOrder}</td>
-                  <td className="px-4 py-3"><span className={`px-2 py-1 rounded-lg text-xs font-medium ${fuColor[String(r.followUpRequired)]??'bg-gray-500/20 text-gray-400'}`}>{r.followUpRequired?t.common.yes:t.common.no}</span></td>
+                  <td className="px-4 py-3"><span className={`px-2 py-1 rounded-lg text-xs font-medium ${fuColor[String(r.followUpRequired)]??'bg-[hsl(var(--muted))]/50 text-[hsl(var(--muted-foreground))]'}`}>{r.followUpRequired?t.common.yes:t.common.no}</span></td>
                   <td className="px-4 py-3 text-[hsl(var(--muted-foreground))]">{r.followUpDate?new Date(r.followUpDate).toLocaleDateString():'—'}</td>
                   <td className="px-4 py-3 max-w-[160px] truncate text-[hsl(var(--muted-foreground))]">{r.notes??'—'}</td>
                   <td className="px-4 py-3"><div className="flex gap-2">

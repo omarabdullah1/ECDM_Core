@@ -471,6 +471,10 @@ const ar: Translations = {
     en: 'English',
     ar: 'العربية',
   },
+  theme: {
+    light: 'فاتح',
+    dark: 'داكن',
+  },
 };
 
 export default ar;

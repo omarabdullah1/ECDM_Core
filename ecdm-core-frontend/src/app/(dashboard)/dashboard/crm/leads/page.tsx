@@ -109,7 +109,7 @@ export default function LeadsPage() {
                                     <td className="px-4 py-3 text-[hsl(var(--muted-foreground))]">{fmt(l.value)}</td>
                                     <td className="px-4 py-3 text-end">
                                         <div className="flex items-center justify-end gap-1">
-                                            <button onClick={() => openEdit(l)} className="rounded-lg p-2 text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--secondary))] hover:text-white transition-all"><Edit2 size={15} /></button>
+                                            <button onClick={() => openEdit(l)} className="rounded-lg p-2 text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--secondary))] hover:text-[hsl(var(--foreground))] transition-all"><Edit2 size={15} /></button>
                                             <button onClick={() => setDeleteId(l._id)} className="rounded-lg p-2 text-[hsl(var(--muted-foreground))] hover:bg-red-500/10 hover:text-red-400 transition-all"><Trash2 size={15} /></button>
                                         </div>
                                     </td>

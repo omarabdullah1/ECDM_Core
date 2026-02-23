@@ -22,7 +22,7 @@ interface Task {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-    'To-do': 'bg-gray-500/15 text-gray-400',
+    'To-do': 'bg-[hsl(var(--muted))]/50 text-[hsl(var(--muted-foreground))]',
     'In Progress': 'bg-amber-500/15 text-amber-400',
     'Done': 'bg-emerald-500/15 text-emerald-400',
 };
@@ -224,7 +224,7 @@ export default function TasksPage() {
                                         <td className="px-4 py-3 text-[hsl(var(--muted-foreground))]">{task.relatedClient?.companyName || '—'}</td>
                                         <td className="px-4 py-3 text-end">
                                             <div className="flex items-center justify-end gap-1">
-                                                <button onClick={() => openEdit(task)} className="rounded-lg p-2 text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--secondary))] hover:text-white transition-all">
+                                                <button onClick={() => openEdit(task)} className="rounded-lg p-2 text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--secondary))] hover:text-[hsl(var(--foreground))] transition-all">
                                                     <Edit2 size={15} />
                                                 </button>
                                                 <button onClick={() => setDeleteId(task._id)} className="rounded-lg p-2 text-[hsl(var(--muted-foreground))] hover:bg-red-500/10 hover:text-red-400 transition-all">

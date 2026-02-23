@@ -11,6 +11,37 @@ html[dir="rtl"] * {
 
 @layer base {
   :root {
+    /* ── Light theme (default) ─────────────── */
+    --background: 0 0% 98%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 217 91% 60%;
+    --accent-foreground: 222 47% 11%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 217 91% 60%;
+    --radius: 0.75rem;
+    --sidebar-width: 260px;
+    --header-height: 64px;
+  }
+
+  /* ── Dark theme ──────────────────────── */
+  .dark {
     --background: 0 0% 3.9%;
     --foreground: 0 0% 98%;
     --card: 0 0% 6%;
@@ -34,9 +65,6 @@ html[dir="rtl"] * {
     --border: 0 0% 14%;
     --input: 0 0% 14%;
     --ring: 217 91% 60%;
-    --radius: 0.75rem;
-    --sidebar-width: 260px;
-    --header-height: 64px;
   }
 
   * {
@@ -91,6 +119,11 @@ html[dir="rtl"] * {
   backdrop-filter: blur(12px);
   border: 1px solid hsla(0, 0%, 100%, 0.06);
   border-radius: var(--radius);
+}
+
+:root:not(.dark) .glass-card {
+  background: linear-gradient(135deg, hsla(0, 0%, 100%, 0.8), hsla(0, 0%, 100%, 0.6));
+  border: 1px solid hsla(0, 0%, 0%, 0.06);
 }
 
 /* ── Animations ────────────────────────────────── */

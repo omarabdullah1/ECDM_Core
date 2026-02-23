@@ -100,7 +100,7 @@ export default function WorkOrdersPage() {
                   <td className="px-4 py-3 text-[hsl(var(--muted-foreground))]">{r.typeOfOrder}</td>
                   <td className="px-4 py-3 text-[hsl(var(--muted-foreground))] max-w-44 truncate">{r.issue}</td>
                   <td className="px-4 py-3 text-[hsl(var(--muted-foreground))]"><span className="flex items-center gap-1"><Clock size={12}/>{r.visitSiteDate?new Date(r.visitSiteDate).toLocaleDateString():'—'}</span></td>
-                  <td className="px-4 py-3">{r.punctuality?<span className={`px-2 py-1 rounded-lg text-xs font-medium ${pColor[r.punctuality]??'bg-gray-500/20 text-gray-400'}`}>{r.punctuality}</span>:<span className="text-[hsl(var(--muted-foreground))]">—</span>}</td>
+                  <td className="px-4 py-3">{r.punctuality?<span className={`px-2 py-1 rounded-lg text-xs font-medium ${pColor[r.punctuality]??'bg-[hsl(var(--muted))]/50 text-[hsl(var(--muted-foreground))]'}`}>{r.punctuality}</span>:<span className="text-[hsl(var(--muted-foreground))]">—</span>}</td>
                   <td className="px-4 py-3 max-w-[160px] truncate text-[hsl(var(--muted-foreground))]">{r.notes??'—'}</td>
                   <td className="px-4 py-3"><div className="flex gap-2">
                     <button onClick={()=>openE(r)} className="p-1.5 rounded-lg hover:bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]"><Edit2 size={14}/></button>

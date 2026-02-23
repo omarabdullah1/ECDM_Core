@@ -21,7 +21,7 @@ interface Client {
 
 const STATUS_COLORS: Record<string, string> = {
     Active: 'bg-emerald-500/15 text-emerald-400',
-    Inactive: 'bg-gray-500/15 text-gray-400',
+    Inactive: 'bg-[hsl(var(--muted))]/50 text-[hsl(var(--muted-foreground))]',
     Prospect: 'bg-blue-500/15 text-blue-400',
     Churned: 'bg-red-500/15 text-red-400',
 };
@@ -170,7 +170,7 @@ export default function ClientsPage() {
                                         <td className="px-4 py-3 text-[hsl(var(--muted-foreground))]">{c.email || '—'}</td>
                                         <td className="px-4 py-3 text-[hsl(var(--muted-foreground))]">{c.phone || '—'}</td>
                                         <td className="px-4 py-3">
-                                            <span className={cn('inline-block rounded-full px-2.5 py-1 text-xs font-medium', STATUS_COLORS[c.status] || 'bg-gray-500/15 text-gray-400')}>
+                                            <span className={cn('inline-block rounded-full px-2.5 py-1 text-xs font-medium', STATUS_COLORS[c.status] || 'bg-[hsl(var(--muted))]/50 text-[hsl(var(--muted-foreground))]')}>
                                                 {c.status}
                                             </span>
                                         </td>
@@ -179,7 +179,7 @@ export default function ClientsPage() {
                                         </td>
                                         <td className="px-4 py-3 text-end">
                                             <div className="flex items-center justify-end gap-1">
-                                                <button onClick={() => openEdit(c)} className="rounded-lg p-2 text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--secondary))] hover:text-white transition-all">
+                                                <button onClick={() => openEdit(c)} className="rounded-lg p-2 text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--secondary))] hover:text-[hsl(var(--foreground))] transition-all">
                                                     <Edit2 size={15} />
                                                 </button>
                                                 <button onClick={() => setDeleteId(c._id)} className="rounded-lg p-2 text-[hsl(var(--muted-foreground))] hover:bg-red-500/10 hover:text-red-400 transition-all">
