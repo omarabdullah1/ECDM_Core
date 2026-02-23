@@ -39,3 +39,4 @@ coverage/
 # ─── Gemini / AI Agent ───────────────────────────
 .gemini/
 .agents/
+seed-admin.js

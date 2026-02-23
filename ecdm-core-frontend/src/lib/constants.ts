@@ -1,6 +1,6 @@
 export const APP_NAME = 'ECDM Core';
 
-const PRODUCTION_API_URL = 'https://ecdmback-1r2qkw1m.b4a.run/api';
+const PRODUCTION_API_URL = 'https://ecdmback-hehu6adg.b4a.run/api';
 const DEVELOPMENT_API_URL = 'http://localhost:5001/api';
 
 export const API_BASE_URL =
