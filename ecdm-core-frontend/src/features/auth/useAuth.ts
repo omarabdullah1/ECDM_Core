@@ -25,14 +25,12 @@ interface AuthState {
 }
 
 export const useAuthStore = create<AuthState>((set) => {
-    // If a token already exists, start in loading state so the dashboard
-    // waits for loadUser() to verify it before deciding to redirect.
-    const storedToken = typeof window !== 'undefined' ? localStorage.getItem('ecdm_token') : null;
-
+    // Always start with consistent state (SSR-safe).
+    // The real token is picked up by loadUser() which runs in useEffect.
     return {
     user: null,
-    token: storedToken,
-    isLoading: !!storedToken,   // ← prevent premature redirect on refresh
+    token: null,
+    isLoading: true,            // ← stays true until loadUser() resolves
     isAuthenticated: false,
 
     login: async (email, password) => {

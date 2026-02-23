@@ -113,7 +113,7 @@ export function useDashboard(): UseDashboardResult {
         try {
             setLoading(true);
             setError(null);
-            const res = await api.get('/api/dashboard/stats');
+            const res = await api.get('/dashboard/stats');
             setData(res.data?.data ?? res.data);
         } catch (err: unknown) {
             setError((err as Error).message ?? 'Failed to load dashboard');
