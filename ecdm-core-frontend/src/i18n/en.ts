@@ -9,13 +9,11 @@ export interface Translations {
     };
   };
   nav: {
-    dashboard: string; marketing: string; campaigns: string; contentTracker: string;
-    crmSales: string; customers: string; salesLeads: string; salesOrders: string;
-    operations: string; workOrders: string; employeeEvaluations: string; employees: string;
-    customerService: string; followUps: string; feedback: string;
-    inventory: string; spareParts: string; products: string; categories: string; stock: string;
-    finance: string; invoices: string; tasks: string; erpPlatform: string;
-    leads: string; clients: string; activities: string;
+    dashboard: string; marketing: string; marketingLeads: string; marketingData: string;
+    sales: string; salesLeads: string; salesData: string; salesOrders: string;
+    customer: string; customerOrders: string; customerFollowUp: string; customerFeedback: string;
+    operations: string; workOrder: string; inventoryPlus: string; reportOperation: string;
+    erpPlatform: string;
   };
   header: { search: string; signOut: string; };
   common: {
@@ -212,31 +210,21 @@ const en: Translations = {
   nav: {
     dashboard: 'Dashboard',
     marketing: 'Marketing',
-    campaigns: 'Campaigns',
-    contentTracker: 'Content Tracker',
-    crmSales: 'CRM & Sales',
-    customers: 'Customers',
+    marketingLeads: 'Marketing Leads',
+    marketingData: 'Marketing Data',
+    sales: 'Sales',
     salesLeads: 'Sales Leads',
+    salesData: 'Sales Data',
     salesOrders: 'Sales Orders',
+    customer: 'Customer',
+    customerOrders: 'Customer Orders',
+    customerFollowUp: 'Follow-Up',
+    customerFeedback: 'Feedback',
     operations: 'Operations',
-    workOrders: 'Work Orders',
-    employeeEvaluations: 'Employee Evaluations',
-    employees: 'Employees',
-    customerService: 'Customer Service',
-    followUps: 'Follow-Ups',
-    feedback: 'Feedback',
-    inventory: 'Inventory',
-    spareParts: 'Spare Parts',
-    products: 'Products',
-    categories: 'Categories',
-    stock: 'Stock',
-    finance: 'Finance',
-    invoices: 'Invoices',
-    tasks: 'Tasks',
+    workOrder: 'Work Orders',
+    inventoryPlus: 'Inventory+',
+    reportOperation: 'Performance Reports',
     erpPlatform: 'ERP & CRM Platform',
-    leads: 'Leads',
-    clients: 'Clients',
-    activities: 'Activities',
   },
   header: {
     search: 'Search anything…',

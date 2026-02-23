@@ -5,21 +5,19 @@ import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import {
-    LayoutDashboard, Users, UserCog, Briefcase, ChevronDown,
-    Package, FolderTree, ArrowUpDown, Layers,
-    Megaphone, FileVideo, TrendingUp, ShoppingCart,
-    Wrench, Star, Headphones, MessageSquare, ClipboardList,
-    FileText, CheckSquare,
+    LayoutDashboard, Users, Database, ChevronDown,
+    Package, TrendingUp, ShoppingCart,
+    Megaphone, Wrench, Star, Headphones, MessageSquare, ClipboardList,
+    FileText,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useT } from '@/i18n/useT';
 
 const iconMap: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
-    LayoutDashboard, Users, UserCog, Briefcase,
-    Package, FolderTree, ArrowUpDown, Layers,
-    Megaphone, FileVideo, TrendingUp, ShoppingCart,
-    Wrench, Star, Headphones, MessageSquare, ClipboardList,
-    FileText, CheckSquare,
+    LayoutDashboard, Users, Database,
+    Package, TrendingUp, ShoppingCart,
+    Megaphone, Wrench, Star, Headphones, MessageSquare, ClipboardList,
+    FileText,
 };
 
 interface NavChild { labelKey: string; href: string; icon: string; }
@@ -28,32 +26,23 @@ interface NavItem  { labelKey: string; href?: string; icon: string; children?: r
 const NAV: NavItem[] = [
     { labelKey: 'dashboard', href: '/dashboard', icon: 'LayoutDashboard' },
     { labelKey: 'marketing', icon: 'Megaphone', children: [
-        { labelKey: 'campaigns',       href: '/dashboard/marketing/campaigns',       icon: 'Megaphone' },
-        { labelKey: 'contentTracker',  href: '/dashboard/marketing/content-tracker', icon: 'FileVideo' },
+        { labelKey: 'marketingLeads', href: '/marketing/leads', icon: 'TrendingUp' },
+        { labelKey: 'marketingData',  href: '/marketing/data',  icon: 'Database' },
     ]},
-    { labelKey: 'crmSales', icon: 'Users', children: [
-        { labelKey: 'customers',    href: '/dashboard/crm/customers',    icon: 'Users' },
-        { labelKey: 'salesLeads',   href: '/dashboard/crm/sales-leads',  icon: 'TrendingUp' },
-        { labelKey: 'salesOrders',  href: '/dashboard/crm/sales-orders', icon: 'ShoppingCart' },
+    { labelKey: 'sales', icon: 'ShoppingCart', children: [
+        { labelKey: 'salesLeads',  href: '/sales/leads',  icon: 'Users' },
+        { labelKey: 'salesData',   href: '/sales/data',   icon: 'FileText' },
+        { labelKey: 'salesOrders', href: '/sales/order',  icon: 'ClipboardList' },
+    ]},
+    { labelKey: 'customer', icon: 'Headphones', children: [
+        { labelKey: 'customerOrders',   href: '/customer/orders',    icon: 'Package' },
+        { labelKey: 'customerFollowUp', href: '/customer/follow-up', icon: 'ClipboardList' },
+        { labelKey: 'customerFeedback', href: '/customer/feedback',  icon: 'MessageSquare' },
     ]},
     { labelKey: 'operations', icon: 'Wrench', children: [
-        { labelKey: 'workOrders',           href: '/dashboard/erp/work-orders',          icon: 'Wrench' },
-        { labelKey: 'employeeEvaluations',  href: '/dashboard/erp/employee-evaluations', icon: 'Star' },
-        { labelKey: 'employees',            href: '/dashboard/erp/employees',            icon: 'UserCog' },
-    ]},
-    { labelKey: 'customerService', icon: 'Headphones', children: [
-        { labelKey: 'followUps', href: '/dashboard/customer-service/follow-ups', icon: 'ClipboardList' },
-        { labelKey: 'feedback',  href: '/dashboard/customer-service/feedback',   icon: 'MessageSquare' },
-    ]},
-    { labelKey: 'inventory', icon: 'Package', children: [
-        { labelKey: 'spareParts', href: '/dashboard/inventory/inventory-items', icon: 'Layers' },
-        { labelKey: 'products',   href: '/dashboard/inventory/products',        icon: 'Package' },
-        { labelKey: 'categories', href: '/dashboard/inventory/categories',      icon: 'FolderTree' },
-        { labelKey: 'stock',      href: '/dashboard/inventory/stock',           icon: 'ArrowUpDown' },
-    ]},
-    { labelKey: 'finance', icon: 'Briefcase', children: [
-        { labelKey: 'invoices', href: '/dashboard/erp/invoices', icon: 'FileText' },
-        { labelKey: 'tasks',    href: '/dashboard/erp/tasks',    icon: 'CheckSquare' },
+        { labelKey: 'workOrder',       href: '/operations/work-order',     icon: 'Wrench' },
+        { labelKey: 'inventoryPlus',   href: '/operations/inventory-plus', icon: 'Package' },
+        { labelKey: 'reportOperation', href: '/operations/report',         icon: 'Star' },
     ]},
 ];
 
@@ -61,7 +50,7 @@ export default function Sidebar() {
     const pathname = usePathname();
     const t = useT();
     const nav = t.nav;
-    const [openGroups, setOpenGroups] = useState<string[]>(['crmSales', 'operations']);
+    const [openGroups, setOpenGroups] = useState<string[]>(['marketing', 'sales', 'customer', 'operations']);
 
     const label = (key: string) => (nav as Record<string, string>)[key] ?? key;
 

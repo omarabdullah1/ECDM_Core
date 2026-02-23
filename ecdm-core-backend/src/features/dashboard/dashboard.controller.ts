@@ -2,17 +2,16 @@ import { Request, Response, NextFunction } from 'express';
 import { sendSuccess } from '../../utils/apiResponse';
 
 // ── Models ──────────────────────────────────────────────────────────
-import Client from '../crm/client/client.model';
-import Customer from '../crm/customer/customer.model';
-import Lead from '../crm/lead/lead.model';
-import SalesOrder from '../crm/sales-order/sales-order.model';
-import WorkOrder from '../erp/work-order/work-order.model';
-import FollowUp from '../erp/follow-up/follow-up.model';
-import Feedback from '../erp/feedback/feedback.model';
-import Campaign from '../erp/campaign/campaign.model';
+import Customer from '../shared/models/customer.model';
+import MarketingLead from '../marketing/models/marketing-lead.model';
+import SalesOrder from '../sales/models/sales-order.model';
+import WorkOrder from '../operations/models/work-order.model';
+import FollowUp from '../customer/models/follow-up.model';
+import Feedback from '../customer/models/feedback.model';
+import Campaign from '../marketing/models/campaign.model';
 import Invoice from '../erp/invoice/invoice.model';
-import Product from '../../features/inventory/product/product.model';
-import InventoryItem from '../../features/inventory/inventory-item/inventory-item.model';
+import Product from '../operations/models/product.model';
+import InventoryItem from '../operations/models/inventory-item.model';
 
 // ═══════════════════════════════════════════════════════════════════
 // GET /api/dashboard/stats
@@ -27,10 +26,10 @@ export const getStats = async (_req: Request, res: Response, next: NextFunction)
 
         // ── Run all aggregations in parallel ────────────────────────
         const [
-            // KPI: Active clients (B2B)
+            // KPI: Active customers this month
             activeClients,
             activeClientsLastMonth,
-            // KPI: Active customers
+            // KPI: Active customers (VIP)
             activeCustomers,
             // KPI: Revenue (paid invoices this month)
             revenueThisMonth,
@@ -57,9 +56,9 @@ export const getStats = async (_req: Request, res: Response, next: NextFunction)
             recentFeedback,
         ] = await Promise.all([
             // ── KPI queries ─────────────────────────────────────
-            Client.countDocuments({ status: 'Active' }),
-            Client.countDocuments({ status: 'Active', createdAt: { $lt: startOfMonth } }),
-            Customer.countDocuments({ status: { $in: ['Active', 'VIP'] } }),
+            Customer.countDocuments({ status: { $in: ['Active', 'VIP'] }, createdAt: { $gte: startOfMonth } }),
+            Customer.countDocuments({ status: { $in: ['Active', 'VIP'] }, createdAt: { $lt: startOfMonth } }),
+            Customer.countDocuments({ status: 'VIP' }),
 
             Invoice.aggregate([
                 { $match: { status: 'Paid', paidAt: { $gte: startOfMonth } } },
@@ -78,8 +77,8 @@ export const getStats = async (_req: Request, res: Response, next: NextFunction)
             }),
             InventoryItem.countDocuments({ status: { $in: ['Sold out', 'Repurchase needed'] } }),
 
-            // ── Chart: Leads by status ──────────────────────────
-            Lead.aggregate([
+            // ── Chart: Marketing leads by status ──────────────
+            MarketingLead.aggregate([
                 { $group: { _id: '$status', count: { $sum: 1 } } },
                 { $sort: { count: -1 } },
             ]),

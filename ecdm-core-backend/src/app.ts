@@ -4,29 +4,34 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import { errorHandler } from './middlewares/errorHandler.middleware';
 
-// ── Feature routes ──────────────────────────────────────────────────
+// ── Auth ────────────────────────────────────────────────────────────
 import authRoutes from './features/auth/auth.routes';
-import clientRoutes from './features/crm/client/client.routes';
-import leadRoutes from './features/crm/lead/lead.routes';
-import activityRoutes from './features/crm/activity/activity.routes';
-import taskRoutes from './features/erp/task/task.routes';
-import employeeRoutes from './features/erp/employee/employee.routes';
-import invoiceRoutes from './features/erp/invoice/invoice.routes';
-import categoryRoutes from './features/inventory/category/category.routes';
-import productRoutes from './features/inventory/product/product.routes';
-import stockMovementRoutes from './features/inventory/stock-movement/stock-movement.routes';
-// ── New feature routes ───────────────────────────────────────────────
-import customerRoutes from './features/crm/customer/customer.routes';
-import salesLeadRoutes from './features/crm/sales-lead/sales-lead.routes';
-import salesOrderRoutes from './features/crm/sales-order/sales-order.routes';
-import workOrderRoutes from './features/erp/work-order/work-order.routes';
-import campaignRoutes from './features/erp/campaign/campaign.routes';
-import contentTrackerRoutes from './features/erp/content-tracker/content-tracker.routes';
-import followUpRoutes from './features/erp/follow-up/follow-up.routes';
-import feedbackRoutes from './features/erp/feedback/feedback.routes';
-import employeeEvaluationRoutes from './features/erp/employee-evaluation/employee-evaluation.routes';
-import inventoryItemRoutes from './features/inventory/inventory-item/inventory-item.routes';
-import dashboardRoutes from './features/dashboard/dashboard.routes';
+
+// ── Shared domain ───────────────────────────────────────────────────
+import sharedCustomerRoutes  from './features/shared/routes/customer.routes';
+import sharedEmployeeRoutes  from './features/shared/routes/employee.routes';
+
+// ── Marketing domain ────────────────────────────────────────────────
+import marketingLeadsRoutes  from './features/marketing/routes/marketing-leads.routes';
+import marketingDataRoutes   from './features/marketing/routes/marketing-data.routes';
+
+// ── Sales domain ────────────────────────────────────────────────────
+import salesLeadsRoutes      from './features/sales/routes/sales-leads.routes';
+import salesDataRoutes       from './features/sales/routes/sales-data.routes';
+import salesOrderRoutes      from './features/sales/routes/sales-order.routes';
+
+// ── Customer domain ─────────────────────────────────────────────────
+import customerOrderRoutes   from './features/customer/routes/customer-order.routes';
+import followUpRoutes        from './features/customer/routes/follow-up.routes';
+import feedbackRoutes        from './features/customer/routes/feedback.routes';
+
+// ── Operations domain ───────────────────────────────────────────────
+import workOrderRoutes       from './features/operations/routes/work-order.routes';
+import inventoryPlusRoutes   from './features/operations/routes/inventory-plus.routes';
+import reportRoutes          from './features/operations/routes/report.routes';
+
+// ── Dashboard ───────────────────────────────────────────────────────
+import dashboardRoutes       from './features/dashboard/dashboard.routes';
 
 const app: Application = express();
 
@@ -89,26 +94,31 @@ app.get('/api/health', (_req, res) => {
 
 // ── API routes ──────────────────────────────────────────────────────
 app.use('/api/auth', authRoutes);
-app.use('/api/crm/clients', clientRoutes);
-app.use('/api/crm/leads', leadRoutes);
-app.use('/api/crm/activities', activityRoutes);
-app.use('/api/erp/tasks', taskRoutes);
-app.use('/api/erp/employees', employeeRoutes);
-app.use('/api/erp/invoices', invoiceRoutes);
-app.use('/api/inventory/categories', categoryRoutes);
-app.use('/api/inventory/products', productRoutes);
-app.use('/api/inventory/stock-movements', stockMovementRoutes);
-// ── New feature routes ───────────────────────────────────────────────
-app.use('/api/crm/customers', customerRoutes);
-app.use('/api/crm/sales-leads', salesLeadRoutes);
-app.use('/api/crm/sales-orders', salesOrderRoutes);
-app.use('/api/erp/work-orders', workOrderRoutes);
-app.use('/api/erp/campaigns', campaignRoutes);
-app.use('/api/erp/content-tracker', contentTrackerRoutes);
-app.use('/api/erp/follow-ups', followUpRoutes);
-app.use('/api/erp/feedback', feedbackRoutes);
-app.use('/api/erp/employee-evaluations', employeeEvaluationRoutes);
-app.use('/api/inventory/inventory-items', inventoryItemRoutes);
+
+// Shared
+app.use('/api/shared/customers',  sharedCustomerRoutes);
+app.use('/api/shared/employees',  sharedEmployeeRoutes);
+
+// Marketing
+app.use('/api/marketing/leads',   marketingLeadsRoutes);
+app.use('/api/marketing/data',    marketingDataRoutes);
+
+// Sales
+app.use('/api/sales/leads',       salesLeadsRoutes);
+app.use('/api/sales/data',        salesDataRoutes);
+app.use('/api/sales/orders',      salesOrderRoutes);
+
+// Customer
+app.use('/api/customer/orders',     customerOrderRoutes);
+app.use('/api/customer/follow-up',  followUpRoutes);
+app.use('/api/customer/feedback',   feedbackRoutes);
+
+// Operations
+app.use('/api/operations/work-order',      workOrderRoutes);
+app.use('/api/operations/inventory-plus',  inventoryPlusRoutes);
+app.use('/api/operations/report',          reportRoutes);
+
+// Dashboard
 app.use('/api/dashboard', dashboardRoutes);
 
 // ── Global error handler (must be last) ─────────────────────────────
