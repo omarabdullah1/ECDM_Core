@@ -26,6 +26,7 @@ import followUpRoutes from './features/erp/follow-up/follow-up.routes';
 import feedbackRoutes from './features/erp/feedback/feedback.routes';
 import employeeEvaluationRoutes from './features/erp/employee-evaluation/employee-evaluation.routes';
 import inventoryItemRoutes from './features/inventory/inventory-item/inventory-item.routes';
+import dashboardRoutes from './features/dashboard/dashboard.routes';
 
 const app: Application = express();
 
@@ -108,6 +109,7 @@ app.use('/api/erp/follow-ups', followUpRoutes);
 app.use('/api/erp/feedback', feedbackRoutes);
 app.use('/api/erp/employee-evaluations', employeeEvaluationRoutes);
 app.use('/api/inventory/inventory-items', inventoryItemRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 
 // ── Global error handler (must be last) ─────────────────────────────
 app.use(errorHandler);
