@@ -5,16 +5,20 @@ import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import {
-    LayoutDashboard, Users, Building2, Target, Activity,
-    Briefcase, UserCog, CheckSquare, FileText, ChevronDown,
-    Package, FolderTree, ArrowUpDown,
+    LayoutDashboard, Users, UserCog, Briefcase, ChevronDown,
+    Package, FolderTree, ArrowUpDown, Layers,
+    Megaphone, FileVideo, TrendingUp, ShoppingCart,
+    Wrench, Star, Headphones, MessageSquare, ClipboardList,
+    FileText, CheckSquare,
 } from 'lucide-react';
 import { useState } from 'react';
 
 const iconMap: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
-    LayoutDashboard, Users, Building2, Target, Activity,
-    Briefcase, UserCog, CheckSquare, FileText,
-    Package, FolderTree, ArrowUpDown,
+    LayoutDashboard, Users, UserCog, Briefcase,
+    Package, FolderTree, ArrowUpDown, Layers,
+    Megaphone, FileVideo, TrendingUp, ShoppingCart,
+    Wrench, Star, Headphones, MessageSquare, ClipboardList,
+    FileText, CheckSquare,
 };
 
 interface NavChild {
@@ -32,35 +36,69 @@ interface NavItem {
 
 const NAV: NavItem[] = [
     { label: 'Dashboard', href: '/dashboard', icon: 'LayoutDashboard' },
+
+    // ── Marketing ──────────────────────────────────────────────────────────────
     {
-        label: 'CRM', icon: 'Users',
+        label: 'Marketing', icon: 'Megaphone',
         children: [
-            { label: 'Clients', href: '/dashboard/crm/clients', icon: 'Building2' },
-            { label: 'Leads', href: '/dashboard/crm/leads', icon: 'Target' },
-            { label: 'Activities', href: '/dashboard/crm/activities', icon: 'Activity' },
+            { label: 'Campaigns',       href: '/dashboard/marketing/campaigns',       icon: 'Megaphone' },
+            { label: 'Content Tracker', href: '/dashboard/marketing/content-tracker', icon: 'FileVideo' },
         ],
     },
+
+    // ── CRM & Sales ────────────────────────────────────────────────────────────
     {
-        label: 'ERP', icon: 'Briefcase',
+        label: 'CRM & Sales', icon: 'Users',
         children: [
-            { label: 'Employees', href: '/dashboard/erp/employees', icon: 'UserCog' },
-            { label: 'Tasks', href: '/dashboard/erp/tasks', icon: 'CheckSquare' },
-            { label: 'Invoices', href: '/dashboard/erp/invoices', icon: 'FileText' },
+            { label: 'Customers',    href: '/dashboard/crm/customers',    icon: 'Users' },
+            { label: 'Sales Leads',  href: '/dashboard/crm/sales-leads',  icon: 'TrendingUp' },
+            { label: 'Sales Orders', href: '/dashboard/crm/sales-orders', icon: 'ShoppingCart' },
         ],
     },
+
+    // ── Operations (Work Orders) ───────────────────────────────────────────────
+    {
+        label: 'Operations', icon: 'Wrench',
+        children: [
+            { label: 'Work Orders',          href: '/dashboard/erp/work-orders',          icon: 'Wrench' },
+            { label: 'Employee Evaluations', href: '/dashboard/erp/employee-evaluations', icon: 'Star' },
+            { label: 'Employees',            href: '/dashboard/erp/employees',            icon: 'UserCog' },
+        ],
+    },
+
+    // ── Customer Service ───────────────────────────────────────────────────────
+    {
+        label: 'Customer Service', icon: 'Headphones',
+        children: [
+            { label: 'Follow-Ups', href: '/dashboard/customer-service/follow-ups', icon: 'ClipboardList' },
+            { label: 'Feedback',   href: '/dashboard/customer-service/feedback',   icon: 'MessageSquare' },
+        ],
+    },
+
+    // ── Inventory ──────────────────────────────────────────────────────────────
     {
         label: 'Inventory', icon: 'Package',
         children: [
-            { label: 'Products', href: '/dashboard/inventory/products', icon: 'Package' },
-            { label: 'Categories', href: '/dashboard/inventory/categories', icon: 'FolderTree' },
-            { label: 'Stock', href: '/dashboard/inventory/stock', icon: 'ArrowUpDown' },
+            { label: 'Spare Parts', href: '/dashboard/inventory/inventory-items', icon: 'Layers' },
+            { label: 'Products',    href: '/dashboard/inventory/products',        icon: 'Package' },
+            { label: 'Categories',  href: '/dashboard/inventory/categories',      icon: 'FolderTree' },
+            { label: 'Stock',       href: '/dashboard/inventory/stock',           icon: 'ArrowUpDown' },
+        ],
+    },
+
+    // ── ERP / Finance ──────────────────────────────────────────────────────────
+    {
+        label: 'Finance', icon: 'Briefcase',
+        children: [
+            { label: 'Invoices', href: '/dashboard/erp/invoices', icon: 'FileText' },
+            { label: 'Tasks',    href: '/dashboard/erp/tasks',    icon: 'CheckSquare' },
         ],
     },
 ];
 
 export default function Sidebar() {
     const pathname = usePathname();
-    const [openGroups, setOpenGroups] = useState<string[]>(['CRM', 'ERP', 'Inventory']);
+    const [openGroups, setOpenGroups] = useState<string[]>(['CRM & Sales', 'Operations']);
 
     const toggle = (label: string) =>
         setOpenGroups((prev) =>

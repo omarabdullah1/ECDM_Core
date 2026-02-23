@@ -15,6 +15,17 @@ import invoiceRoutes from './features/erp/invoice/invoice.routes';
 import categoryRoutes from './features/inventory/category/category.routes';
 import productRoutes from './features/inventory/product/product.routes';
 import stockMovementRoutes from './features/inventory/stock-movement/stock-movement.routes';
+// ── New feature routes ───────────────────────────────────────────────
+import customerRoutes from './features/crm/customer/customer.routes';
+import salesLeadRoutes from './features/crm/sales-lead/sales-lead.routes';
+import salesOrderRoutes from './features/crm/sales-order/sales-order.routes';
+import workOrderRoutes from './features/erp/work-order/work-order.routes';
+import campaignRoutes from './features/erp/campaign/campaign.routes';
+import contentTrackerRoutes from './features/erp/content-tracker/content-tracker.routes';
+import followUpRoutes from './features/erp/follow-up/follow-up.routes';
+import feedbackRoutes from './features/erp/feedback/feedback.routes';
+import employeeEvaluationRoutes from './features/erp/employee-evaluation/employee-evaluation.routes';
+import inventoryItemRoutes from './features/inventory/inventory-item/inventory-item.routes';
 
 const app: Application = express();
 
@@ -57,8 +68,9 @@ app.use(
 // ── Rate limiting ───────────────────────────────────────────────────
 app.use(
     rateLimit({
-        windowMs: 15 * 60 * 1000, // 15 minutes
-        max: 100,
+        windowMs: 15 * 60 * 1000,          // 15-minute window
+        max: 1000,                          // production: 1 000 req / window / IP
+        skip: () => process.env.NODE_ENV === 'development', // no limit in dev
         standardHeaders: true,
         legacyHeaders: false,
         message: { success: false, data: null, message: 'Too many requests, please try again later.' },
@@ -85,6 +97,17 @@ app.use('/api/erp/invoices', invoiceRoutes);
 app.use('/api/inventory/categories', categoryRoutes);
 app.use('/api/inventory/products', productRoutes);
 app.use('/api/inventory/stock-movements', stockMovementRoutes);
+// ── New feature routes ───────────────────────────────────────────────
+app.use('/api/crm/customers', customerRoutes);
+app.use('/api/crm/sales-leads', salesLeadRoutes);
+app.use('/api/crm/sales-orders', salesOrderRoutes);
+app.use('/api/erp/work-orders', workOrderRoutes);
+app.use('/api/erp/campaigns', campaignRoutes);
+app.use('/api/erp/content-tracker', contentTrackerRoutes);
+app.use('/api/erp/follow-ups', followUpRoutes);
+app.use('/api/erp/feedback', feedbackRoutes);
+app.use('/api/erp/employee-evaluations', employeeEvaluationRoutes);
+app.use('/api/inventory/inventory-items', inventoryItemRoutes);
 
 // ── Global error handler (must be last) ─────────────────────────────
 app.use(errorHandler);

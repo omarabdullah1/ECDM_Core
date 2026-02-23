@@ -6,6 +6,9 @@ export enum UserRole {
     Manager = 'Manager',
     Sales = 'Sales',
     HR = 'HR',
+    MaintenanceEngineer = 'MaintenanceEngineer',
+    Technician = 'Technician',
+    CustomerService = 'CustomerService',
 }
 
 // ── Base interface (plain data shape) ───────────────────────────────

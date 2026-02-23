@@ -1,5 +1,5 @@
 import mongoose, { Schema, Model } from 'mongoose';
-import { IEmployeeDocument, Department, EmployeeStatus } from './employee.types';
+import { IEmployeeDocument, Department, EmployeeStatus, EmployeeSector } from './employee.types';
 
 const employeeSchema = new Schema<IEmployeeDocument>(
     {
@@ -11,8 +11,10 @@ const employeeSchema = new Schema<IEmployeeDocument>(
         position: { type: String, required: true, trim: true },
         hireDate: { type: Date },
         salary: { type: Number, min: 0 },
-        status: { type: String, enum: Object.values(EmployeeStatus), default: EmployeeStatus.Active },
-        userId: { type: Schema.Types.ObjectId, ref: 'User' },
+        status:         { type: String, enum: Object.values(EmployeeStatus), default: EmployeeStatus.Active },
+        userId:         { type: Schema.Types.ObjectId, ref: 'User' },
+        jobDescription: { type: String, trim: true, maxlength: [1000, 'Job description too long'] },
+        sector:         { type: String, enum: Object.values(EmployeeSector) },
     },
     { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } },
 );

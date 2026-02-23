@@ -24,10 +24,15 @@ interface AuthState {
     loadUser: () => Promise<void>;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>((set) => {
+    // If a token already exists, start in loading state so the dashboard
+    // waits for loadUser() to verify it before deciding to redirect.
+    const storedToken = typeof window !== 'undefined' ? localStorage.getItem('ecdm_token') : null;
+
+    return {
     user: null,
-    token: typeof window !== 'undefined' ? localStorage.getItem('ecdm_token') : null,
-    isLoading: false,
+    token: storedToken,
+    isLoading: !!storedToken,   // ← prevent premature redirect on refresh
     isAuthenticated: false,
 
     login: async (email, password) => {
@@ -83,4 +88,5 @@ export const useAuthStore = create<AuthState>((set) => ({
             set({ user: null, token: null, isAuthenticated: false, isLoading: false });
         }
     },
-}));
+    };
+});

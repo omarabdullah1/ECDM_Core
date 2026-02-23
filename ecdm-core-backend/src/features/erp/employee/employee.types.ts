@@ -1,5 +1,12 @@
 import { Document, Types } from 'mongoose';
 
+// Operational sector the employee works within
+export enum EmployeeSector {
+    B2B = 'B2B',
+    B2C = 'B2C',
+    B2G = 'B2G',
+}
+
 export enum Department {
     Engineering = 'Engineering',
     Sales = 'Sales',
@@ -26,7 +33,9 @@ export interface IEmployee {
     hireDate?: Date;
     salary?: number;
     status: EmployeeStatus;
-    userId?: Types.ObjectId;
+    userId?: Types.ObjectId;       // Links to User collection (auth identity)
+    jobDescription?: string;       // Free-text HR job description
+    sector?: EmployeeSector;       // Operational sector: B2B / B2C / B2G
     createdAt: Date;
     updatedAt: Date;
 }
