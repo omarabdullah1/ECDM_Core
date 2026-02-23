@@ -71,7 +71,7 @@ export default function Sidebar() {
         );
 
     return (
-        <aside className="fixed left-0 top-0 z-40 flex h-screen w-[var(--sidebar-width)] flex-col border-r border-[hsl(var(--border))] bg-[hsl(var(--card))]">
+        <aside className="fixed inset-inline-start-0 top-0 z-40 flex h-screen w-[var(--sidebar-width)] flex-col border-e border-[hsl(var(--border))] bg-[hsl(var(--card))]">
             {/* Logo */}
             <div className="flex h-[var(--header-height)] items-center gap-3 px-5 border-b border-[hsl(var(--border))]">
                 <Image src="/logo.png" alt="ECDM" width={36} height={36} className="rounded-lg" />

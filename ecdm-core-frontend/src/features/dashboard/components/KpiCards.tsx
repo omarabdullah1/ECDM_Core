@@ -1,6 +1,7 @@
 'use client';
 import { Users, DollarSign, Wrench, AlertTriangle, TrendingUp, TrendingDown } from 'lucide-react';
 import type { DashboardKpis } from '../useDashboard';
+import { useT } from '@/i18n/useT';
 
 interface Props { kpis: DashboardKpis }
 
@@ -9,11 +10,14 @@ function fmt(n: number) {
 }
 
 export default function KpiCards({ kpis }: Props) {
+    const t = useT();
+    const d = t.dashboard;
+
     const cards = [
         {
-            label: 'Active Clients & Customers',
+            label: d.activeClientsCustomers,
             value: fmt(kpis.activeClients + kpis.activeCustomers),
-            trend: `${Number(kpis.clientGrowthPct) >= 0 ? '+' : ''}${kpis.clientGrowthPct}% this month`,
+            trend: `${Number(kpis.clientGrowthPct) >= 0 ? '+' : ''}${kpis.clientGrowthPct}% ${d.thisMonth}`,
             trendUp: Number(kpis.clientGrowthPct) >= 0,
             icon: Users,
             accentClass: 'text-blue-400',
@@ -21,9 +25,9 @@ export default function KpiCards({ kpis }: Props) {
             isStock: false,
         },
         {
-            label: 'Revenue (Current Month)',
+            label: d.revenueCurrent,
             value: `EGP ${fmt(kpis.revenueThisMonth)}`,
-            trend: `${Number(kpis.revenueTrendPct) >= 0 ? '+' : ''}${kpis.revenueTrendPct}% vs last month`,
+            trend: `${Number(kpis.revenueTrendPct) >= 0 ? '+' : ''}${kpis.revenueTrendPct}% ${d.vsLastMonth}`,
             trendUp: Number(kpis.revenueTrendPct) >= 0,
             icon: DollarSign,
             accentClass: 'text-emerald-400',
@@ -31,9 +35,9 @@ export default function KpiCards({ kpis }: Props) {
             isStock: false,
         },
         {
-            label: 'Active Work Orders',
+            label: d.activeWorkOrders,
             value: fmt(kpis.activeWorkOrders),
-            trend: 'In Progress',
+            trend: d.inProgress,
             trendUp: false,
             icon: Wrench,
             accentClass: 'text-purple-400',
@@ -41,9 +45,9 @@ export default function KpiCards({ kpis }: Props) {
             isStock: false,
         },
         {
-            label: 'Low Stock Alerts',
+            label: d.lowStockAlerts,
             value: fmt(kpis.totalLowStock),
-            trend: `${kpis.lowStockItems} Spare Parts · ${kpis.lowStockProducts} Products`,
+            trend: `${kpis.lowStockItems} ${d.sparePartsLabel} · ${kpis.lowStockProducts} ${d.productsLabel}`,
             trendUp: false,
             icon: AlertTriangle,
             accentClass: 'text-red-400',

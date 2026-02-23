@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import api from '@/lib/axios';
 import { cn } from '@/lib/utils';
 import { CalendarCheck, Plus, Search, Edit2, Trash2, X, ChevronLeft, ChevronRight, Phone, Mail, MessageSquare, StickyNote, MoreHorizontal } from 'lucide-react';
+import { useT } from '@/i18n/useT';
 
 interface Activity { _id: string; type: string; subject: string; description?: string; relatedClient?: { companyName: string }; relatedLead?: { title: string }; performedBy?: { firstName: string; lastName: string }; date: string; duration?: number; }
 
@@ -11,6 +12,7 @@ const TYPE_META: Record<string, { color: string; Icon: typeof Phone }> = { Call:
 const inputCls = cn('w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-4 py-3 text-sm', 'placeholder:text-[hsl(var(--muted-foreground))] focus:border-[hsl(var(--primary))]', 'focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/20 transition-all');
 
 export default function ActivitiesPage() {
+    const t = useT();
     const [activities, setActivities] = useState<Activity[]>([]);
     const [total, setTotal] = useState(0);
     const [page, setPage] = useState(1);
@@ -71,31 +73,31 @@ export default function ActivitiesPage() {
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold flex items-center gap-3"><MessageSquare size={24} className="text-amber-400" /> Activities</h1>
-                    <p className="mt-1 text-sm text-[hsl(var(--muted-foreground))]">Track calls, emails, meetings and notes ({total} total)</p>
+                    <h1 className="text-2xl font-bold flex items-center gap-3"><MessageSquare size={24} className="text-amber-400" /> {t.pages.activities.title}</h1>
+                    <p className="mt-1 text-sm text-[hsl(var(--muted-foreground))]">{t.pages.activities.subtitle} ({total} {t.common.total})</p>
                 </div>
-                <button onClick={openCreate} className="flex items-center gap-2 rounded-xl bg-[hsl(var(--primary))] px-4 py-2.5 text-sm font-semibold text-white hover:opacity-90 transition-all"><Plus size={16} /> Log Activity</button>
+                <button onClick={openCreate} className="flex items-center gap-2 rounded-xl bg-[hsl(var(--primary))] px-4 py-2.5 text-sm font-semibold text-white hover:opacity-90 transition-all"><Plus size={16} /> {t.pages.activities.addBtn}</button>
             </div>
 
             <div className="flex gap-3 flex-wrap">
-                <div className="relative w-64"><Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[hsl(var(--muted-foreground))]" /><input type="text" placeholder="Search activities..." value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} className={cn(inputCls, 'pl-10')} /></div>
+                <div className="relative w-64"><Search size={16} className="absolute start-3 top-1/2 -translate-y-1/2 text-[hsl(var(--muted-foreground))]" /><input type="text" placeholder={t.pages.activities.searchPlaceholder} value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} className={cn(inputCls, 'ps-10')} /></div>
                 <select value={filterType} onChange={e => { setFilterType(e.target.value); setPage(1); }} className={cn(inputCls, 'w-44')}>
-                    <option value="">All Types</option>
-                    {['Call', 'Email', 'Meeting', 'Note', 'Other'].map(t => <option key={t} value={t}>{t}</option>)}
+                    <option value="">{t.common.allTypes}</option>
+                    {['Call', 'Email', 'Meeting', 'Note', 'Other'].map(tp => <option key={tp} value={tp}>{tp}</option>)}
                 </select>
             </div>
 
             <div className="glass-card overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm">
-                        <thead><tr className="border-b border-[hsl(var(--border))] text-left text-[hsl(var(--muted-foreground))]">
-                            <th className="px-4 py-3 font-medium">Type</th><th className="px-4 py-3 font-medium">Subject</th><th className="px-4 py-3 font-medium">Date</th><th className="px-4 py-3 font-medium">Duration</th><th className="px-4 py-3 font-medium">Performed By</th><th className="px-4 py-3 font-medium text-right">Actions</th>
+                        <thead><tr className="border-b border-[hsl(var(--border))] text-start text-[hsl(var(--muted-foreground))]">
+                            <th className="px-4 py-3 font-medium">{t.common.type}</th><th className="px-4 py-3 font-medium">{t.pages.activities.subject}</th><th className="px-4 py-3 font-medium">{t.common.date}</th><th className="px-4 py-3 font-medium">{t.pages.activities.duration}</th><th className="px-4 py-3 font-medium">{t.pages.activities.performedBy}</th><th className="px-4 py-3 font-medium text-end">{t.common.actions}</th>
                         </tr></thead>
                         <tbody>
                             {loading ? (
                                 <tr><td colSpan={6} className="px-4 py-12 text-center"><div className="h-6 w-6 animate-spin rounded-full border-2 border-[hsl(var(--primary))]/30 border-t-[hsl(var(--primary))] mx-auto" /></td></tr>
                             ) : activities.length === 0 ? (
-                                <tr><td colSpan={6} className="px-4 py-12 text-center text-[hsl(var(--muted-foreground))]">No activities found. Click &quot;Log Activity&quot; to create one.</td></tr>
+                                <tr><td colSpan={6} className="px-4 py-12 text-center text-[hsl(var(--muted-foreground))]">{t.pages.activities.emptyState}</td></tr>
                             ) : activities.map(a => {
                                 const meta = TYPE_META[a.type] || TYPE_META.Other;
                                 const Icon = meta.Icon;
@@ -106,7 +108,7 @@ export default function ActivitiesPage() {
                                         <td className="px-4 py-3 text-[hsl(var(--muted-foreground))]">{fmtDate(a.date)}</td>
                                         <td className="px-4 py-3 text-[hsl(var(--muted-foreground))]">{a.duration ? `${a.duration} min` : '—'}</td>
                                         <td className="px-4 py-3 text-[hsl(var(--muted-foreground))]">{a.performedBy ? `${a.performedBy.firstName} ${a.performedBy.lastName}` : '—'}</td>
-                                        <td className="px-4 py-3 text-right">
+                                        <td className="px-4 py-3 text-end">
                                             <div className="flex items-center justify-end gap-1">
                                                 <button onClick={() => openEdit(a)} className="rounded-lg p-2 text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--secondary))] hover:text-white transition-all"><Edit2 size={15} /></button>
                                                 <button onClick={() => setDeleteId(a._id)} className="rounded-lg p-2 text-[hsl(var(--muted-foreground))] hover:bg-red-500/10 hover:text-red-400 transition-all"><Trash2 size={15} /></button>
@@ -120,7 +122,7 @@ export default function ActivitiesPage() {
                 </div>
                 {totalPages > 1 && (
                     <div className="flex items-center justify-between border-t border-[hsl(var(--border))] px-4 py-3">
-                        <p className="text-xs text-[hsl(var(--muted-foreground))]">Page {page} of {totalPages}</p>
+                        <p className="text-xs text-[hsl(var(--muted-foreground))]">{t.common.page} {page} {t.common.of} {totalPages}</p>
                         <div className="flex gap-1">
                             <button onClick={() => setPage(Math.max(1, page - 1))} disabled={page <= 1} className="rounded-lg p-1.5 text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--secondary))] disabled:opacity-30"><ChevronLeft size={16} /></button>
                             <button onClick={() => setPage(Math.min(totalPages, page + 1))} disabled={page >= totalPages} className="rounded-lg p-1.5 text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--secondary))] disabled:opacity-30"><ChevronRight size={16} /></button>
@@ -132,23 +134,23 @@ export default function ActivitiesPage() {
             {showModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowModal(false)}>
                     <div className="glass-card w-full max-w-lg p-6 animate-fade-in bg-[hsl(var(--card))]" onClick={e => e.stopPropagation()}>
-                        <div className="flex items-center justify-between mb-6"><h3 className="text-lg font-bold">{editing ? 'Edit Activity' : 'Log Activity'}</h3><button onClick={() => setShowModal(false)} className="rounded-lg p-1 hover:bg-[hsl(var(--secondary))]"><X size={18} /></button></div>
+                        <div className="flex items-center justify-between mb-6"><h3 className="text-lg font-bold">{editing ? t.common.edit : t.pages.activities.addBtn}</h3><button onClick={() => setShowModal(false)} className="rounded-lg p-1 hover:bg-[hsl(var(--secondary))]"><X size={18} /></button></div>
                         <form onSubmit={handleSave} className="space-y-4">
                             {error && <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">{error}</div>}
                             <div className="grid grid-cols-2 gap-4">
-                                <div><label className="mb-1.5 block text-sm font-medium text-[hsl(var(--muted-foreground))]">Type *</label><select value={form.type} onChange={update('type')} className={inputCls}>{['Call', 'Email', 'Meeting', 'Note', 'Other'].map(t => <option key={t} value={t}>{t}</option>)}</select></div>
-                                <div><label className="mb-1.5 block text-sm font-medium text-[hsl(var(--muted-foreground))]">Date</label><input type="date" value={form.date} onChange={update('date')} className={inputCls} /></div>
+                                <div><label className="mb-1.5 block text-sm font-medium text-[hsl(var(--muted-foreground))]">{t.common.type} *</label><select value={form.type} onChange={update('type')} className={inputCls}>{['Call', 'Email', 'Meeting', 'Note', 'Other'].map(tp => <option key={tp} value={tp}>{tp}</option>)}</select></div>
+                                <div><label className="mb-1.5 block text-sm font-medium text-[hsl(var(--muted-foreground))]">{t.common.date}</label><input type="date" value={form.date} onChange={update('date')} className={inputCls} /></div>
                             </div>
-                            <div><label className="mb-1.5 block text-sm font-medium text-[hsl(var(--muted-foreground))]">Subject *</label><input value={form.subject} onChange={update('subject')} required className={inputCls} placeholder="Follow-up call with client" /></div>
-                            <div><label className="mb-1.5 block text-sm font-medium text-[hsl(var(--muted-foreground))]">Description</label><textarea value={form.description} onChange={update('description')} rows={3} className={cn(inputCls, 'resize-none')} placeholder="Activity details..." /></div>
-                            <div><label className="mb-1.5 block text-sm font-medium text-[hsl(var(--muted-foreground))]">Duration (minutes)</label><input type="number" value={form.duration} onChange={update('duration')} className={inputCls} placeholder="30" /></div>
+                            <div><label className="mb-1.5 block text-sm font-medium text-[hsl(var(--muted-foreground))]">{t.pages.activities.subject} *</label><input value={form.subject} onChange={update('subject')} required className={inputCls} /></div>
+                            <div><label className="mb-1.5 block text-sm font-medium text-[hsl(var(--muted-foreground))]">{t.common.description}</label><textarea value={form.description} onChange={update('description')} rows={3} className={cn(inputCls, 'resize-none')} /></div>
+                            <div><label className="mb-1.5 block text-sm font-medium text-[hsl(var(--muted-foreground))]">{t.pages.activities.duration}</label><input type="number" value={form.duration} onChange={update('duration')} className={inputCls} placeholder="30" /></div>
                             <div className="grid grid-cols-2 gap-4">
-                                <div><label className="mb-1.5 block text-sm font-medium text-[hsl(var(--muted-foreground))]">Related Client</label><select value={form.relatedClient} onChange={update('relatedClient')} className={inputCls}><option value="">— None —</option>{clientsList.map(c => <option key={c._id} value={c._id}>{c.companyName}</option>)}</select></div>
-                                <div><label className="mb-1.5 block text-sm font-medium text-[hsl(var(--muted-foreground))]">Related Lead</label><select value={form.relatedLead} onChange={update('relatedLead')} className={inputCls}><option value="">— None —</option>{leadsList.map(l => <option key={l._id} value={l._id}>{l.title}</option>)}</select></div>
+                                <div><label className="mb-1.5 block text-sm font-medium text-[hsl(var(--muted-foreground))]">{t.pages.activities.relatedClient}</label><select value={form.relatedClient} onChange={update('relatedClient')} className={inputCls}><option value="">{t.common.none}</option>{clientsList.map(c => <option key={c._id} value={c._id}>{c.companyName}</option>)}</select></div>
+                                <div><label className="mb-1.5 block text-sm font-medium text-[hsl(var(--muted-foreground))]">{t.pages.activities.relatedLead}</label><select value={form.relatedLead} onChange={update('relatedLead')} className={inputCls}><option value="">{t.common.none}</option>{leadsList.map(l => <option key={l._id} value={l._id}>{l.title}</option>)}</select></div>
                             </div>
                             <div className="flex gap-3 pt-2">
-                                <button type="button" onClick={() => setShowModal(false)} className="flex-1 rounded-xl border border-[hsl(var(--border))] px-4 py-2.5 text-sm font-medium hover:bg-[hsl(var(--secondary))] transition-all">Cancel</button>
-                                <button type="submit" disabled={saving} className="flex-1 rounded-xl bg-[hsl(var(--primary))] px-4 py-2.5 text-sm font-semibold text-white hover:opacity-90 transition-all disabled:opacity-50 flex items-center justify-center gap-2">{saving ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" /> : editing ? 'Update' : 'Create'}</button>
+                                <button type="button" onClick={() => setShowModal(false)} className="flex-1 rounded-xl border border-[hsl(var(--border))] px-4 py-2.5 text-sm font-medium hover:bg-[hsl(var(--secondary))] transition-all">{t.common.cancel}</button>
+                                <button type="submit" disabled={saving} className="flex-1 rounded-xl bg-[hsl(var(--primary))] px-4 py-2.5 text-sm font-semibold text-white hover:opacity-90 transition-all disabled:opacity-50 flex items-center justify-center gap-2">{saving ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" /> : editing ? t.common.update : t.common.create}</button>
                             </div>
                         </form>
                     </div>
@@ -159,11 +161,11 @@ export default function ActivitiesPage() {
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setDeleteId(null)}>
                     <div className="glass-card w-full max-w-sm p-6 animate-fade-in bg-[hsl(var(--card))]" onClick={e => e.stopPropagation()}>
                         <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-500/15 mx-auto mb-4"><Trash2 size={22} className="text-red-400" /></div>
-                        <h3 className="text-lg font-bold text-center">Delete Activity?</h3>
-                        <p className="text-sm text-[hsl(var(--muted-foreground))] text-center mt-2">This action cannot be undone.</p>
+                        <h3 className="text-lg font-bold text-center">{t.pages.activities.deleteTitle}</h3>
+                        <p className="text-sm text-[hsl(var(--muted-foreground))] text-center mt-2">{t.common.cannotUndo}</p>
                         <div className="flex gap-3 mt-6">
-                            <button onClick={() => setDeleteId(null)} className="flex-1 rounded-xl border border-[hsl(var(--border))] px-4 py-2.5 text-sm font-medium hover:bg-[hsl(var(--secondary))] transition-all">Cancel</button>
-                            <button onClick={confirmDelete} className="flex-1 rounded-xl bg-red-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-600 transition-all">Delete</button>
+                            <button onClick={() => setDeleteId(null)} className="flex-1 rounded-xl border border-[hsl(var(--border))] px-4 py-2.5 text-sm font-medium hover:bg-[hsl(var(--secondary))] transition-all">{t.common.cancel}</button>
+                            <button onClick={confirmDelete} className="flex-1 rounded-xl bg-red-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-600 transition-all">{t.common.delete}</button>
                         </div>
                     </div>
                 </div>

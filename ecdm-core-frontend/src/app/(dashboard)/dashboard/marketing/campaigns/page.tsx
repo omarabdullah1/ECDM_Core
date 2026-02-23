@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '@/lib/axios';
 import { Megaphone, Plus, Edit2, Trash2, X, ChevronLeft, ChevronRight, TrendingUp, DollarSign, Eye } from 'lucide-react';
+import { useT } from '@/i18n/useT';
 
 interface Campaign { _id: string; name: string; platform: string; status: string; impressions?: number; conversions?: number; salesRevenue?: number; budget?: number; startDate?: string; endDate?: string; notes?: string; }
 
@@ -12,6 +13,7 @@ const blank = { name:'',platform:'',status:'',impressions:'',conversions:'',sale
 const sColor: Record<string,string> = { Current:'bg-green-500/20 text-green-400', Future:'bg-blue-500/20 text-blue-400', Previous:'bg-gray-500/20 text-gray-400' };
 
 export default function CampaignsPage() {
+  const t = useT();
   const [rows, setRows]       = useState<Campaign[]>([]);
   const [total, setTotal]     = useState(0);
   const [page, setPage]       = useState(1);
@@ -74,30 +76,30 @@ export default function CampaignsPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-[hsl(var(--primary))]/20 flex items-center justify-center"><Megaphone size={20} className="text-[hsl(var(--primary))]"/></div>
-          <div><h1 className="text-2xl font-bold">Campaigns</h1><p className="text-sm text-[hsl(var(--muted-foreground))]">{total} total</p></div>
+          <div><h1 className="text-2xl font-bold">{t.pages.campaigns.title}</h1><p className="text-sm text-[hsl(var(--muted-foreground))]">{total} {t.common.total}</p></div>
         </div>
         <button onClick={openC} className="flex items-center gap-2 bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] px-4 py-2 rounded-xl text-sm font-medium hover:opacity-90">
-          <Plus size={16}/> New Campaign
+          <Plus size={16}/> {t.pages.campaigns.addBtn}
         </button>
       </div>
 
       <div className="flex gap-3 flex-wrap">
         <select value={fStatus} onChange={e=>{setFStatus(e.target.value);setPage(1);}} className={iCls+' !w-44'}>
-          <option value="">All Statuses</option>{STATUSES.map(s=><option key={s}>{s}</option>)}</select>
+          <option value="">{t.common.allStatuses}</option>{STATUSES.map(s=><option key={s}>{s}</option>)}</select>
         <select value={fPlatform} onChange={e=>{setFPlatform(e.target.value);setPage(1);}} className={iCls+' !w-44'}>
-          <option value="">All Platforms</option>{PLATFORMS.map(p=><option key={p}>{p}</option>)}</select>
+          <option value="">{t.common.allPlatforms}</option>{PLATFORMS.map(p=><option key={p}>{p}</option>)}</select>
       </div>
 
       <div className="rounded-2xl border border-[hsl(var(--border))] overflow-hidden bg-[hsl(var(--card))]">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="border-b border-[hsl(var(--border))] bg-[hsl(var(--muted))]/30">
-              <tr>{['Name','Platform','Status','Budget','Dates','Impressions','Conv.%','Revenue','Notes','Actions'].map(h=>
-                <th key={h} className="px-4 py-3 text-left font-medium text-[hsl(var(--muted-foreground))]">{h}</th>)}</tr>
+              <tr>{[t.common.name, t.common.platform, t.common.status, t.common.budget, t.common.dates, t.common.impressions, t.pages.campaigns.convRate, t.common.revenue, t.common.notes, t.common.actions].map(h=>
+                <th key={h} className="px-4 py-3 text-start font-medium text-[hsl(var(--muted-foreground))]">{h}</th>)}</tr>
             </thead>
             <tbody>
-              {loading?(<tr><td colSpan={10} className="px-4 py-12 text-center text-[hsl(var(--muted-foreground))]">Loading…</td></tr>)
-              :rows.length===0?(<tr><td colSpan={10} className="px-4 py-12 text-center text-[hsl(var(--muted-foreground))]">No campaigns found</td></tr>)
+              {loading?(<tr><td colSpan={10} className="px-4 py-12 text-center text-[hsl(var(--muted-foreground))]">{t.common.loading}</td></tr>)
+              :rows.length===0?(<tr><td colSpan={10} className="px-4 py-12 text-center text-[hsl(var(--muted-foreground))]">{t.pages.campaigns.emptyState}</td></tr>)
               :rows.map(r=>(
                 <tr key={r._id} className="border-b border-[hsl(var(--border))]/50 hover:bg-[hsl(var(--muted))]/20">
                   <td className="px-4 py-3 font-medium">{r.name}</td>
@@ -121,7 +123,7 @@ export default function CampaignsPage() {
           </table>
         </div>
         {tp>1&&(<div className="flex items-center justify-between px-4 py-3 border-t border-[hsl(var(--border))]">
-          <span className="text-sm text-[hsl(var(--muted-foreground))]">Page {page} of {tp}</span>
+          <span className="text-sm text-[hsl(var(--muted-foreground))]">{t.common.page} {page} {t.common.of} {tp}</span>
           <div className="flex gap-2">
             <button disabled={page===1} onClick={()=>setPage(p=>p-1)} className="p-1.5 rounded-lg hover:bg-[hsl(var(--muted))] disabled:opacity-40"><ChevronLeft size={16}/></button>
             <button disabled={page===tp} onClick={()=>setPage(p=>p+1)} className="p-1.5 rounded-lg hover:bg-[hsl(var(--muted))] disabled:opacity-40"><ChevronRight size={16}/></button>
@@ -132,32 +134,32 @@ export default function CampaignsPage() {
       {modal&&(
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-[hsl(var(--card))] rounded-2xl border border-[hsl(var(--border))] w-full max-w-lg max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between p-6 border-b border-[hsl(var(--border))]"><h2 className="text-lg font-semibold">{editing?'Edit':'New'} Campaign</h2><button onClick={()=>setModal(false)} className="p-2 hover:bg-[hsl(var(--muted))] rounded-lg"><X size={18}/></button></div>
+            <div className="flex items-center justify-between p-6 border-b border-[hsl(var(--border))]"><h2 className="text-lg font-semibold">{editing ? t.common.edit : t.pages.campaigns.addBtn}</h2><button onClick={()=>setModal(false)} className="p-2 hover:bg-[hsl(var(--muted))] rounded-lg"><X size={18}/></button></div>
             <form onSubmit={save} className="p-6 space-y-4">
               {error&&<div className="bg-red-500/20 text-red-400 px-4 py-3 rounded-xl text-sm">{error}</div>}
-              <div><label className="block text-sm font-medium mb-1.5">Name *</label><input className={iCls} value={form.name} onChange={u('name')} required placeholder="e.g. Q1 Google Ads"/></div>
+              <div><label className="block text-sm font-medium mb-1.5">{t.common.name} *</label><input className={iCls} value={form.name} onChange={u('name')} required placeholder={t.pages.campaigns.namePlaceholder}/></div>
               <div className="grid grid-cols-2 gap-4">
-                <div><label className="block text-sm font-medium mb-1.5">Platform *</label>
-                  <select className={iCls} value={form.platform} onChange={u('platform')} required><option value="">Select…</option>{PLATFORMS.map(p=><option key={p}>{p}</option>)}</select></div>
-                <div><label className="block text-sm font-medium mb-1.5">Status *</label>
-                  <select className={iCls} value={form.status} onChange={u('status')} required><option value="">Select…</option>{STATUSES.map(s=><option key={s}>{s}</option>)}</select></div>
+                <div><label className="block text-sm font-medium mb-1.5">{t.common.platform} *</label>
+                  <select className={iCls} value={form.platform} onChange={u('platform')} required><option value="">{t.common.select}</option>{PLATFORMS.map(p=><option key={p}>{p}</option>)}</select></div>
+                <div><label className="block text-sm font-medium mb-1.5">{t.common.status} *</label>
+                  <select className={iCls} value={form.status} onChange={u('status')} required><option value="">{t.common.select}</option>{STATUSES.map(s=><option key={s}>{s}</option>)}</select></div>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div><label className="block text-sm font-medium mb-1.5">Impressions</label><input className={iCls} type="number" min="0" value={form.impressions} onChange={u('impressions')}/></div>
-                <div><label className="block text-sm font-medium mb-1.5">Conversions</label><input className={iCls} type="number" min="0" value={form.conversions} onChange={u('conversions')}/></div>
+                <div><label className="block text-sm font-medium mb-1.5">{t.common.impressions}</label><input className={iCls} type="number" min="0" value={form.impressions} onChange={u('impressions')}/></div>
+                <div><label className="block text-sm font-medium mb-1.5">{t.common.conversions}</label><input className={iCls} type="number" min="0" value={form.conversions} onChange={u('conversions')}/></div>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div><label className="block text-sm font-medium mb-1.5">Revenue ($)</label><input className={iCls} type="number" min="0" step="0.01" value={form.salesRevenue} onChange={u('salesRevenue')}/></div>
-                <div><label className="block text-sm font-medium mb-1.5">Budget ($)</label><input className={iCls} type="number" min="0" step="0.01" value={form.budget} onChange={u('budget')}/></div>
+                <div><label className="block text-sm font-medium mb-1.5">{t.common.revenue} ($)</label><input className={iCls} type="number" min="0" step="0.01" value={form.salesRevenue} onChange={u('salesRevenue')}/></div>
+                <div><label className="block text-sm font-medium mb-1.5">{t.common.budget} ($)</label><input className={iCls} type="number" min="0" step="0.01" value={form.budget} onChange={u('budget')}/></div>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div><label className="block text-sm font-medium mb-1.5">Start Date</label><input className={iCls} type="date" value={form.startDate} onChange={u('startDate')}/></div>
-                <div><label className="block text-sm font-medium mb-1.5">End Date</label><input className={iCls} type="date" value={form.endDate} onChange={u('endDate')}/></div>
+                <div><label className="block text-sm font-medium mb-1.5">{t.common.startDate}</label><input className={iCls} type="date" value={form.startDate} onChange={u('startDate')}/></div>
+                <div><label className="block text-sm font-medium mb-1.5">{t.common.endDate}</label><input className={iCls} type="date" value={form.endDate} onChange={u('endDate')}/></div>
               </div>
-              <div><label className="block text-sm font-medium mb-1.5">Notes</label><textarea className={iCls} rows={3} value={form.notes} onChange={u('notes')}/></div>
+              <div><label className="block text-sm font-medium mb-1.5">{t.common.notes}</label><textarea className={iCls} rows={3} value={form.notes} onChange={u('notes')}/></div>
               <div className="flex gap-3 pt-2">
-                <button type="button" onClick={()=>setModal(false)} className="flex-1 px-4 py-2.5 rounded-xl border border-[hsl(var(--border))] text-sm hover:bg-[hsl(var(--muted))]">Cancel</button>
-                <button type="submit" disabled={saving} className="flex-1 px-4 py-2.5 rounded-xl bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] text-sm font-medium hover:opacity-90 disabled:opacity-50">{saving?'Saving…':editing?'Update':'Create'}</button>
+                <button type="button" onClick={()=>setModal(false)} className="flex-1 px-4 py-2.5 rounded-xl border border-[hsl(var(--border))] text-sm hover:bg-[hsl(var(--muted))]">{t.common.cancel}</button>
+                <button type="submit" disabled={saving} className="flex-1 px-4 py-2.5 rounded-xl bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] text-sm font-medium hover:opacity-90 disabled:opacity-50">{saving ? t.common.saving : editing ? t.common.update : t.common.create}</button>
               </div>
             </form>
           </div>
@@ -165,11 +167,11 @@ export default function CampaignsPage() {
       )}
       {delId&&(<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
         <div className="bg-[hsl(var(--card))] rounded-2xl border border-[hsl(var(--border))] w-full max-w-sm p-6 space-y-4">
-          <h2 className="text-lg font-semibold">Delete Campaign?</h2>
-          <p className="text-sm text-[hsl(var(--muted-foreground))]">This action cannot be undone.</p>
+          <h2 className="text-lg font-semibold">{t.pages.campaigns.deleteTitle}</h2>
+          <p className="text-sm text-[hsl(var(--muted-foreground))]">{t.common.cannotUndo}</p>
           <div className="flex gap-3">
-            <button onClick={()=>setDelId(null)} className="flex-1 px-4 py-2.5 rounded-xl border border-[hsl(var(--border))] text-sm hover:bg-[hsl(var(--muted))]">Cancel</button>
-            <button onClick={del} className="flex-1 px-4 py-2.5 rounded-xl bg-red-500 text-white text-sm font-medium hover:bg-red-600">Delete</button>
+            <button onClick={()=>setDelId(null)} className="flex-1 px-4 py-2.5 rounded-xl border border-[hsl(var(--border))] text-sm hover:bg-[hsl(var(--muted))]">{t.common.cancel}</button>
+            <button onClick={del} className="flex-1 px-4 py-2.5 rounded-xl bg-red-500 text-white text-sm font-medium hover:bg-red-600">{t.common.delete}</button>
           </div>
         </div>
       </div>)}

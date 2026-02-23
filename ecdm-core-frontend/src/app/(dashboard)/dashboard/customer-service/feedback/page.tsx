@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import api from '@/lib/axios';
+import { useT } from '@/i18n/useT';
 
 interface WorkOrderRef { _id: string; typeOfOrder?: string; issue?: string; }
 interface CustomerRef  { _id: string; name: string; }
@@ -31,6 +32,7 @@ const blank = {
 const stars = (n: number) => '★'.repeat(n) + '☆'.repeat(5 - n);
 
 export default function FeedbackPage() {
+    const t = useT();
     const [rows,     setRows]    = useState<Feedback[]>([]);
     const [total,    setTotal]   = useState(0);
     const [page,     setPage]    = useState(1);
@@ -113,46 +115,48 @@ export default function FeedbackPage() {
             ? [wo.typeOfOrder, wo.issue].filter(Boolean).join(' — ') || wo._id
             : (wo ?? '—');
     const cName = (c: CustomerRef | string | null | undefined) => c && typeof c === 'object' ? c.name : (c ?? '—');
-    const eName = (e: UserRef     | string | null | undefined) =>
-        e && typeof e === 'object'
-            ? ((e.firstName || '') + ' ' + (e.lastName || '')).trim() || e.name || e._id
-            : (e ?? '—');
+    const eName = (eng: UserRef | string | null | undefined) =>
+        eng && typeof eng === 'object'
+            ? ((eng.firstName || '') + ' ' + (eng.lastName || '')).trim() || eng.name || eng._id
+            : (eng ?? '—');
 
     const pages = Math.ceil(total / 15) || 1;
+
+    const tableHeaders = [t.common.workOrder, t.common.customer, t.common.engineer, t.common.opRating, t.common.csRating, t.common.notes, ''];
 
     return (
         <div className="space-y-6">
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold">Feedback</h1>
-                    <p className="mt-1 text-sm text-[hsl(var(--muted-foreground))]">Post-service quality ratings · auto-updates EmployeeEvaluation</p>
+                    <h1 className="text-2xl font-bold">{t.pages.feedback.title}</h1>
+                    <p className="mt-1 text-sm text-[hsl(var(--muted-foreground))]">{t.pages.feedback.subtitle}</p>
                 </div>
                 <button onClick={openC}
                     className="rounded-xl bg-[hsl(var(--primary))] px-5 py-2.5 text-sm font-semibold text-[hsl(var(--primary-foreground))] hover:opacity-90 transition-opacity">
-                    + New Feedback
+                    {t.pages.feedback.addBtn}
                 </button>
             </div>
 
             {/* Filters */}
             <input value={search} onChange={e => { setSearch(e.target.value); setPage(1); }}
-                placeholder="Search…" className={`${iCls} max-w-xs`} />
+                placeholder={t.common.search} className={`${iCls} max-w-xs`} />
 
             {/* Table */}
             <div className="overflow-x-auto rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))]">
                 <table className="w-full text-sm">
                     <thead>
-                        <tr className="border-b border-[hsl(var(--border))] text-left text-xs font-semibold text-[hsl(var(--muted-foreground))] uppercase tracking-wide">
-                            {['Work Order','Customer','Engineer','Op Rating','CS Rating','Notes',''].map(h => (
-                                <th key={h} className="px-5 py-3">{h}</th>
+                        <tr className="border-b border-[hsl(var(--border))] text-start text-xs font-semibold text-[hsl(var(--muted-foreground))] uppercase tracking-wide">
+                            {tableHeaders.map((h, i) => (
+                                <th key={i} className="px-5 py-3">{h}</th>
                             ))}
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-[hsl(var(--border))]">
                         {loading ? (
-                            <tr><td colSpan={7} className="py-12 text-center text-[hsl(var(--muted-foreground))]">Loading…</td></tr>
+                            <tr><td colSpan={7} className="py-12 text-center text-[hsl(var(--muted-foreground))]">{t.common.loading}</td></tr>
                         ) : rows.length === 0 ? (
-                            <tr><td colSpan={7} className="py-12 text-center text-[hsl(var(--muted-foreground))]">No feedback found</td></tr>
+                            <tr><td colSpan={7} className="py-12 text-center text-[hsl(var(--muted-foreground))]">{t.pages.feedback.emptyState}</td></tr>
                         ) : rows.map(row => (
                             <tr key={row._id} className="hover:bg-[hsl(var(--muted))]/30 transition-colors">
                                 <td className="px-5 py-3 font-mono text-xs">{wName(row.workOrder)}</td>
@@ -163,8 +167,8 @@ export default function FeedbackPage() {
                                 <td className="px-5 py-3 max-w-[180px] truncate text-[hsl(var(--muted-foreground))]">{row.notes ?? '—'}</td>
                                 <td className="px-5 py-3">
                                     <div className="flex gap-3">
-                                        <button onClick={() => openE(row)} className="text-xs font-medium text-[hsl(var(--primary))] hover:underline">Edit</button>
-                                        <button onClick={() => setDelId(row._id)} className="text-xs font-medium text-red-400 hover:underline">Delete</button>
+                                        <button onClick={() => openE(row)} className="text-xs font-medium text-[hsl(var(--primary))] hover:underline">{t.common.edit}</button>
+                                        <button onClick={() => setDelId(row._id)} className="text-xs font-medium text-red-400 hover:underline">{t.common.delete}</button>
                                     </div>
                                 </td>
                             </tr>
@@ -177,10 +181,10 @@ export default function FeedbackPage() {
             {pages > 1 && (
                 <div className="flex items-center gap-2 text-sm">
                     <button disabled={page === 1} onClick={() => setPage(p => p - 1)}
-                        className="rounded-lg border border-[hsl(var(--border))] px-3 py-1.5 disabled:opacity-40">← Prev</button>
-                    <span className="text-[hsl(var(--muted-foreground))]">Page {page} / {pages}</span>
+                        className="rounded-lg border border-[hsl(var(--border))] px-3 py-1.5 disabled:opacity-40">{t.common.prev}</button>
+                    <span className="text-[hsl(var(--muted-foreground))]">{t.common.page} {page} / {pages}</span>
                     <button disabled={page === pages} onClick={() => setPage(p => p + 1)}
-                        className="rounded-lg border border-[hsl(var(--border))] px-3 py-1.5 disabled:opacity-40">Next →</button>
+                        className="rounded-lg border border-[hsl(var(--border))] px-3 py-1.5 disabled:opacity-40">{t.common.next}</button>
                 </div>
             )}
 
@@ -188,46 +192,46 @@ export default function FeedbackPage() {
             {modal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
                     <div className="w-full max-w-lg rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
-                        <h2 className="text-lg font-bold">{editing ? 'Edit Feedback' : 'New Feedback'}</h2>
+                        <h2 className="text-lg font-bold">{editing ? t.common.edit : t.common.create}</h2>
 
                         <div className="space-y-3">
                             <div>
-                                <label className="block mb-1 text-xs font-medium">Work Order</label>
+                                <label className="block mb-1 text-xs font-medium">{t.common.workOrder}</label>
                                 <select value={form.workOrder} onChange={e => u('workOrder', e.target.value)} className={iCls}>
-                                    <option value="">— select —</option>
+                                    <option value="">{t.common.select}</option>
                                     {workOrders.map(w => <option key={w._id} value={w._id}>{[w.typeOfOrder, w.issue].filter(Boolean).join(' — ') || w._id}</option>)}
                                 </select>
                             </div>
                             <div>
-                                <label className="block mb-1 text-xs font-medium">Customer</label>
+                                <label className="block mb-1 text-xs font-medium">{t.common.customer}</label>
                                 <select value={form.customer} onChange={e => u('customer', e.target.value)} className={iCls}>
-                                    <option value="">— select —</option>
+                                    <option value="">{t.common.select}</option>
                                     {customers.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
                                 </select>
                             </div>
                             <div>
-                                <label className="block mb-1 text-xs font-medium">Engineer</label>
+                                <label className="block mb-1 text-xs font-medium">{t.common.engineer}</label>
                                 <select value={form.engineer} onChange={e => u('engineer', e.target.value)} className={iCls}>
-                                    <option value="">— select —</option>
-                                    {engineers.map(e => <option key={e._id} value={e._id}>{((e.firstName || '') + ' ' + (e.lastName || '')).trim() || e.name || e._id}</option>)}
+                                    <option value="">{t.common.select}</option>
+                                    {engineers.map(eng => <option key={eng._id} value={eng._id}>{((eng.firstName || '') + ' ' + (eng.lastName || '')).trim() || eng.name || eng._id}</option>)}
                                 </select>
                             </div>
                             <div>
-                                <label className="block mb-1 text-xs font-medium">Rating — Operation Quality (1–5)</label>
+                                <label className="block mb-1 text-xs font-medium">{t.pages.feedback.ratingOp}</label>
                                 <select value={form.ratingOperation} onChange={e => u('ratingOperation', e.target.value)} className={iCls}>
                                     {[1,2,3,4,5].map(n => <option key={n} value={n}>{stars(n)} ({n})</option>)}
                                 </select>
                             </div>
                             <div>
-                                <label className="block mb-1 text-xs font-medium">Rating — Customer Service (1–5)</label>
+                                <label className="block mb-1 text-xs font-medium">{t.pages.feedback.ratingCs}</label>
                                 <select value={form.ratingCustomerService} onChange={e => u('ratingCustomerService', e.target.value)} className={iCls}>
                                     {[1,2,3,4,5].map(n => <option key={n} value={n}>{stars(n)} ({n})</option>)}
                                 </select>
                             </div>
                             <div>
-                                <label className="block mb-1 text-xs font-medium">Notes</label>
+                                <label className="block mb-1 text-xs font-medium">{t.common.notes}</label>
                                 <textarea rows={3} value={form.notes} onChange={e => u('notes', e.target.value)}
-                                    className={iCls} placeholder="Customer comments…" />
+                                    className={iCls} placeholder={t.pages.feedback.notesPlaceholder} />
                             </div>
                         </div>
 
@@ -235,10 +239,10 @@ export default function FeedbackPage() {
 
                         <div className="flex justify-end gap-3 pt-2">
                             <button onClick={() => setModal(false)}
-                                className="rounded-xl border border-[hsl(var(--border))] px-4 py-2 text-sm">Cancel</button>
+                                className="rounded-xl border border-[hsl(var(--border))] px-4 py-2 text-sm">{t.common.cancel}</button>
                             <button onClick={save} disabled={saving}
                                 className="rounded-xl bg-[hsl(var(--primary))] px-5 py-2 text-sm font-semibold text-[hsl(var(--primary-foreground))] disabled:opacity-50">
-                                {saving ? 'Saving…' : (editing ? 'Save Changes' : 'Create')}
+                                {saving ? t.common.saving : (editing ? t.common.save : t.common.create)}
                             </button>
                         </div>
                     </div>
@@ -249,13 +253,13 @@ export default function FeedbackPage() {
             {delId && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
                     <div className="w-full max-w-sm rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6 shadow-2xl space-y-4">
-                        <h2 className="text-lg font-bold">Delete Feedback?</h2>
-                        <p className="text-sm text-[hsl(var(--muted-foreground))]">This action cannot be undone.</p>
+                        <h2 className="text-lg font-bold">{t.pages.feedback.deleteTitle}</h2>
+                        <p className="text-sm text-[hsl(var(--muted-foreground))]">{t.common.cannotUndo}</p>
                         <div className="flex justify-end gap-3">
                             <button onClick={() => setDelId(null)}
-                                className="rounded-xl border border-[hsl(var(--border))] px-4 py-2 text-sm">Cancel</button>
+                                className="rounded-xl border border-[hsl(var(--border))] px-4 py-2 text-sm">{t.common.cancel}</button>
                             <button onClick={del}
-                                className="rounded-xl bg-red-500 px-5 py-2 text-sm font-semibold text-white hover:bg-red-600">Delete</button>
+                                className="rounded-xl bg-red-500 px-5 py-2 text-sm font-semibold text-white hover:bg-red-600">{t.common.delete}</button>
                         </div>
                     </div>
                 </div>

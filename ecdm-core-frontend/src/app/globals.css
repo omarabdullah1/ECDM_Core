@@ -138,6 +138,23 @@ html[dir="rtl"] * {
   animation: slide-in-left 0.3s ease-out;
 }
 
+/* RTL: flip slide direction */
+html[dir="rtl"] .animate-slide-in-left {
+  animation: slide-in-right 0.3s ease-out;
+}
+
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
 .animate-pulse-glow {
   animation: pulse-glow 2s infinite;
 }

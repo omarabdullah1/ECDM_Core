@@ -9,9 +9,11 @@ import PendingFollowups from '@/features/dashboard/components/PendingFollowups';
 import DelayedOrders from '@/features/dashboard/components/DelayedOrders';
 import RecentFeedback from '@/features/dashboard/components/RecentFeedback';
 import { RefreshCw } from 'lucide-react';
+import { useT } from '@/i18n/useT';
 
 export default function DashboardPage() {
     const { data, loading, error, refetch } = useDashboard();
+    const t = useT();
 
     if (loading) {
         return (
@@ -24,10 +26,10 @@ export default function DashboardPage() {
     if (error || !data) {
         return (
             <div className="flex flex-col items-center justify-center h-64 gap-4">
-                <p className="text-sm text-red-400">{error ?? 'Failed to load dashboard'}</p>
+                <p className="text-sm text-red-400">{error ?? t.dashboard.failedLoad}</p>
                 <button onClick={refetch}
                     className="flex items-center gap-2 rounded-xl bg-[hsl(var(--primary))] px-4 py-2 text-sm font-medium text-white hover:opacity-90 transition-opacity">
-                    <RefreshCw size={14} /> Retry
+                    <RefreshCw size={14} /> {t.dashboard.retry}
                 </button>
             </div>
         );

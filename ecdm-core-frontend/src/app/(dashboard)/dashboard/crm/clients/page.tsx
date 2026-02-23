@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import api from '@/lib/axios';
+import { useT } from '@/i18n/useT';
 import { cn } from '@/lib/utils';
 import {
     Building2, Plus, Search, Edit2, Trash2, X, ChevronLeft, ChevronRight,
@@ -32,6 +33,7 @@ const inputCls = cn(
 );
 
 export default function ClientsPage() {
+    const t = useT();
     const [clients, setClients] = useState<Client[]>([]);
     const [total, setTotal] = useState(0);
     const [page, setPage] = useState(1);
@@ -119,21 +121,21 @@ export default function ClientsPage() {
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-2xl font-bold flex items-center gap-3">
-                        <Building2 size={24} className="text-[hsl(var(--primary))]" /> Clients
+                        <Building2 size={24} className="text-[hsl(var(--primary))]" /> {t.pages.clients.title}
                     </h1>
-                    <p className="mt-1 text-sm text-[hsl(var(--muted-foreground))]">Manage your client portfolio ({total} total)</p>
+                    <p className="mt-1 text-sm text-[hsl(var(--muted-foreground))]">{t.pages.clients.subtitle} ({total} {t.common.total})</p>
                 </div>
                 <button onClick={openCreate} className="flex items-center gap-2 rounded-xl bg-[hsl(var(--primary))] px-4 py-2.5 text-sm font-semibold text-white hover:opacity-90 transition-all">
-                    <Plus size={16} /> Add Client
+                    <Plus size={16} /> {t.pages.clients.addBtn}
                 </button>
             </div>
 
             {/* Search */}
             <div className="relative w-full max-w-sm">
-                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[hsl(var(--muted-foreground))]" />
-                <input type="text" placeholder="Search clients..." value={search}
+                <Search size={16} className="absolute start-3 top-1/2 -translate-y-1/2 text-[hsl(var(--muted-foreground))]" />
+                <input type="text" placeholder={t.pages.clients.searchPlaceholder} value={search}
                     onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                    className={cn(inputCls, 'pl-10')} />
+                    className={cn(inputCls, 'ps-10')} />
             </div>
 
             {/* Table */}
@@ -141,14 +143,14 @@ export default function ClientsPage() {
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                         <thead>
-                            <tr className="border-b border-[hsl(var(--border))] text-left text-[hsl(var(--muted-foreground))]">
-                                <th className="px-4 py-3 font-medium">Company</th>
-                                <th className="px-4 py-3 font-medium">Industry</th>
-                                <th className="px-4 py-3 font-medium">Email</th>
-                                <th className="px-4 py-3 font-medium">Phone</th>
-                                <th className="px-4 py-3 font-medium">Status</th>
-                                <th className="px-4 py-3 font-medium">Assigned To</th>
-                                <th className="px-4 py-3 font-medium text-right">Actions</th>
+                            <tr className="border-b border-[hsl(var(--border))] text-start text-[hsl(var(--muted-foreground))]">
+                                <th className="px-4 py-3 font-medium">{t.pages.clients.company}</th>
+                                <th className="px-4 py-3 font-medium">{t.pages.clients.industry}</th>
+                                <th className="px-4 py-3 font-medium">{t.common.email}</th>
+                                <th className="px-4 py-3 font-medium">{t.common.phone}</th>
+                                <th className="px-4 py-3 font-medium">{t.common.status}</th>
+                                <th className="px-4 py-3 font-medium">{t.pages.clients.assignedTo}</th>
+                                <th className="px-4 py-3 font-medium text-end">{t.common.actions}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -158,7 +160,7 @@ export default function ClientsPage() {
                                 </td></tr>
                             ) : clients.length === 0 ? (
                                 <tr><td colSpan={7} className="px-4 py-12 text-center text-[hsl(var(--muted-foreground))]">
-                                    No clients found. Click &quot;Add Client&quot; to create one.
+                                    {t.pages.clients.emptyState}
                                 </td></tr>
                             ) : (
                                 clients.map((c) => (
@@ -175,7 +177,7 @@ export default function ClientsPage() {
                                         <td className="px-4 py-3 text-[hsl(var(--muted-foreground))]">
                                             {c.assignedTo ? `${c.assignedTo.firstName} ${c.assignedTo.lastName}` : '—'}
                                         </td>
-                                        <td className="px-4 py-3 text-right">
+                                        <td className="px-4 py-3 text-end">
                                             <div className="flex items-center justify-end gap-1">
                                                 <button onClick={() => openEdit(c)} className="rounded-lg p-2 text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--secondary))] hover:text-white transition-all">
                                                     <Edit2 size={15} />
@@ -195,7 +197,7 @@ export default function ClientsPage() {
                 {/* Pagination */}
                 {totalPages > 1 && (
                     <div className="flex items-center justify-between border-t border-[hsl(var(--border))] px-4 py-3">
-                        <p className="text-xs text-[hsl(var(--muted-foreground))]">Page {page} of {totalPages}</p>
+                        <p className="text-xs text-[hsl(var(--muted-foreground))]">{t.common.page} {page} {t.common.of} {totalPages}</p>
                         <div className="flex gap-1">
                             <button onClick={() => setPage(Math.max(1, page - 1))} disabled={page <= 1}
                                 className="rounded-lg p-1.5 text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--secondary))] disabled:opacity-30">
@@ -215,7 +217,7 @@ export default function ClientsPage() {
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowModal(false)}>
                     <div className="glass-card w-full max-w-lg p-6 animate-fade-in bg-[hsl(var(--card))]" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-between mb-6">
-                            <h3 className="text-lg font-bold">{editingClient ? 'Edit Client' : 'New Client'}</h3>
+                            <h3 className="text-lg font-bold">{editingClient ? `${t.common.edit} — ${t.pages.clients.title}` : `${t.common.new} — ${t.pages.clients.title}`}</h3>
                             <button onClick={() => setShowModal(false)} className="rounded-lg p-1 hover:bg-[hsl(var(--secondary))]">
                                 <X size={18} />
                             </button>
@@ -228,38 +230,38 @@ export default function ClientsPage() {
                                 </div>
                             )}
                             <div>
-                                <label className="mb-1.5 block text-sm font-medium text-[hsl(var(--muted-foreground))]">Company Name *</label>
+                                <label className="mb-1.5 block text-sm font-medium text-[hsl(var(--muted-foreground))]">{t.pages.clients.companyName} *</label>
                                 <input value={form.companyName} onChange={update('companyName')} required className={inputCls} placeholder="Acme Corp" />
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="mb-1.5 block text-sm font-medium text-[hsl(var(--muted-foreground))]">Industry</label>
+                                    <label className="mb-1.5 block text-sm font-medium text-[hsl(var(--muted-foreground))]">{t.pages.clients.industry}</label>
                                     <input value={form.industry} onChange={update('industry')} className={inputCls} placeholder="Technology" />
                                 </div>
                                 <div>
-                                    <label className="mb-1.5 block text-sm font-medium text-[hsl(var(--muted-foreground))]">Status</label>
+                                    <label className="mb-1.5 block text-sm font-medium text-[hsl(var(--muted-foreground))]">{t.common.status}</label>
                                     <select value={form.status} onChange={update('status')} className={inputCls}>
-                                        <option value="Prospect">Prospect</option>
-                                        <option value="Active">Active</option>
-                                        <option value="Inactive">Inactive</option>
-                                        <option value="Churned">Churned</option>
+                                        <option value="Prospect">{t.pages.clients.prospect}</option>
+                                        <option value="Active">{t.pages.clients.active}</option>
+                                        <option value="Inactive">{t.pages.clients.inactive}</option>
+                                        <option value="Churned">{t.pages.clients.churned}</option>
                                     </select>
                                 </div>
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="mb-1.5 block text-sm font-medium text-[hsl(var(--muted-foreground))]">Email</label>
+                                    <label className="mb-1.5 block text-sm font-medium text-[hsl(var(--muted-foreground))]">{t.common.email}</label>
                                     <input type="email" value={form.email} onChange={update('email')} className={inputCls} placeholder="info@acme.com" />
                                 </div>
                                 <div>
-                                    <label className="mb-1.5 block text-sm font-medium text-[hsl(var(--muted-foreground))]">Phone</label>
+                                    <label className="mb-1.5 block text-sm font-medium text-[hsl(var(--muted-foreground))]">{t.common.phone}</label>
                                     <input value={form.phone} onChange={update('phone')} className={inputCls} placeholder="+20 xxx xxx xxxx" />
                                 </div>
                             </div>
                             <div>
-                                <label className="mb-1.5 block text-sm font-medium text-[hsl(var(--muted-foreground))]">Assigned To</label>
+                                <label className="mb-1.5 block text-sm font-medium text-[hsl(var(--muted-foreground))]">{t.pages.clients.assignedTo}</label>
                                 <select value={form.assignedTo} onChange={update('assignedTo')} className={inputCls}>
-                                    <option value="">— None —</option>
+                                    <option value="">{t.pages.clients.noneAssigned}</option>
                                     {employees.map(emp => <option key={emp._id} value={emp._id}>{emp.firstName} {emp.lastName}</option>)}
                                 </select>
                             </div>
@@ -267,11 +269,11 @@ export default function ClientsPage() {
                             <div className="flex gap-3 pt-2">
                                 <button type="button" onClick={() => setShowModal(false)}
                                     className="flex-1 rounded-xl border border-[hsl(var(--border))] px-4 py-2.5 text-sm font-medium hover:bg-[hsl(var(--secondary))] transition-all">
-                                    Cancel
+                                    {t.common.cancel}
                                 </button>
                                 <button type="submit" disabled={saving}
                                     className="flex-1 rounded-xl bg-[hsl(var(--primary))] px-4 py-2.5 text-sm font-semibold text-white hover:opacity-90 transition-all disabled:opacity-50 flex items-center justify-center gap-2">
-                                    {saving ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" /> : editingClient ? 'Update' : 'Create'}
+                                    {saving ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" /> : editingClient ? t.common.update : t.common.create}
                                 </button>
                             </div>
                         </form>
@@ -286,18 +288,18 @@ export default function ClientsPage() {
                         <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-500/15 mx-auto mb-4">
                             <Trash2 size={22} className="text-red-400" />
                         </div>
-                        <h3 className="text-lg font-bold text-center">Delete Client?</h3>
+                        <h3 className="text-lg font-bold text-center">{t.pages.clients.deleteTitle}</h3>
                         <p className="text-sm text-[hsl(var(--muted-foreground))] text-center mt-2">
-                            This action cannot be undone. The client and all related data will be permanently removed.
+                            {t.pages.clients.deleteMsg}
                         </p>
                         <div className="flex gap-3 mt-6">
                             <button onClick={() => setDeleteId(null)}
                                 className="flex-1 rounded-xl border border-[hsl(var(--border))] px-4 py-2.5 text-sm font-medium hover:bg-[hsl(var(--secondary))] transition-all">
-                                Cancel
+                                {t.common.cancel}
                             </button>
                             <button onClick={confirmDelete}
                                 className="flex-1 rounded-xl bg-red-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-600 transition-all">
-                                Delete
+                                {t.common.delete}
                             </button>
                         </div>
                     </div>

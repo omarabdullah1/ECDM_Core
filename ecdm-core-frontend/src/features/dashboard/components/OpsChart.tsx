@@ -1,13 +1,17 @@
 'use client';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 import type { PunctualityData } from '../useDashboard';
+import { useT } from '@/i18n/useT';
 
 interface Props { data: PunctualityData }
 
 export default function OpsChart({ data }: Props) {
+    const t = useT();
+    const d = t.dashboard;
+
     const chartData = [
-        { name: 'On-Time', value: data.onTimePct, color: '#22c55e' },
-        { name: 'Delayed', value: data.latePct, color: '#ef4444' },
+        { name: d.onTime, value: data.onTimePct, color: '#22c55e' },
+        { name: d.delayed, value: data.latePct, color: '#ef4444' },
     ];
 
     const isEmpty = data.total === 0;
@@ -15,14 +19,14 @@ export default function OpsChart({ data }: Props) {
     return (
         <div className="rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6 flex flex-col gap-5">
             <div>
-                <h3 className="text-base font-semibold">Operations Punctuality</h3>
+                <h3 className="text-base font-semibold">{d.operationsPunctuality}</h3>
                 <p className="text-xs text-[hsl(var(--muted-foreground))] mt-0.5">
-                    {isEmpty ? 'No completed work orders yet' : `${data.total} work orders tracked`}
+                    {isEmpty ? d.noCompletedOrders : `${data.total} ${d.workOrdersTracked}`}
                 </p>
             </div>
 
             {isEmpty ? (
-                <p className="text-center text-sm text-[hsl(var(--muted-foreground))] py-12">No data yet</p>
+                <p className="text-center text-sm text-[hsl(var(--muted-foreground))] py-12">{d.noDataYet}</p>
             ) : (
                 <>
                     <ResponsiveContainer width="100%" height={180}>
@@ -38,11 +42,11 @@ export default function OpsChart({ data }: Props) {
                         </PieChart>
                     </ResponsiveContainer>
                     <div className="flex justify-center gap-6">
-                        {chartData.map((d) => (
-                            <div key={d.name} className="flex items-center gap-2 text-sm">
-                                <span className="w-3 h-3 rounded-full" style={{ background: d.color }} />
-                                <span className="text-[hsl(var(--muted-foreground))]">{d.name}</span>
-                                <span className="font-semibold">{d.value}%</span>
+                        {chartData.map((cd) => (
+                            <div key={cd.name} className="flex items-center gap-2 text-sm">
+                                <span className="w-3 h-3 rounded-full" style={{ background: cd.color }} />
+                                <span className="text-[hsl(var(--muted-foreground))]">{cd.name}</span>
+                                <span className="font-semibold">{cd.value}%</span>
                             </div>
                         ))}
                     </div>
