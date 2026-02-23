@@ -7,10 +7,13 @@ import { useAuthStore } from '@/features/auth/useAuth';
 import { cn } from '@/lib/utils';
 import { Eye, EyeOff, LogIn, UserPlus } from 'lucide-react';
 import Link from 'next/link';
+import LangSwitcher from '@/components/ui/LangSwitcher';
+import { useT } from '@/i18n/useT';
 
 export default function LoginPage() {
     const router = useRouter();
     const { login, isLoading } = useAuthStore();
+    const t = useT();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
@@ -39,22 +42,24 @@ export default function LoginPage() {
                 <div className="relative z-10 p-12 text-center">
                     <Image src="/logo.png" alt="ECDM Solutions" width={80} height={80} className="mx-auto mb-8 rounded-2xl" />
                     <h1 className="text-4xl font-bold text-white mb-4">ECDM Core</h1>
-                    <p className="text-lg text-white/60 max-w-sm">
-                        Enterprise ERP &amp; CRM platform — manage clients, leads, tasks, and your entire workforce from one unified dashboard.
-                    </p>
+                    <p className="text-lg text-white/60 max-w-sm">{t.auth.branding}</p>
                 </div>
             </div>
 
             {/* Right — Login Form */}
             <div className="flex w-full lg:w-1/2 items-center justify-center p-8">
                 <div className="w-full max-w-md animate-fade-in">
-                    <div className="mb-8 lg:hidden flex items-center gap-3">
-                        <Image src="/logo.png" alt="ECDM" width={40} height={40} className="rounded-xl" />
-                        <span className="text-xl font-bold">ECDM Core</span>
+                    {/* Mobile logo + lang switcher */}
+                    <div className="mb-8 flex items-center justify-between">
+                        <div className="flex items-center gap-3 lg:hidden">
+                            <Image src="/logo.png" alt="ECDM" width={40} height={40} className="rounded-xl" />
+                            <span className="text-xl font-bold">ECDM Core</span>
+                        </div>
+                        <div className="lg:ms-auto"><LangSwitcher /></div>
                     </div>
 
-                    <h2 className="text-2xl font-bold mb-2">Welcome back</h2>
-                    <p className="text-[hsl(var(--muted-foreground))] mb-8">Sign in to your account to continue</p>
+                    <h2 className="text-2xl font-bold mb-2">{t.auth.welcomeBack}</h2>
+                    <p className="text-[hsl(var(--muted-foreground))] mb-8">{t.auth.signInContinue}</p>
 
                     {error && (
                         <div className="mb-6 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
@@ -64,7 +69,7 @@ export default function LoginPage() {
 
                     <form onSubmit={handleSubmit} className="space-y-5">
                         <div>
-                            <label className="mb-2 block text-sm font-medium text-[hsl(var(--muted-foreground))]">Email</label>
+                            <label className="mb-2 block text-sm font-medium text-[hsl(var(--muted-foreground))]">{t.auth.email}</label>
                             <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required
                                 className={cn(
                                     'w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-4 py-3 text-sm',
@@ -76,7 +81,7 @@ export default function LoginPage() {
                         </div>
 
                         <div>
-                            <label className="mb-2 block text-sm font-medium text-[hsl(var(--muted-foreground))]">Password</label>
+                            <label className="mb-2 block text-sm font-medium text-[hsl(var(--muted-foreground))]">{t.auth.password}</label>
                             <div className="relative">
                                 <input type={showPassword ? 'text' : 'password'} value={password}
                                     onChange={(e) => setPassword(e.target.value)} required
@@ -88,6 +93,7 @@ export default function LoginPage() {
                                     placeholder="••••••••"
                                 />
                                 <button type="button" onClick={() => setShowPassword(!showPassword)}
+                                    title={showPassword ? t.auth.hidePassword : t.auth.showPassword}
                                     className="absolute right-3 top-1/2 -translate-y-1/2 text-[hsl(var(--muted-foreground))] hover:text-white">
                                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                                 </button>
@@ -103,15 +109,15 @@ export default function LoginPage() {
                             {isLoading ? (
                                 <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
                             ) : (
-                                <><LogIn size={18} /> Sign In</>
+                                <><LogIn size={18} /> {t.auth.signIn}</>
                             )}
                         </button>
                     </form>
 
                     <p className="mt-6 text-center text-sm text-[hsl(var(--muted-foreground))]">
-                        Don&apos;t have an account?{' '}
+                        {t.auth.noAccount}{' '}
                         <Link href="/register" className="text-[hsl(var(--primary))] hover:underline font-medium">
-                            <UserPlus size={14} className="inline mr-1" />Create account
+                            <UserPlus size={14} className="inline mr-1" />{t.auth.createAccount}
                         </Link>
                     </p>
                 </div>

@@ -12,6 +12,7 @@ import {
     FileText, CheckSquare,
 } from 'lucide-react';
 import { useState } from 'react';
+import { useT } from '@/i18n/useT';
 
 const iconMap: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
     LayoutDashboard, Users, UserCog, Briefcase,
@@ -21,88 +22,52 @@ const iconMap: Record<string, React.ComponentType<{ size?: number; className?: s
     FileText, CheckSquare,
 };
 
-interface NavChild {
-    label: string;
-    href: string;
-    icon: string;
-}
-
-interface NavItem {
-    label: string;
-    href?: string;
-    icon: string;
-    children?: readonly NavChild[];
-}
+interface NavChild { labelKey: string; href: string; icon: string; }
+interface NavItem  { labelKey: string; href?: string; icon: string; children?: readonly NavChild[]; }
 
 const NAV: NavItem[] = [
-    { label: 'Dashboard', href: '/dashboard', icon: 'LayoutDashboard' },
-
-    // ── Marketing ──────────────────────────────────────────────────────────────
-    {
-        label: 'Marketing', icon: 'Megaphone',
-        children: [
-            { label: 'Campaigns',       href: '/dashboard/marketing/campaigns',       icon: 'Megaphone' },
-            { label: 'Content Tracker', href: '/dashboard/marketing/content-tracker', icon: 'FileVideo' },
-        ],
-    },
-
-    // ── CRM & Sales ────────────────────────────────────────────────────────────
-    {
-        label: 'CRM & Sales', icon: 'Users',
-        children: [
-            { label: 'Customers',    href: '/dashboard/crm/customers',    icon: 'Users' },
-            { label: 'Sales Leads',  href: '/dashboard/crm/sales-leads',  icon: 'TrendingUp' },
-            { label: 'Sales Orders', href: '/dashboard/crm/sales-orders', icon: 'ShoppingCart' },
-        ],
-    },
-
-    // ── Operations (Work Orders) ───────────────────────────────────────────────
-    {
-        label: 'Operations', icon: 'Wrench',
-        children: [
-            { label: 'Work Orders',          href: '/dashboard/erp/work-orders',          icon: 'Wrench' },
-            { label: 'Employee Evaluations', href: '/dashboard/erp/employee-evaluations', icon: 'Star' },
-            { label: 'Employees',            href: '/dashboard/erp/employees',            icon: 'UserCog' },
-        ],
-    },
-
-    // ── Customer Service ───────────────────────────────────────────────────────
-    {
-        label: 'Customer Service', icon: 'Headphones',
-        children: [
-            { label: 'Follow-Ups', href: '/dashboard/customer-service/follow-ups', icon: 'ClipboardList' },
-            { label: 'Feedback',   href: '/dashboard/customer-service/feedback',   icon: 'MessageSquare' },
-        ],
-    },
-
-    // ── Inventory ──────────────────────────────────────────────────────────────
-    {
-        label: 'Inventory', icon: 'Package',
-        children: [
-            { label: 'Spare Parts', href: '/dashboard/inventory/inventory-items', icon: 'Layers' },
-            { label: 'Products',    href: '/dashboard/inventory/products',        icon: 'Package' },
-            { label: 'Categories',  href: '/dashboard/inventory/categories',      icon: 'FolderTree' },
-            { label: 'Stock',       href: '/dashboard/inventory/stock',           icon: 'ArrowUpDown' },
-        ],
-    },
-
-    // ── ERP / Finance ──────────────────────────────────────────────────────────
-    {
-        label: 'Finance', icon: 'Briefcase',
-        children: [
-            { label: 'Invoices', href: '/dashboard/erp/invoices', icon: 'FileText' },
-            { label: 'Tasks',    href: '/dashboard/erp/tasks',    icon: 'CheckSquare' },
-        ],
-    },
+    { labelKey: 'dashboard', href: '/dashboard', icon: 'LayoutDashboard' },
+    { labelKey: 'marketing', icon: 'Megaphone', children: [
+        { labelKey: 'campaigns',       href: '/dashboard/marketing/campaigns',       icon: 'Megaphone' },
+        { labelKey: 'contentTracker',  href: '/dashboard/marketing/content-tracker', icon: 'FileVideo' },
+    ]},
+    { labelKey: 'crmSales', icon: 'Users', children: [
+        { labelKey: 'customers',    href: '/dashboard/crm/customers',    icon: 'Users' },
+        { labelKey: 'salesLeads',   href: '/dashboard/crm/sales-leads',  icon: 'TrendingUp' },
+        { labelKey: 'salesOrders',  href: '/dashboard/crm/sales-orders', icon: 'ShoppingCart' },
+    ]},
+    { labelKey: 'operations', icon: 'Wrench', children: [
+        { labelKey: 'workOrders',           href: '/dashboard/erp/work-orders',          icon: 'Wrench' },
+        { labelKey: 'employeeEvaluations',  href: '/dashboard/erp/employee-evaluations', icon: 'Star' },
+        { labelKey: 'employees',            href: '/dashboard/erp/employees',            icon: 'UserCog' },
+    ]},
+    { labelKey: 'customerService', icon: 'Headphones', children: [
+        { labelKey: 'followUps', href: '/dashboard/customer-service/follow-ups', icon: 'ClipboardList' },
+        { labelKey: 'feedback',  href: '/dashboard/customer-service/feedback',   icon: 'MessageSquare' },
+    ]},
+    { labelKey: 'inventory', icon: 'Package', children: [
+        { labelKey: 'spareParts', href: '/dashboard/inventory/inventory-items', icon: 'Layers' },
+        { labelKey: 'products',   href: '/dashboard/inventory/products',        icon: 'Package' },
+        { labelKey: 'categories', href: '/dashboard/inventory/categories',      icon: 'FolderTree' },
+        { labelKey: 'stock',      href: '/dashboard/inventory/stock',           icon: 'ArrowUpDown' },
+    ]},
+    { labelKey: 'finance', icon: 'Briefcase', children: [
+        { labelKey: 'invoices', href: '/dashboard/erp/invoices', icon: 'FileText' },
+        { labelKey: 'tasks',    href: '/dashboard/erp/tasks',    icon: 'CheckSquare' },
+    ]},
 ];
 
 export default function Sidebar() {
     const pathname = usePathname();
-    const [openGroups, setOpenGroups] = useState<string[]>(['CRM & Sales', 'Operations']);
+    const t = useT();
+    const nav = t.nav;
+    const [openGroups, setOpenGroups] = useState<string[]>(['crmSales', 'operations']);
 
-    const toggle = (label: string) =>
+    const label = (key: string) => (nav as Record<string, string>)[key] ?? key;
+
+    const toggle = (key: string) =>
         setOpenGroups((prev) =>
-            prev.includes(label) ? prev.filter((g) => g !== label) : [...prev, label],
+            prev.includes(key) ? prev.filter((g) => g !== key) : [...prev, key],
         );
 
     return (
@@ -112,7 +77,7 @@ export default function Sidebar() {
                 <Image src="/logo.png" alt="ECDM" width={36} height={36} className="rounded-lg" />
                 <div>
                     <h1 className="text-sm font-bold">ECDM Core</h1>
-                    <p className="text-[10px] text-[hsl(var(--muted-foreground))]">ERP &amp; CRM Platform</p>
+                    <p className="text-[10px] text-[hsl(var(--muted-foreground))]">{nav.erpPlatform}</p>
                 </div>
             </div>
 
@@ -124,7 +89,7 @@ export default function Sidebar() {
                     if (item.href) {
                         const isActive = pathname === item.href;
                         return (
-                            <Link key={item.label} href={item.href}
+                            <Link key={item.labelKey} href={item.href}
                                 className={cn(
                                     'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all',
                                     isActive
@@ -132,23 +97,23 @@ export default function Sidebar() {
                                         : 'text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--secondary))] hover:text-white',
                                 )}>
                                 {Icon && <Icon size={18} />}
-                                {item.label}
+                                {label(item.labelKey)}
                             </Link>
                         );
                     }
 
-                    const isOpen = openGroups.includes(item.label);
+                    const isOpen = openGroups.includes(item.labelKey);
                     return (
-                        <div key={item.label}>
-                            <button onClick={() => toggle(item.label)}
+                        <div key={item.labelKey}>
+                            <button onClick={() => toggle(item.labelKey)}
                                 className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--secondary))] hover:text-white transition-all">
                                 {Icon && <Icon size={18} />}
-                                <span className="flex-1 text-left">{item.label}</span>
+                                <span className="flex-1 text-start">{label(item.labelKey)}</span>
                                 <ChevronDown size={14} className={cn('transition-transform', isOpen && 'rotate-180')} />
                             </button>
 
                             {isOpen && item.children && (
-                                <div className="ml-4 mt-1 space-y-1 border-l border-[hsl(var(--border))] pl-3">
+                                <div className="ms-4 mt-1 space-y-1 border-s border-[hsl(var(--border))] ps-3">
                                     {item.children.map((child) => {
                                         const ChildIcon = iconMap[child.icon];
                                         const isActive = pathname === child.href;
@@ -161,7 +126,7 @@ export default function Sidebar() {
                                                         : 'text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--secondary))] hover:text-white',
                                                 )}>
                                                 {ChildIcon && <ChildIcon size={15} />}
-                                                {child.label}
+                                                {label(child.labelKey)}
                                             </Link>
                                         );
                                     })}

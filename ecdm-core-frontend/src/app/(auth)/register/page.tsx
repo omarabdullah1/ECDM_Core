@@ -7,10 +7,14 @@ import { useAuthStore } from '@/features/auth/useAuth';
 import { cn } from '@/lib/utils';
 import { Eye, EyeOff, UserPlus } from 'lucide-react';
 import Link from 'next/link';
+import LangSwitcher from '@/components/ui/LangSwitcher';
+import { useT } from '@/i18n/useT';
 
 export default function RegisterPage() {
     const router = useRouter();
     const { register, isLoading } = useAuthStore();
+    const t = useT();
+    const r = t.auth.register;
     const [form, setForm] = useState({ firstName: '', lastName: '', email: '', password: '' });
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
@@ -45,17 +49,20 @@ export default function RegisterPage() {
                 </div>
                 <div className="relative z-10 p-12 text-center">
                     <Image src="/logo.png" alt="ECDM Solutions" width={80} height={80} className="mx-auto mb-8 rounded-2xl" />
-                    <h1 className="text-4xl font-bold text-white mb-4">Join ECDM Core</h1>
-                    <p className="text-lg text-white/60 max-w-sm">
-                        Create your account to start managing your business with an integrated ERP &amp; CRM platform.
-                    </p>
+                    <h1 className="text-4xl font-bold text-white mb-4">{r.joinTitle}</h1>
+                    <p className="text-lg text-white/60 max-w-sm">{r.branding}</p>
                 </div>
             </div>
 
             <div className="flex w-full lg:w-1/2 items-center justify-center p-8">
                 <div className="w-full max-w-md animate-fade-in">
-                    <h2 className="text-2xl font-bold mb-2">Create Account</h2>
-                    <p className="text-[hsl(var(--muted-foreground))] mb-8">Fill in your details to get started</p>
+                    <div className="mb-8 flex items-center justify-between">
+                        <div className="lg:hidden" />
+                        <LangSwitcher className="ms-auto" />
+                    </div>
+
+                    <h2 className="text-2xl font-bold mb-2">{r.title}</h2>
+                    <p className="text-[hsl(var(--muted-foreground))] mb-8">{r.subtitle}</p>
 
                     {error && (
                         <div className="mb-6 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
@@ -66,25 +73,25 @@ export default function RegisterPage() {
                     <form onSubmit={handleSubmit} className="space-y-5">
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className="mb-2 block text-sm font-medium text-[hsl(var(--muted-foreground))]">First Name</label>
+                                <label className="mb-2 block text-sm font-medium text-[hsl(var(--muted-foreground))]">{r.firstName}</label>
                                 <input type="text" value={form.firstName} onChange={update('firstName')} required
                                     className={inputCls} placeholder="Ahmed" />
                             </div>
                             <div>
-                                <label className="mb-2 block text-sm font-medium text-[hsl(var(--muted-foreground))]">Last Name</label>
+                                <label className="mb-2 block text-sm font-medium text-[hsl(var(--muted-foreground))]">{r.lastName}</label>
                                 <input type="text" value={form.lastName} onChange={update('lastName')} required
                                     className={inputCls} placeholder="Admin" />
                             </div>
                         </div>
 
                         <div>
-                            <label className="mb-2 block text-sm font-medium text-[hsl(var(--muted-foreground))]">Email</label>
+                            <label className="mb-2 block text-sm font-medium text-[hsl(var(--muted-foreground))]">{t.auth.email}</label>
                             <input type="email" value={form.email} onChange={update('email')} required
                                 className={inputCls} placeholder="you@ecdmsolutions.com" />
                         </div>
 
                         <div>
-                            <label className="mb-2 block text-sm font-medium text-[hsl(var(--muted-foreground))]">Password</label>
+                            <label className="mb-2 block text-sm font-medium text-[hsl(var(--muted-foreground))]">{t.auth.password}</label>
                             <div className="relative">
                                 <input type={showPassword ? 'text' : 'password'} value={form.password}
                                     onChange={update('password')} required minLength={8}
@@ -105,14 +112,14 @@ export default function RegisterPage() {
                             {isLoading ? (
                                 <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
                             ) : (
-                                <><UserPlus size={18} /> Create Account</>
+                                <><UserPlus size={18} /> {r.title}</>
                             )}
                         </button>
                     </form>
 
                     <p className="mt-6 text-center text-sm text-[hsl(var(--muted-foreground))]">
-                        Already have an account?{' '}
-                        <Link href="/login" className="text-[hsl(var(--primary))] hover:underline font-medium">Sign in</Link>
+                        {r.alreadyAccount}{' '}
+                        <Link href="/login" className="text-[hsl(var(--primary))] hover:underline font-medium">{r.signIn}</Link>
                     </p>
                 </div>
             </div>
