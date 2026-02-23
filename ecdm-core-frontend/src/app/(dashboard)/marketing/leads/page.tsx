@@ -3,12 +3,12 @@ import { useState, useEffect, useCallback } from 'react';
 import api from '@/lib/axios';
 import { TrendingUp, Plus, Edit2, Trash2, X, ChevronLeft, ChevronRight } from 'lucide-react';
 
-interface MarketingLead { _id: string; fullName: string; phone: string; email?: string; source: string; status: string; notes?: string; }
+interface MarketingLead { _id: string; contactName: string; phone: string; email?: string; source: string; status: string; notes?: string; }
 
 const iCls = 'w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-4 py-3 text-sm placeholder:text-[hsl(var(--muted-foreground))] focus:border-[hsl(var(--primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/20 transition-all';
 const SOURCES = ['Facebook', 'Instagram', 'TikTok', 'Snapchat', 'GoogleAds', 'Website', 'Referral', 'WhatsApp', 'Cold Call', 'Exhibition', 'Other'];
 const STATUSES = ['New', 'Contacted', 'Qualified', 'Converted', 'Disqualified'];
-const blank = { fullName: '', phone: '', email: '', source: '', status: 'New', notes: '' };
+const blank = { contactName: '', phone: '', email: '', source: '', status: 'New', notes: '' };
 
 export default function MarketingLeadsPage() {
   const [rows, setRows] = useState<MarketingLead[]>([]);
@@ -37,7 +37,7 @@ export default function MarketingLeadsPage() {
   useEffect(() => { fetch_(); }, [fetch_]);
 
   const openC = () => { setEditing(null); setForm(blank); setError(''); setModal(true); };
-  const openE = (r: MarketingLead) => { setEditing(r); setForm({ fullName: r.fullName, phone: r.phone, email: r.email || '', source: r.source, status: r.status, notes: r.notes || '' }); setError(''); setModal(true); };
+  const openE = (r: MarketingLead) => { setEditing(r); setForm({ contactName: r.contactName, phone: r.phone, email: r.email || '', source: r.source, status: r.status, notes: r.notes || '' }); setError(''); setModal(true); };
   const save = async (ev: React.FormEvent) => {
     ev.preventDefault(); setSaving(true); setError('');
     const pl: Record<string, unknown> = {};
@@ -75,7 +75,7 @@ export default function MarketingLeadsPage() {
             <tbody>
               {rows.map(r => (
                 <tr key={r._id} className="border-b border-[hsl(var(--border))]/50 hover:bg-[hsl(var(--muted))]/20">
-                  <td className="px-4 py-3 font-medium">{r.fullName}</td>
+                  <td className="px-4 py-3 font-medium">{r.contactName}</td>
                   <td className="px-4 py-3">{r.phone}</td>
                   <td className="px-4 py-3">{r.email || '—'}</td>
                   <td className="px-4 py-3">{r.source}</td>
@@ -102,7 +102,7 @@ export default function MarketingLeadsPage() {
           <div className="w-full max-w-lg rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6 shadow-2xl">
             <div className="flex items-center justify-between mb-6"><h2 className="text-lg font-bold">{editing ? 'Edit Lead' : 'Add Lead'}</h2><button onClick={() => setModal(false)}><X className="h-5 w-5" /></button></div>
             <form onSubmit={save} className="space-y-4">
-              <input required placeholder="Full Name" value={form.fullName} onChange={u('fullName')} className={iCls} />
+              <input required placeholder="Full Name" value={form.contactName} onChange={u('contactName')} className={iCls} />
               <input required placeholder="Phone" value={form.phone} onChange={u('phone')} className={iCls} />
               <input placeholder="Email" value={form.email} onChange={u('email')} className={iCls} />
               <select required value={form.source} onChange={u('source')} className={iCls}><option value="">Select Source</option>{SOURCES.map(s => <option key={s} value={s}>{s}</option>)}</select>

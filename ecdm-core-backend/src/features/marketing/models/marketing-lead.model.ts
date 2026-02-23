@@ -3,7 +3,7 @@ import { IMarketingLeadDocument, MarketingLeadSource, MarketingLeadStatus } from
 
 const marketingLeadSchema = new Schema<IMarketingLeadDocument>(
     {
-        title:       { type: String, required: [true, 'Lead title is required'], trim: true, maxlength: 200 },
+        title:       { type: String, trim: true, maxlength: 200 },
         contactName: { type: String, required: [true, 'Contact name is required'], trim: true },
         email:       { type: String, trim: true, lowercase: true },
         phone:       { type: String, trim: true },
@@ -25,6 +25,12 @@ const marketingLeadSchema = new Schema<IMarketingLeadDocument>(
     },
     { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } },
 );
+
+// Auto-generate title from contactName if not provided
+marketingLeadSchema.pre('save', function (next) {
+    if (!this.title) this.title = this.contactName;
+    next();
+});
 
 marketingLeadSchema.index({ status:     1 });
 marketingLeadSchema.index({ source:     1 });

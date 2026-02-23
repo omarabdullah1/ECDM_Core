@@ -3,8 +3,11 @@ import { CreateMarketingLeadInput, UpdateMarketingLeadInput } from '../validatio
 import { IMarketingLeadDocument } from '../types/marketing-leads.types';
 import { AppError } from '../../../utils/apiError';
 
-export const create = async (data: CreateMarketingLeadInput): Promise<IMarketingLeadDocument> =>
-    MarketingLead.create(data);
+export const create = async (data: CreateMarketingLeadInput & Record<string, unknown>): Promise<IMarketingLeadDocument> => {
+    // Allow frontend to send fullName instead of contactName
+    if (!data.contactName && data.fullName) data.contactName = data.fullName as string;
+    return MarketingLead.create(data);
+};
 
 export const getAll = async (query: Record<string, unknown>) => {
     const { page = 1, limit = 10, search, source, status, campaign, assignedTo } = query;

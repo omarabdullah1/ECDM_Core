@@ -2,11 +2,20 @@ import { Document, Types } from 'mongoose';
 
 // Channel through which the inbound lead was captured
 export enum MarketingLeadSource {
-    Web      = 'Web',
-    Referral = 'Referral',
-    Social   = 'Social',
-    Campaign = 'Campaign',
-    Other    = 'Other',
+    Web        = 'Web',
+    Website    = 'Website',
+    Referral   = 'Referral',
+    Social     = 'Social',
+    Campaign   = 'Campaign',
+    Facebook   = 'Facebook',
+    Instagram  = 'Instagram',
+    TikTok     = 'TikTok',
+    Snapchat   = 'Snapchat',
+    GoogleAds  = 'GoogleAds',
+    WhatsApp   = 'WhatsApp',
+    ColdCall   = 'Cold Call',
+    Exhibition = 'Exhibition',
+    Other      = 'Other',
 }
 
 // Lifecycle status of an inbound marketing lead
@@ -19,7 +28,7 @@ export enum MarketingLeadStatus {
 }
 
 export interface IMarketingLead {
-    title:       string;
+    title?:      string;
     contactName: string;
     email?:      string;
     phone?:      string;

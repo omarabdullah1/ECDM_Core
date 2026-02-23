@@ -2,8 +2,9 @@ import { z } from 'zod';
 import { MarketingLeadSource, MarketingLeadStatus } from '../types/marketing-leads.types';
 
 export const createMarketingLeadSchema = z.object({
-    title:       z.string().min(1, 'Title is required').max(200),
-    contactName: z.string().min(1, 'Contact name is required'),
+    title:       z.string().max(200).optional(),
+    contactName: z.string().min(1, 'Contact name is required').optional(),
+    fullName:    z.string().min(1, 'Name is required').optional(),
     email:       z.string().email().optional(),
     phone:       z.string().optional(),
     company:     z.string().optional(),
