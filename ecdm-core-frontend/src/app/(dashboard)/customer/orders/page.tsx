@@ -54,8 +54,8 @@ export default function CustomerOrdersPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3"><Package className="h-7 w-7 text-[hsl(var(--primary))]" /><h1 className="text-2xl font-bold">'Customer Orders'</h1></div>
-        <button onClick={openC} className="flex items-center gap-2 rounded-xl bg-[hsl(var(--primary))] px-4 py-2 text-sm font-semibold text-[hsl(var(--primary-foreground))] hover:opacity-90 transition-opacity"><Plus className="h-4 w-4" />'Add'</button>
+        <div className="flex items-center gap-3"><Package className="h-7 w-7 text-[hsl(var(--primary))]" /><h1 className="text-2xl font-bold">Customer Orders</h1></div>
+        <button onClick={openC} className="flex items-center gap-2 rounded-xl bg-[hsl(var(--primary))] px-4 py-2 text-sm font-semibold text-[hsl(var(--primary-foreground))] hover:opacity-90 transition-opacity"><Plus className="h-4 w-4" />Add</button>
       </div>
 
       <div className="flex gap-3 flex-wrap">
