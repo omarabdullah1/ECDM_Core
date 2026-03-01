@@ -54,3 +54,12 @@ export const deleteWorkOrder = async (id: string) => {
     const item = await WorkOrder.findByIdAndDelete(id);
     if (!item) throw new AppError('Work order not found', 404);
 };
+
+/**
+ * Bulk delete multiple work orders by IDs.
+ * Admin-only operation.
+ */
+export const bulkDelete = async (ids: string[]): Promise<{ deletedCount: number }> => {
+    const result = await WorkOrder.deleteMany({ _id: { $in: ids } });
+    return { deletedCount: result.deletedCount };
+};

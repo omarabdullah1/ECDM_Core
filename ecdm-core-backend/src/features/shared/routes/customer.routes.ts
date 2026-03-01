@@ -1,17 +1,20 @@
 import { Router } from 'express';
 import * as ctrl from '../controllers/customer.controller';
-import { authenticate, authorise } from '../../../middlewares/auth.middleware';
-import { validate } from '../../../middlewares/validate.middleware';
-import { createCustomerSchema, updateCustomerSchema } from '../validation/customer.validation';
+import { authenticate, authorise, isAdmin } from '../../../middlewares/auth.middleware';
 import { UserRole } from '../../auth/auth.types';
 
 const router = Router();
 router.use(authenticate);
 
-router.post('/',      validate(createCustomerSchema), ctrl.create);
-router.get('/',       ctrl.getAll);
-router.get('/:id',    ctrl.getById);
-router.put('/:id',    validate(updateCustomerSchema), ctrl.update);
-router.delete('/:id', authorise(UserRole.SuperAdmin, UserRole.Manager), ctrl.remove);
+// TEMPORARY: Database patch endpoint to fix missing customerIds
+router.get('/patch-ids',    isAdmin, ctrl.patchMissingIds);
+
+router.post('/',            ctrl.create);
+router.get('/',             ctrl.getAll);
+router.get('/:id',          ctrl.getById);
+router.get('/:id/history',  ctrl.getHistory);  // History/timeline across all modules
+router.put('/:id',          ctrl.update);
+router.delete('/:id',       authorise(UserRole.SuperAdmin, UserRole.Manager), ctrl.remove);
+router.post('/bulk-delete', isAdmin, ctrl.bulkDelete);  // Admin-only bulk delete
 
 export default router;

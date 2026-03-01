@@ -36,3 +36,12 @@ export const deleteEmployee = async (id: string): Promise<void> => {
     const emp = await Employee.findByIdAndDelete(id);
     if (!emp) throw new AppError('Employee not found', 404);
 };
+
+/**
+ * Bulk delete multiple employees by IDs.
+ * Admin-only operation.
+ */
+export const bulkDelete = async (ids: string[]): Promise<{ deletedCount: number }> => {
+    const result = await Employee.deleteMany({ _id: { $in: ids } });
+    return { deletedCount: result.deletedCount };
+};

@@ -9,18 +9,27 @@
     "start": "node dist/server.js",
     "lint": "eslint src/**/*.ts"
   },
-  "keywords": ["erp", "crm", "ecdm"],
+  "keywords": [
+    "erp",
+    "crm",
+    "ecdm"
+  ],
   "author": "ECDM Solutions",
   "license": "UNLICENSED",
   "dependencies": {
+    "@types/multer": "^2.0.0",
+    "@types/xlsx": "^0.0.35",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "express-rate-limit": "^7.5.0",
+    "googleapis": "^171.4.0",
     "helmet": "^8.0.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.10.1",
+    "multer": "^2.0.2",
+    "xlsx": "^0.18.5",
     "zod": "^3.24.2"
   },
   "devDependencies": {

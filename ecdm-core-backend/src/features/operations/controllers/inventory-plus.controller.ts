@@ -81,3 +81,40 @@ export const getStockMovementById = async (req: Request, res: Response, next: Ne
     try { sendSuccess(res, { item: await svc.getStockMovementById(String(req.params.id)) }); }
     catch (e) { next(e); }
 };
+
+// ── Bulk Delete Operations (Admin-only) ───────────────────────────────────────
+export const bulkDeleteItems = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+        const { ids } = req.body;
+        if (!ids || !Array.isArray(ids) || ids.length === 0) {
+            sendSuccess(res, null, 'Missing or invalid ids array', 400);
+            return;
+        }
+        const result = await svc.bulkDeleteItems(ids);
+        sendSuccess(res, { deletedCount: result.deletedCount }, `Successfully deleted ${result.deletedCount} inventory items`);
+    } catch (e) { next(e); }
+};
+
+export const bulkDeleteCategories = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+        const { ids } = req.body;
+        if (!ids || !Array.isArray(ids) || ids.length === 0) {
+            sendSuccess(res, null, 'Missing or invalid ids array', 400);
+            return;
+        }
+        const result = await svc.bulkDeleteCategories(ids);
+        sendSuccess(res, { deletedCount: result.deletedCount }, `Successfully deleted ${result.deletedCount} categories`);
+    } catch (e) { next(e); }
+};
+
+export const bulkDeleteProducts = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+        const { ids } = req.body;
+        if (!ids || !Array.isArray(ids) || ids.length === 0) {
+            sendSuccess(res, null, 'Missing or invalid ids array', 400);
+            return;
+        }
+        const result = await svc.bulkDeleteProducts(ids);
+        sendSuccess(res, { deletedCount: result.deletedCount }, `Successfully deleted ${result.deletedCount} products`);
+    } catch (e) { next(e); }
+};

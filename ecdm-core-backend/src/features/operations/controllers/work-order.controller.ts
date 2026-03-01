@@ -22,3 +22,23 @@ export const remove = async (req: Request, res: Response, next: NextFunction) =>
     try { await svc.deleteWorkOrder(String(req.params.id)); sendSuccess(res, null, 'Work order deleted'); }
     catch (e) { next(e); }
 };
+
+/**
+ * POST /api/operations/work-orders/bulk-delete
+ * Admin-only: Deletes multiple work orders by their IDs.
+ */
+export const bulkDelete = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+        const { ids } = req.body;
+        
+        if (!ids || !Array.isArray(ids) || ids.length === 0) {
+            sendSuccess(res, null, 'Missing or invalid ids array', 400);
+            return;
+        }
+        
+        const result = await svc.bulkDelete(ids);
+        sendSuccess(res, { deletedCount: result.deletedCount }, `Successfully deleted ${result.deletedCount} work orders`);
+    } catch (e) {
+        next(e);
+    }
+};

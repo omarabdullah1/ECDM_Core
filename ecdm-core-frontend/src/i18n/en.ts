@@ -10,8 +10,8 @@ export interface Translations {
   };
   nav: {
     dashboard: string; marketing: string; marketingLeads: string; marketingData: string;
-    sales: string; salesLeads: string; salesData: string; salesOrders: string;
-    customer: string; customerOrders: string; customerFollowUp: string; customerFeedback: string;
+    sales: string; salesLeads: string; salesData: string; salesFollowUps: string; salesOrders: string;
+    customer: string; customersList: string; customerOrders: string; customerFollowUp: string; customerFeedback: string;
     operations: string; workOrder: string; inventoryPlus: string; reportOperation: string;
     erpPlatform: string;
   };
@@ -215,8 +215,10 @@ const en: Translations = {
     sales: 'Sales',
     salesLeads: 'Sales Leads',
     salesData: 'Sales Data',
+    salesFollowUps: 'Sales Follow-ups',
     salesOrders: 'Sales Orders',
     customer: 'Customer',
+    customersList: 'Customers List',
     customerOrders: 'Customer Orders',
     customerFollowUp: 'Follow-Up',
     customerFeedback: 'Feedback',

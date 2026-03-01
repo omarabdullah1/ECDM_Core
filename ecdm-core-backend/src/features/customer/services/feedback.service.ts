@@ -43,3 +43,12 @@ export const remove = async (id: string): Promise<void> => {
     const doc = await Feedback.findByIdAndDelete(id);
     if (!doc) throw new AppError('Feedback not found', 404);
 };
+
+/**
+ * Bulk delete multiple feedback records by IDs.
+ * Admin-only operation.
+ */
+export const bulkDelete = async (ids: string[]): Promise<{ deletedCount: number }> => {
+    const result = await Feedback.deleteMany({ _id: { $in: ids } });
+    return { deletedCount: result.deletedCount };
+};

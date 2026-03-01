@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { sendSuccess } from '../../utils/apiResponse';
 
 // ── Models ──────────────────────────────────────────────────────────
-import Customer from '../shared/models/customer.model';
+import Customer from '../shared/models/contact.model';
 import MarketingLead from '../marketing/models/marketing-lead.model';
 import SalesOrder from '../sales/models/sales-order.model';
 import WorkOrder from '../operations/models/work-order.model';

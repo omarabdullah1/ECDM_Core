@@ -56,7 +56,6 @@ const inventoryItemSchema = new Schema<IInventoryItemDocument>(
     },
 );
 
-inventoryItemSchema.index({ stockNumber: 1 }, { unique: true });
 inventoryItemSchema.index({ status:      1 });
 inventoryItemSchema.index({ category:    1 });
 inventoryItemSchema.index({ itemName:    'text' });

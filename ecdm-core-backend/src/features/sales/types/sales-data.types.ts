@@ -9,16 +9,30 @@ export enum SalesDataCallOutcome {
     Rejected   = 'Rejected',
 }
 
+// Yes/No enum for Order and Follow-Up fields
+export enum YesNo {
+    Yes = 'Yes',
+    No  = 'No',
+}
+
+export type TypeOfOrder = 'Maintenance' | 'General supplies' | 'Supply and installation';
+export type SalesPlatform = 'Online' | 'In Side' | 'Phone' | 'Out side' | 'Data';
+
 export interface ISalesData {
-    // The MarketingData record being worked on
-    marketingData:   Types.ObjectId;    // → MarketingData
-    // Sales rep making the call
-    salesPerson:     Types.ObjectId;    // → User
-    // If the call succeeds and a Customer is created, link it here
-    customer?:       Types.ObjectId;    // → Customer (shared)
+    // The MarketingData record being worked on (optional for Excel imports)
+    marketingData?:  Types.ObjectId;    // → MarketingData
+    // Sales rep making the call (optional for Excel imports)
+    salesPerson?:    Types.ObjectId;    // → User
+    // Customer reference (required - SSOT)
+    customer:        Types.ObjectId;    // → Customer (shared)
 
     callDate?:       Date;
     callOutcome:     SalesDataCallOutcome;
+    typeOfOrder?:    TypeOfOrder | '';    // Restricted to specific values
+    salesPlatform?:  SalesPlatform | '';  // Restricted to specific values
+    issue?:          string;              // Issue/Problem description
+    order?:          YesNo | '';          // Restricted to Yes/No
+    followUp?:       YesNo | '';          // Restricted to Yes/No
     followUpDate?:   Date;
     notes?:          string;
     createdAt:       Date;

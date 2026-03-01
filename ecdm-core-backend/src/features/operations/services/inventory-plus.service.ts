@@ -45,6 +45,15 @@ export const deleteItem = async (id: string) => {
     if (!item) throw new AppError('Inventory item not found', 404);
 };
 
+/**
+ * Bulk delete multiple inventory items by IDs.
+ * Admin-only operation.
+ */
+export const bulkDeleteItems = async (ids: string[]): Promise<{ deletedCount: number }> => {
+    const result = await InventoryItem.deleteMany({ _id: { $in: ids } });
+    return { deletedCount: result.deletedCount };
+};
+
 // ── Category ──────────────────────────────────────────────────────────────────
 export const createCategory = async (data: CreateCategoryInput) => Category.create(data);
 
@@ -77,6 +86,15 @@ export const updateCategory = async (id: string, data: UpdateCategoryInput) => {
 export const deleteCategory = async (id: string) => {
     const item = await Category.findByIdAndDelete(id);
     if (!item) throw new AppError('Category not found', 404);
+};
+
+/**
+ * Bulk delete multiple categories by IDs.
+ * Admin-only operation.
+ */
+export const bulkDeleteCategories = async (ids: string[]): Promise<{ deletedCount: number }> => {
+    const result = await Category.deleteMany({ _id: { $in: ids } });
+    return { deletedCount: result.deletedCount };
 };
 
 // ── Product ───────────────────────────────────────────────────────────────────
@@ -112,6 +130,15 @@ export const updateProduct = async (id: string, data: UpdateProductInput) => {
 export const deleteProduct = async (id: string) => {
     const item = await Product.findByIdAndDelete(id);
     if (!item) throw new AppError('Product not found', 404);
+};
+
+/**
+ * Bulk delete multiple products by IDs.
+ * Admin-only operation.
+ */
+export const bulkDeleteProducts = async (ids: string[]): Promise<{ deletedCount: number }> => {
+    const result = await Product.deleteMany({ _id: { $in: ids } });
+    return { deletedCount: result.deletedCount };
 };
 
 // ── StockMovement ─────────────────────────────────────────────────────────────

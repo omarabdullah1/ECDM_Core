@@ -2,6 +2,7 @@ import express, { Application } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
+import path from 'path';
 import { errorHandler } from './middlewares/errorHandler.middleware';
 
 // ── Auth ────────────────────────────────────────────────────────────
@@ -13,12 +14,14 @@ import sharedEmployeeRoutes  from './features/shared/routes/employee.routes';
 
 // ── Marketing domain ────────────────────────────────────────────────
 import marketingLeadsRoutes  from './features/marketing/routes/marketing-leads.routes';
-import marketingDataRoutes   from './features/marketing/routes/marketing-data.routes';
+import syncRoutes            from './features/marketing/routes/sync.routes';
+import savedSheetsRoutes     from './features/marketing/routes/saved-sheets.routes';
 
 // ── Sales domain ────────────────────────────────────────────────────
 import salesLeadsRoutes      from './features/sales/routes/sales-leads.routes';
 import salesDataRoutes       from './features/sales/routes/sales-data.routes';
 import salesOrderRoutes      from './features/sales/routes/sales-order.routes';
+import salesFollowUpRoutes   from './features/sales/routes/sales-followup.routes';
 
 // ── Customer domain ─────────────────────────────────────────────────
 import customerOrderRoutes   from './features/customer/routes/customer-order.routes';
@@ -87,6 +90,12 @@ app.use(
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
+// ── Static file serving (Uploaded files) ────────────────────────────
+// Use absolute path to ensure correct resolution
+const uploadsPath = path.join(__dirname, '../uploads');
+app.use('/uploads', express.static(uploadsPath));
+console.log('📁 Serving static files from:', uploadsPath);
+
 // ── Health check ────────────────────────────────────────────────────
 app.get('/api/health', (_req, res) => {
     res.json({ success: true, data: { status: 'ok' }, message: 'ECDM Core is running 🚀' });
@@ -100,13 +109,15 @@ app.use('/api/shared/customers',  sharedCustomerRoutes);
 app.use('/api/shared/employees',  sharedEmployeeRoutes);
 
 // Marketing
-app.use('/api/marketing/leads',   marketingLeadsRoutes);
-app.use('/api/marketing/data',    marketingDataRoutes);
+app.use('/api/marketing/leads',        marketingLeadsRoutes);
+app.use('/api/marketing/sync',         syncRoutes);
+app.use('/api/marketing/saved-sheets', savedSheetsRoutes);
 
 // Sales
 app.use('/api/sales/leads',       salesLeadsRoutes);
 app.use('/api/sales/data',        salesDataRoutes);
 app.use('/api/sales/orders',      salesOrderRoutes);
+app.use('/api/sales/follow-ups',  salesFollowUpRoutes);
 
 // Customer
 app.use('/api/customer/orders',     customerOrderRoutes);

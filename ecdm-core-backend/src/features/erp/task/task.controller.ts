@@ -54,3 +54,23 @@ export const remove = async (req: Request, res: Response, next: NextFunction): P
         next(err);
     }
 };
+
+/**
+ * POST /api/erp/tasks/bulk-delete
+ * Admin-only: Deletes multiple tasks by their IDs.
+ */
+export const bulkDelete = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+        const { ids } = req.body;
+        
+        if (!ids || !Array.isArray(ids) || ids.length === 0) {
+            sendSuccess(res, null, 'Missing or invalid ids array', 400);
+            return;
+        }
+        
+        const result = await taskService.bulkDelete(ids);
+        sendSuccess(res, { deletedCount: result.deletedCount }, `Successfully deleted ${result.deletedCount} tasks`);
+    } catch (err) {
+        next(err);
+    }
+};

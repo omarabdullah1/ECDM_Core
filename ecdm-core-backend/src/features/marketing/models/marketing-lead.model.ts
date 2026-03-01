@@ -1,17 +1,30 @@
 import mongoose, { Schema, Model } from 'mongoose';
 import { IMarketingLeadDocument, MarketingLeadSource, MarketingLeadStatus } from '../types/marketing-leads.types';
 
+/**
+ * MarketingLead Schema - Marketing pipeline module
+ * 
+ * References Customer (SSOT) for demographic data.
+ * Uses Customer.customerId as the global human-readable ID.
+ * Stores only marketing-specific pipeline information.
+ */
 const marketingLeadSchema = new Schema<IMarketingLeadDocument>(
     {
-        title:       { type: String, trim: true, maxlength: 200 },
-        contactName: { type: String, required: [true, 'Contact name is required'], trim: true },
-        email:       { type: String, trim: true, lowercase: true },
-        phone:       { type: String, trim: true },
-        company:     { type: String, trim: true },
+        // Reference to Customer (Single Source of Truth)
+        customerId: {
+            type:     Schema.Types.ObjectId,
+            ref:      'Customer',
+            required: [true, 'Customer reference is required'],
+            index:    true,
+        },
+        
+        date:   { type: Date, default: Date.now },
+        notes:  { type: String, maxlength: 2000 },
+        
+        // Marketing-specific fields
         source: {
-            type:    String,
-            enum:    Object.values(MarketingLeadSource),
-            default: MarketingLeadSource.Other,
+            type: String,
+            enum: Object.values(MarketingLeadSource),
         },
         status: {
             type:    String,
@@ -21,24 +34,22 @@ const marketingLeadSchema = new Schema<IMarketingLeadDocument>(
         value:      { type: Number, min: 0 },
         campaign:   { type: Schema.Types.ObjectId, ref: 'Campaign' },
         assignedTo: { type: Schema.Types.ObjectId, ref: 'User' },
-        notes:      { type: String, maxlength: 2000 },
+        
+        // Legacy fields for backward compatibility (deprecated)
+        title:       { type: String, trim: true, maxlength: 200 },
+        contactName: { type: String, trim: true },
+        email:       { type: String, trim: true, lowercase: true },
+        company:     { type: String, trim: true },
     },
     { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } },
 );
-
-// Auto-generate title from contactName if not provided
-marketingLeadSchema.pre('save', function (next) {
-    if (!this.title) this.title = this.contactName;
-    next();
-});
 
 marketingLeadSchema.index({ status:     1 });
 marketingLeadSchema.index({ source:     1 });
 marketingLeadSchema.index({ assignedTo: 1 });
 marketingLeadSchema.index({ campaign:   1 });
-marketingLeadSchema.index({ title: 'text', contactName: 'text', company: 'text' });
+marketingLeadSchema.index({ customerId: 1 });
 
-// Mongoose model name: 'MarketingLead' → MongoDB collection: 'marketingleads'
 const MarketingLead: Model<IMarketingLeadDocument> =
     mongoose.model<IMarketingLeadDocument>('MarketingLead', marketingLeadSchema);
 export default MarketingLead;

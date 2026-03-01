@@ -49,3 +49,31 @@ export const authorise = (...roles: UserRole[]) => {
         next();
     };
 };
+
+/**
+ * Admin-only middleware — restricts access to SuperAdmin and Manager (Admin) roles.
+ * Use this for sensitive operations like bulk delete.
+ * 
+ * @description
+ * This middleware MUST be applied AFTER the authenticate middleware.
+ * It checks if the authenticated user has admin privileges (SuperAdmin or Manager).
+ * Returns 403 Forbidden if the user lacks admin access.
+ * 
+ * @example
+ * // Usage in routes:
+ * router.post('/bulk-delete', isAdmin, ctrl.bulkDelete);
+ */
+export const isAdmin = (req: Request, _res: Response, next: NextFunction): void => {
+    // Define admin roles - SuperAdmin has full access, Manager has admin-level access
+    const adminRoles: UserRole[] = [UserRole.SuperAdmin, UserRole.Manager];
+    
+    if (!req.user) {
+        return next(new AppError('Forbidden: Authentication required', 401));
+    }
+    
+    if (!adminRoles.includes(req.user.role)) {
+        return next(new AppError('Forbidden: Admin access required. Only SuperAdmin or Manager roles can perform this action.', 403));
+    }
+    
+    next();
+};

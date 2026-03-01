@@ -1,10 +1,16 @@
 import { z } from 'zod';
+import { FollowUpStatus } from '../types/follow-up.types';
 
 export const createFollowUpSchema = z.object({
-    workOrder:            z.string().min(1, 'Work order ID is required'),
+    // Source references (at least one optional, or it's a manual entry)
+    workOrder:            z.string().optional(),
+    leadId:               z.string().optional(),
+    salesDataId:          z.string().optional(),
+    
     customer:             z.string().min(1, 'Customer ID is required'),
-    csr:                  z.string().min(1, 'CSR user ID is required'),
-    solvedIssue:          z.boolean(),
+    csr:                  z.string().optional(),
+    status:               z.nativeEnum(FollowUpStatus).optional(),
+    solvedIssue:          z.boolean().optional(),
     reasonForNotSolving:  z.string().max(1000).optional(),
     followUpDate:         z.string().min(1, 'Follow-up date is required'),
     notes:                z.string().max(2000).optional(),

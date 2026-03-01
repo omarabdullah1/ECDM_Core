@@ -1,30 +1,47 @@
 import { Document, Types } from 'mongoose';
 
-// The confirmed service/product request that follows a Won SalesOrder
-export enum CustomerOrderStatus {
-    Pending    = 'Pending',     // Awaiting scheduling
-    Scheduled  = 'Scheduled',   // Site visit / work date set
-    InProgress = 'In Progress', // Work order(s) have been created
-    Completed  = 'Completed',   // All work orders done
-    Cancelled  = 'Cancelled',
+// Device Pickup Type Options
+export enum DevicePickupType {
+    CustomerDropOff = 'Customer Drop-off',
+    CompanyPickup   = 'Company Pickup',
+    OnSiteRepair    = 'On-site Repair',
+    NotSet          = '',
+}
+
+// Deal Status Options
+export enum DealStatus {
+    Pending  = 'Pending',
+    Approved = 'Approved',
+    Rejected = 'Rejected',
+    Done     = 'Done',
+    NotSet   = '',
 }
 
 export interface ICustomerOrder {
     // Core references
-    customer:      Types.ObjectId;    // → Customer (shared) — always required
-    salesOrder:    Types.ObjectId;    // → SalesOrder — the Won quotation
-    // Work orders spawned from this customer order (can be multiple)
-    workOrders?:   Types.ObjectId[];  // → WorkOrder[]
-
-    // Confirmed service definition
-    serviceDescription: string;
-    scheduledDate?:     Date;
-    completedDate?:     Date;
-    status:             CustomerOrderStatus;
-
-    notes?:    string;
-    createdAt: Date;
-    updatedAt: Date;
+    customerId:    Types.ObjectId;    // → Customer (shared SSOT) — always required
+    salesOrderId:  Types.ObjectId;    // → SalesOrder — the originating sales order
+    
+    // Inherited fields (copied at creation for historic snapshot)
+    typeOfOrder?:       string;
+    issue?:             string;
+    scheduledVisitDate?: Date;  // Inherited from Sales Order's siteInspectionDate
+    
+    // Operational Fields (New)
+    engineerName?:       string;  // Or ObjectId referencing User/Employee
+    actualVisitDate?:    Date;
+    devicePickupType?:   DevicePickupType;
+    deal?:               DealStatus;
+    cost?:               number;
+    startDate?:          Date;
+    endDate?:            Date;
+    deviceReturnedDate?: Date;
+    notes?:              string;
+    
+    // Tracking
+    updatedBy?:   Types.ObjectId;  // The user who last modified this record
+    createdAt:    Date;
+    updatedAt:    Date;
 }
 
 export interface ICustomerOrderDocument extends ICustomerOrder, Document {

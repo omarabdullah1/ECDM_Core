@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import * as taskController from './task.controller';
 import { validate } from '../../../middlewares/validate.middleware';
-import { authenticate, authorise } from '../../../middlewares/auth.middleware';
+import { authenticate, authorise, isAdmin } from '../../../middlewares/auth.middleware';
 import { createTaskSchema, updateTaskSchema } from './task.validation';
 import { UserRole } from '../../auth/auth.types';
 
@@ -19,5 +19,6 @@ router.delete(
     authorise(UserRole.SuperAdmin, UserRole.Manager),
     taskController.remove,
 );
+router.post('/bulk-delete', isAdmin, taskController.bulkDelete);  // Admin-only bulk delete
 
 export default router;

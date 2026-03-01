@@ -99,3 +99,12 @@ export const deleteTask = async (id: string): Promise<void> => {
         throw new AppError('Task not found', 404);
     }
 };
+
+/**
+ * Bulk delete multiple tasks by IDs.
+ * Admin-only operation.
+ */
+export const bulkDelete = async (ids: string[]): Promise<{ deletedCount: number }> => {
+    const result = await Task.deleteMany({ _id: { $in: ids } });
+    return { deletedCount: result.deletedCount };
+};

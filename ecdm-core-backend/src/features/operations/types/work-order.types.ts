@@ -1,6 +1,11 @@
 import { Document, Types } from 'mongoose';
 
-export { OrderType } from '../../sales/types/sales-leads.types';
+// Type of maintenance/supply work carried out on a work order
+export enum OrderType {
+    Maintenance      = 'Maintenance',
+    GeneralSupplies  = 'General supplies',
+    SupplyAndInstall = 'Supply and installation',
+}
 
 export enum Punctuality {
     OnTime = 'On-Time',

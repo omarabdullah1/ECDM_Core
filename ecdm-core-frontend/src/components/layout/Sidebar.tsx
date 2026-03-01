@@ -27,14 +27,14 @@ const NAV: NavItem[] = [
     { labelKey: 'dashboard', href: '/dashboard', icon: 'LayoutDashboard' },
     { labelKey: 'marketing', icon: 'Megaphone', children: [
         { labelKey: 'marketingLeads', href: '/marketing/leads', icon: 'TrendingUp' },
-        { labelKey: 'marketingData',  href: '/marketing/data',  icon: 'Database' },
     ]},
     { labelKey: 'sales', icon: 'ShoppingCart', children: [
-        { labelKey: 'salesLeads',  href: '/sales/leads',  icon: 'Users' },
-        { labelKey: 'salesData',   href: '/sales/data',   icon: 'FileText' },
-        { labelKey: 'salesOrders', href: '/sales/order',  icon: 'ClipboardList' },
+        { labelKey: 'salesLeads',     href: '/sales/leads',      icon: 'Users' },
+        { labelKey: 'salesData',      href: '/sales/data',       icon: 'FileText' },
+        { labelKey: 'salesOrders',    href: '/sales/order',      icon: 'ClipboardList' },
     ]},
     { labelKey: 'customer', icon: 'Headphones', children: [
+        { labelKey: 'customersList',    href: '/customer/list',      icon: 'Users' },
         { labelKey: 'customerOrders',   href: '/customer/orders',    icon: 'Package' },
         { labelKey: 'customerFollowUp', href: '/customer/follow-up', icon: 'ClipboardList' },
         { labelKey: 'customerFeedback', href: '/customer/feedback',  icon: 'MessageSquare' },
