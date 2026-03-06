@@ -7,17 +7,17 @@ export const create = async (data: CreateFeedbackInput): Promise<IFeedbackDocume
     Feedback.create(data);
 
 export const getAll = async (query: Record<string, unknown>) => {
-    const { page = 1, limit = 10, customer, engineer, workOrder } = query;
+    const { page = 1, limit = 10, customerId, customerOrderId } = query;
     const filter: Record<string, unknown> = {};
-    if (customer)  filter.customer  = customer;
-    if (engineer)  filter.engineer  = engineer;
-    if (workOrder) filter.workOrder = workOrder;
+    if (customerId)      filter.customerId      = customerId;
+    if (customerOrderId) filter.customerOrderId = customerOrderId;
+    
     const skip = (Number(page) - 1) * Number(limit);
     const [data, total] = await Promise.all([
         Feedback.find(filter)
-            .populate('customer',  'name phone')
-            .populate('engineer',  'firstName lastName email')
-            .populate('workOrder', 'typeOfOrder issue')
+            .populate('customerId',      'customerId name phone region address')
+            .populate('customerOrderId') // Crucial for Engineer name and dates
+            .populate('updatedBy',       'email firstName lastName')
             .sort({ createdAt: -1 }).skip(skip).limit(Number(limit)),
         Feedback.countDocuments(filter),
     ]);
@@ -26,9 +26,9 @@ export const getAll = async (query: Record<string, unknown>) => {
 
 export const getById = async (id: string): Promise<IFeedbackDocument> => {
     const doc = await Feedback.findById(id)
-        .populate('customer',  'name phone')
-        .populate('engineer',  'firstName lastName email')
-        .populate('workOrder');
+        .populate('customerId',      'customerId name phone region address')
+        .populate('customerOrderId') // Crucial for Engineer name and dates
+        .populate('updatedBy',       'email firstName lastName');
     if (!doc) throw new AppError('Feedback not found', 404);
     return doc;
 };

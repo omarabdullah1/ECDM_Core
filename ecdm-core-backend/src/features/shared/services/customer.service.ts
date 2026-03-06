@@ -1,6 +1,11 @@
 import Customer from '../models/contact.model';
 import MarketingLead from '../../marketing/models/marketing-lead.model';
 import SalesLead from '../../sales/models/sales-lead.model';
+import SalesOrder from '../../sales/models/sales-order.model';
+import CustomerOrder from '../../customer/models/customer-order.model';
+import WorkOrder from '../../operations/models/work-order.model';
+import FollowUp from '../../customer/models/follow-up.model';
+import Feedback from '../../customer/models/feedback.model';
 import { ICustomerDocument } from '../types/contact.types';
 import { AppError } from '../../../utils/apiError';
 
@@ -94,6 +99,73 @@ export const deleteCustomer = async (id: string): Promise<void> => {
 export const bulkDelete = async (ids: string[]): Promise<{ deletedCount: number }> => {
     const result = await Customer.deleteMany({ _id: { $in: ids } });
     return { deletedCount: result.deletedCount };
+};
+
+/**
+ * Customer 360° Report
+ * Aggregates all data across modules: SalesOrders, CustomerOrders, WorkOrders, FollowUps, Feedbacks
+ * Calculates KPIs: totalSpent, totalVisits, totalOrders
+ */
+export interface Customer360Report {
+    customer: ICustomerDocument;
+    kpis: {
+        totalSpent: number;
+        totalVisits: number;
+        totalOrders: number;
+        totalWorkOrders: number;
+        totalFollowUps: number;
+        totalFeedbacks: number;
+    };
+    history: {
+        salesOrders: unknown[];
+        customerOrders: unknown[];
+        workOrders: unknown[];
+        followUps: unknown[];
+        feedbacks: unknown[];
+    };
+}
+
+export const getCustomerReport = async (id: string): Promise<Customer360Report> => {
+    // Fetch customer
+    const customer = await Customer.findById(id);
+    if (!customer) throw new AppError('Customer not found', 404);
+
+    // Fetch all related documents in parallel
+    const [salesOrders, customerOrders, followUps, feedbacks] = await Promise.all([
+        SalesOrder.find({ customer: id }).sort({ createdAt: -1 }).lean(),
+        CustomerOrder.find({ customerId: id }).sort({ createdAt: -1 }).lean(),
+        FollowUp.find({ customer: id }).sort({ createdAt: -1 }).lean(),
+        Feedback.find({ customerId: id }).sort({ createdAt: -1 }).lean(),
+    ]);
+
+    // Fetch work orders linked to customer orders
+    const customerOrderIds = customerOrders.map((o) => o._id);
+    const workOrders = await WorkOrder.find({ customerOrderId: { $in: customerOrderIds } })
+        .sort({ createdAt: -1 })
+        .lean();
+
+    // Calculate KPIs
+    const totalSpent = customerOrders.reduce((sum, order) => sum + ((order as { cost?: number }).cost || 0), 0);
+    const totalVisits = customerOrders.filter((o) => (o as { actualVisitDate?: Date }).actualVisitDate).length;
+
+    return {
+        customer,
+        kpis: {
+            totalSpent,
+            totalVisits,
+            totalOrders: salesOrders.length,
+            totalWorkOrders: workOrders.length,
+            totalFollowUps: followUps.length,
+            totalFeedbacks: feedbacks.length,
+        },
+        history: {
+            salesOrders,
+            customerOrders,
+            workOrders,
+            followUps,
+            feedbacks,
+        },
+    };
 };
 
 /**

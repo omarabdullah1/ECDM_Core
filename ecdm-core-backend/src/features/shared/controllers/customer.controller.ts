@@ -6,6 +6,7 @@ export const create  = async (req: Request, res: Response, next: NextFunction) =
 export const getAll  = async (req: Request, res: Response, next: NextFunction) => { try { sendSuccess(res, await svc.getCustomers(req.query)); } catch (e) { next(e); } };
 export const getById = async (req: Request, res: Response, next: NextFunction) => { try { sendSuccess(res, { customer: await svc.getCustomerById(String(req.params.id)) }); } catch (e) { next(e); } };
 export const getHistory = async (req: Request, res: Response, next: NextFunction) => { try { sendSuccess(res, { history: await svc.getCustomerHistory(String(req.params.id)) }); } catch (e) { next(e); } };
+export const getReport = async (req: Request, res: Response, next: NextFunction) => { try { sendSuccess(res, await svc.getCustomerReport(String(req.params.id))); } catch (e) { next(e); } };
 export const update  = async (req: Request, res: Response, next: NextFunction) => { try { sendSuccess(res, { customer: await svc.updateCustomer(String(req.params.id), req.body) }, 'Customer updated'); } catch (e) { next(e); } };
 export const remove  = async (req: Request, res: Response, next: NextFunction) => { try { await svc.deleteCustomer(String(req.params.id)); sendSuccess(res, null, 'Customer deleted'); } catch (e) { next(e); } };
 

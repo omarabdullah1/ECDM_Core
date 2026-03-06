@@ -10,9 +10,12 @@ export interface Translations {
   };
   nav: {
     dashboard: string; marketing: string; marketingLeads: string; marketingData: string;
+    contentTracker: string; campaignResults: string;
     sales: string; salesLeads: string; salesData: string; salesFollowUps: string; salesOrders: string;
     customer: string; customersList: string; customerOrders: string; customerFollowUp: string; customerFeedback: string;
     operations: string; workOrder: string; inventoryPlus: string; reportOperation: string;
+    hr: string; hrEmployees: string; hrAttendance: string;
+    administration: string; userManagement: string; modificationRequests: string; auditLogs: string;
     erpPlatform: string;
   };
   header: { search: string; signOut: string; };
@@ -211,6 +214,8 @@ const en: Translations = {
     dashboard: 'Dashboard',
     marketing: 'Marketing',
     marketingLeads: 'Marketing Leads',
+    contentTracker: 'Content Tracker',
+    campaignResults: 'Campaign Results',
     marketingData: 'Marketing Data',
     sales: 'Sales',
     salesLeads: 'Sales Leads',
@@ -226,6 +231,13 @@ const en: Translations = {
     workOrder: 'Work Orders',
     inventoryPlus: 'Inventory+',
     reportOperation: 'Performance Reports',
+    hr: 'HR',
+    hrEmployees: 'Employees',
+    hrAttendance: 'Attendance',
+    administration: 'Administration',
+    userManagement: 'User Management',
+    modificationRequests: 'Modification Requests',
+    auditLogs: 'Audit Logs',
     erpPlatform: 'ERP & CRM Platform',
   },
   header: {

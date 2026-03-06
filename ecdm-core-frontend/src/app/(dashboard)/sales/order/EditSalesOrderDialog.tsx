@@ -3,10 +3,20 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { X, Upload, FileText } from 'lucide-react';
+import { X, Upload, FileText, FilePlus, Edit } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '@/lib/axios';
 import { SalesOrder } from './columns';
+import AddQuotationDialog from './AddQuotationDialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 /**
  * Edit Sales Order Dialog - CEO-Approved Advanced UX
@@ -135,6 +145,8 @@ const formatDateDisplay = (isoDate: string | null | undefined): string => {
 export default function EditSalesOrderDialog({ order, onClose, onSuccess }: EditSalesOrderDialogProps) {
   const [quotationFile, setQuotationFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
+  const [showApprovalAlert, setShowApprovalAlert] = useState(false);
+  const [showQuotationBuilder, setShowQuotationBuilder] = useState(false);
 
   // Initialize react-hook-form with Zod validation
   const form = useForm<FormSchema>({
@@ -305,9 +317,29 @@ export default function EditSalesOrderDialog({ order, onClose, onSuccess }: Edit
       }
 
       // Make API call - Let axios handle Content-Type automatically for FormData
-      await api.patch(`/sales/orders/${order._id}`, formData);
+      const response = await api.patch(`/sales/orders/${order._id}`, formData);
       
-      console.log('✅ Order updated successfully');
+      // ─────────────────────────────────────────────────────────────────────────
+      // DEBUG: Log response details
+      // ─────────────────────────────────────────────────────────────────────────
+      console.log('🔍 API Response Status:', response.status);
+      console.log('🔍 API Response Data:', response.data);
+      
+      // ─────────────────────────────────────────────────────────────────────────
+      // Handle Maker-Checker 202 Accepted Status
+      // ─────────────────────────────────────────────────────────────────────────
+      if (response.status === 202) {
+        console.log('⏳ Edit intercepted by Maker-Checker - Pending approval');
+        console.log('🔔 Setting showApprovalAlert to TRUE');
+        setSaving(false); // Reset saving state
+        setShowApprovalAlert(true);
+        return; // CRITICAL: Exit here - DO NOT call onClose()
+      }
+      
+      // ─────────────────────────────────────────────────────────────────────────
+      // Standard Success (200/204) - Admin or no Maker-Checker
+      // ─────────────────────────────────────────────────────────────────────────
+      console.log('✅ Order updated successfully (Status:', response.status, ')');
       toast.success('Order updated successfully!');
       
       // Close dialog and trigger refresh
@@ -532,36 +564,72 @@ export default function EditSalesOrderDialog({ order, onClose, onSuccess }: Edit
                   </>
                 )}
 
-                {/* ─── Task 2: Quotation File Upload ───────────────────────── */}
-                <div className="md:col-span-2">
-                  <label className={labelCls}>Quotation Document</label>
-                  <div className="space-y-2">
-                    {/* Current File Display */}
-                    {form.watch('quotationFileUrl') && !quotationFile && (
-                      <div className="flex items-center gap-2 p-3 bg-[hsl(var(--muted))]/20 rounded-lg border border-[hsl(var(--border))]">
-                        <FileText className="h-4 w-4 text-[hsl(var(--primary))]" />
-                        <span className="text-sm flex-1">Current file: {form.watch('quotationFileUrl')?.split('/').pop()}</span>
-                      </div>
-                    )}
-                    
-                    {/* File Upload Input */}
-                    <label className="flex items-center gap-3 p-4 rounded-xl border-2 border-dashed border-[hsl(var(--border))] hover:border-[hsl(var(--primary))] hover:bg-[hsl(var(--muted))]/10 cursor-pointer transition-all group">
-                      <Upload className="h-5 w-5 text-[hsl(var(--muted-foreground))] group-hover:text-[hsl(var(--primary))] transition-colors" />
-                      <div className="flex-1">
-                        <p className="text-sm font-medium">
-                          {quotationFile ? quotationFile.name : 'Choose a file or drag here'}
-                        </p>
-                        <p className="text-xs text-[hsl(var(--muted-foreground))] mt-0.5">
-                          PDF, DOC, DOCX (Max 5MB)
-                        </p>
-                      </div>
-                      <input
-                        type="file"
-                        accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                        onChange={handleFileChange}
-                        className="hidden"
-                      />
-                    </label>
+                {/* ─── Task 2: Quotation Document (System Builder OR Manual Upload) ───────────────────────── */}
+                <div className="md:col-span-2 border rounded-xl p-4 bg-[hsl(var(--muted))]/10 space-y-4">
+                  {/* System Quotation Builder Section */}
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-[hsl(var(--border))]">
+                    <div>
+                      <h3 className="text-sm font-semibold text-[hsl(var(--foreground))] flex items-center gap-2">
+                        <FilePlus className="w-4 h-4 text-[hsl(var(--primary))]" />
+                        System Quotation Tool
+                      </h3>
+                      <p className="text-xs text-[hsl(var(--muted-foreground))] mt-1">
+                        Generate a professional PDF quotation directly from inventory
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowQuotationBuilder(true)}
+                      className="px-4 py-2 bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] rounded-lg hover:opacity-90 transition-all text-sm font-medium flex items-center gap-2 whitespace-nowrap"
+                    >
+                      {(order as any).quotation?.items?.length > 0 ? (
+                        <>
+                          <Edit className="w-4 h-4" />
+                          Edit System Quotation
+                        </>
+                      ) : (
+                        <>
+                          <FilePlus className="w-4 h-4" />
+                          Create System Quotation
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  {/* Manual File Upload Section */}
+                  <div>
+                    <h3 className="text-sm font-semibold text-[hsl(var(--foreground))] mb-2 flex items-center gap-2">
+                      <Upload className="w-4 h-4 text-[hsl(var(--muted-foreground))]" />
+                      OR Upload External Document
+                    </h3>
+                    <div className="space-y-2">
+                      {/* Current File Display */}
+                      {form.watch('quotationFileUrl') && !quotationFile && (
+                        <div className="flex items-center gap-2 p-3 bg-[hsl(var(--background))] rounded-lg border border-[hsl(var(--border))]">
+                          <FileText className="h-4 w-4 text-[hsl(var(--primary))]" />
+                          <span className="text-sm flex-1">Current file: {form.watch('quotationFileUrl')?.split('/').pop()}</span>
+                        </div>
+                      )}
+                      
+                      {/* File Upload Input */}
+                      <label className="flex items-center gap-3 p-4 rounded-xl border-2 border-dashed border-[hsl(var(--border))] hover:border-[hsl(var(--primary))] hover:bg-[hsl(var(--background))] cursor-pointer transition-all group">
+                        <Upload className="h-5 w-5 text-[hsl(var(--muted-foreground))] group-hover:text-[hsl(var(--primary))] transition-colors" />
+                        <div className="flex-1">
+                          <p className="text-sm font-medium">
+                            {quotationFile ? quotationFile.name : 'Choose a file or drag here'}
+                          </p>
+                          <p className="text-xs text-[hsl(var(--muted-foreground))] mt-0.5">
+                            PDF, DOC, DOCX (Max 5MB)
+                          </p>
+                        </div>
+                        <input
+                          type="file"
+                          accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                          onChange={handleFileChange}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -726,6 +794,48 @@ export default function EditSalesOrderDialog({ order, onClose, onSuccess }: Edit
           </div>
         </form>
       </div>
+
+      {/* ═══════════════════════════════════════════════════════════════════════
+          Maker-Checker Approval Alert Dialog
+          Shown when status 202 is returned (non-admin edit pending approval)
+      ═══════════════════════════════════════════════════════════════════════ */}
+      <AlertDialog open={showApprovalAlert} onOpenChange={setShowApprovalAlert}>
+        <AlertDialogContent className="z-[9999]">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Approval Required</AlertDialogTitle>
+            <AlertDialogDescription>
+              Your modifications have been submitted successfully. However, they require Admin approval before taking effect on the system.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction
+              onClick={() => {
+                console.log('✅ User acknowledged approval requirement');
+                setShowApprovalAlert(false);
+                onSuccess(); // Refresh the data table
+                onClose(); // Close the parent Edit Dialog
+              }}
+            >
+              Got it
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* ═══════════════════════════════════════════════════════════════════════
+          System Quotation Builder Dialog
+          Allows creating/editing quotation directly from inventory
+      ═══════════════════════════════════════════════════════════════════════ */}
+      {showQuotationBuilder && (
+        <AddQuotationDialog
+          order={order}
+          onClose={() => setShowQuotationBuilder(false)}
+          onSuccess={() => {
+            setShowQuotationBuilder(false);
+            onSuccess(); // Refresh parent data to show updated quotation status
+          }}
+        />
+      )}
     </div>
   );
 }

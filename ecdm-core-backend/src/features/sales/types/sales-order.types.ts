@@ -26,6 +26,28 @@ export enum OrderStatus {
     Canceled    = 'Canceled',
 }
 
+/**
+ * Quotation Item Interface
+ */
+export interface IQuotationItem {
+    description: string;
+    quantity: number;
+    unitPrice: number;
+    total: number;
+}
+
+/**
+ * Quotation Interface
+ */
+export interface IQuotation {
+    items: IQuotationItem[];
+    subTotal: number;
+    discount: number;
+    grandTotal: number;
+    notes?: string;
+    createdAt?: Date;
+}
+
 export interface ISalesOrder {
     // Human-readable unique ID (auto-generated: "SO-1001", "SO-1002", etc.)
     salesOrderId: string;
@@ -53,6 +75,9 @@ export interface ISalesOrder {
     // Quotation File Upload
     quotationFileUrl?:           string;
     quotationFileName?:          string;
+    
+    // Dynamic Quotation Builder
+    quotation?:                  IQuotation;
     
     // First Follow-Up
     followUpFirst?:                     Date;

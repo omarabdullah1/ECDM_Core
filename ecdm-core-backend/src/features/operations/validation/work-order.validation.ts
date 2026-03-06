@@ -1,41 +1,31 @@
 import { z } from 'zod';
-import { Punctuality, LateDurationType, DevicePickupType, OrderType } from '../types/work-order.types';
+import { Punctuality, TaskCompleted, SparePartsAvailability } from '../types/work-order.types';
 
-const taskStageSchema = z.object({
-    stageName:   z.enum(['First', 'Second', 'Third']),
-    completed:   z.boolean(),
-    completedAt: z.string().optional(),
-    reason:      z.string().optional(),
-});
-
-const sparePartUsedSchema = z.object({
-    inventoryItem: z.string().min(1),
-    quantity:      z.number().positive(),
-    notes:         z.string().optional(),
-});
+/**
+ * Work Order Validation - Maintenance/Workshop Module
+ * 
+ * Validates input for creating and updating Work Orders.
+ * Most fields are optional as Work Orders are auto-created with just customerOrderId.
+ */
 
 export const createWorkOrderSchema = z.object({
-    customer:             z.string().min(1, 'Customer ID is required'),
-    assignedEngineer:     z.string().min(1, 'Engineer ID is required'),
-    salesOrder:           z.string().optional(),
-    customerOrder:        z.string().optional(),
-    typeOfOrder:          z.nativeEnum(OrderType),
-    issue:                z.string().min(1, 'Issue description is required'),
-    visitSiteDate:        z.string().optional(),
-    startMaintenanceDate: z.string().optional(),
-    endMaintenanceDate:   z.string().optional(),
-    punctuality:          z.nativeEnum(Punctuality).optional(),
-    lateDuration:         z.number().optional(),
-    lateDurationType:     z.nativeEnum(LateDurationType).optional(),
-    reasonForDelay:       z.string().optional(),
-    taskCompletedStages:  z.array(taskStageSchema).optional(),
-    devicePickupType:     z.nativeEnum(DevicePickupType).optional(),
-    deviceReturned:       z.boolean().optional(),
-    deviceReturnedDate:   z.string().optional(),
-    sparePartsUsed:       z.array(sparePartUsedSchema).optional(),
-    notes:                z.string().optional(),
+    customerOrderId:       z.string().min(1, 'Customer Order ID is required'),
+    taskDate:              z.string().optional(),
+    maintenanceEngineer:   z.string().optional().default(''),
+    startMaintenanceDate:  z.string().optional(),
+    endMaintenanceDate:    z.string().optional(),
+    punctuality:           z.nativeEnum(Punctuality).optional().default(Punctuality.Empty),
+    reasonForDelay:        z.string().optional().default(''),
+    taskCompleted:         z.nativeEnum(TaskCompleted).optional().default(TaskCompleted.Empty),
+    reasonForIncompletion: z.string().optional().default(''),
+    rating:                z.string().optional().default(''),
+    sparePartsId:          z.string().optional().default(''),
+    sparePartsAvailability: z.nativeEnum(SparePartsAvailability).optional().default(SparePartsAvailability.Empty),
+    notes:                 z.string().optional().default(''),
+    updatedBy:             z.string().optional(),
 });
 
-export const updateWorkOrderSchema = createWorkOrderSchema.partial();
+export const updateWorkOrderSchema = createWorkOrderSchema.partial().omit({ customerOrderId: true });
+
 export type CreateWorkOrderInput = z.infer<typeof createWorkOrderSchema>;
 export type UpdateWorkOrderInput = z.infer<typeof updateWorkOrderSchema>;

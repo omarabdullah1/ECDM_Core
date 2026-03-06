@@ -1,12 +1,83 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import api from '@/lib/axios';
-import { MessageSquare, Plus, Trash2, X, ChevronLeft, ChevronRight, Star } from 'lucide-react';
+import { MessageSquare, Plus, Trash2, X, ChevronLeft, ChevronRight, Edit2 } from 'lucide-react';
 
-interface Feedback { _id: string; ratingOperation: number; ratingCustomerService: number; customer?: { name: string }; engineer?: { firstName: string; lastName: string }; workOrder?: { typeOfOrder: string }; createdAt: string; }
+// ─────────────────────────────────────────────────────────────────────────────
+// TypeScript Interfaces
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface Customer {
+  _id?: string;
+  customerId?: string;
+  name?: string;
+  phone?: string;
+}
+
+interface CustomerOrder {
+  _id?: string;
+  engineerName?: string;
+  actualVisitDate?: string;
+  startDate?: string;
+  endDate?: string;
+}
+
+interface User {
+  _id?: string;
+  email?: string;
+  firstName?: string;
+  lastName?: string;
+}
+
+interface Feedback {
+  _id: string;
+  customerId?: Customer;
+  customerOrderId?: CustomerOrder;
+  solvedIssue?: string;
+  ratingOperation?: string;
+  followUp?: string;
+  ratingCustomerService?: string;
+  notes?: string;
+  updatedBy?: User;
+  createdAt: string;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Date Helper
+// ─────────────────────────────────────────────────────────────────────────────
+
+const formatDate = (dateValue: string | Date | null | undefined): string => {
+  if (!dateValue) return '-';
+  try {
+    const date = new Date(dateValue);
+    if (isNaN(date.getTime())) return '-';
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+  } catch {
+    return '-';
+  }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Badge Component
+// ─────────────────────────────────────────────────────────────────────────────
+
+const Badge = ({ children, variant = 'outline' }: { children: React.ReactNode; variant?: 'default' | 'destructive' | 'outline' }) => {
+  const baseClasses = "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap";
+  
+  const variantClasses: Record<string, string> = {
+    'default':     'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
+    'destructive': 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
+    'outline':     'border border-gray-300 text-gray-700 dark:border-gray-600 dark:text-gray-300',
+  };
+  
+  return <span className={`${baseClasses} ${variantClasses[variant]}`}>{children || '-'}</span>;
+};
 
 const iCls = 'w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-4 py-3 text-sm placeholder:text-[hsl(var(--muted-foreground))] focus:border-[hsl(var(--primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/20 transition-all';
-const blank = { workOrder: '', customer: '', engineer: '', ratingOperation: '5', ratingCustomerService: '5', notes: '' };
+const blank = { customerId: '', customerOrderId: '', solvedIssue: '', ratingOperation: '', followUp: '', ratingCustomerService: '', notes: '' };
 
 export default function FeedbackPage() {
   const [rows, setRows] = useState<Feedback[]>([]);
@@ -14,6 +85,7 @@ export default function FeedbackPage() {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(false);
+  const [editing, setEditing] = useState<Feedback | null>(null);
   const [form, setForm] = useState(blank);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -31,15 +103,31 @@ export default function FeedbackPage() {
   }, [page]);
   useEffect(() => { fetch_(); }, [fetch_]);
 
-  const openC = () => { setForm(blank); setError(''); setModal(true); };
+  const openC = () => { setEditing(null); setForm(blank); setError(''); setModal(true); };
+  const openE = (r: Feedback) => {
+    setEditing(r);
+    setForm({
+      customerId: '',
+      customerOrderId: '',
+      solvedIssue: r.solvedIssue || '',
+      ratingOperation: r.ratingOperation || '',
+      followUp: r.followUp || '',
+      ratingCustomerService: r.ratingCustomerService || '',
+      notes: r.notes || ''
+    });
+    setError('');
+    setModal(true);
+  };
+
   const save = async (ev: React.FormEvent) => {
     ev.preventDefault(); setSaving(true); setError('');
     const pl: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(form)) {
-      if (v !== '') pl[k] = (k === 'ratingOperation' || k === 'ratingCustomerService') ? Number(v) : v;
+      if (v !== '') pl[k] = v;
     }
     try {
-      await api.post('/customer/feedback', pl);
+      if (editing) await api.put(`/customer/feedback/${editing._id}`, pl);
+      else await api.post('/customer/feedback', pl);
       setModal(false); fetch_();
     } catch (e: unknown) { setError((e as { response?: { data?: { message?: string } } }).response?.data?.message || 'Failed'); }
     setSaving(false);
@@ -47,11 +135,12 @@ export default function FeedbackPage() {
   const del = async () => { if (!delId) return; try { await api.delete(`/customer/feedback/${delId}`); fetch_(); } catch { } setDelId(null); };
   const u = (f: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setForm(p => ({ ...p, [f]: e.target.value }));
 
-  const StarRating = ({ value }: { value: number }) => (
-    <div className="flex gap-0.5">
-      {[1,2,3,4,5].map(i => <Star key={i} className={`h-3.5 w-3.5 ${i <= value ? 'fill-amber-400 text-amber-400' : 'text-gray-300'}`} />)}
-    </div>
-  );
+  // 13 Columns as specified
+  const headers = [
+    'Customer ID', 'Name', 'Phone', 'Engineer Name', 'Visit Engineer Date',
+    'Start Date', 'End Date', 'Solved Issue', 'Rating Operation',
+    'Follow Up', 'Rating CS', 'User Email', 'Notes', 'Actions'
+  ];
 
   return (
     <div className="space-y-6">
@@ -60,25 +149,51 @@ export default function FeedbackPage() {
         <button onClick={openC} className="flex items-center gap-2 rounded-xl bg-[hsl(var(--primary))] px-4 py-2 text-sm font-semibold text-[hsl(var(--primary-foreground))] hover:opacity-90 transition-opacity"><Plus className="h-4 w-4" />Add</button>
       </div>
 
-      <div className="rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] overflow-hidden">
+      <div className="rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] overflow-hidden overflow-x-auto">
         {loading ? <div className="p-8 text-center text-[hsl(var(--muted-foreground))]">Loading…</div> : (
-          <table className="w-full text-sm">
+          <table className="w-full text-sm min-w-[1400px]">
             <thead className="border-b border-[hsl(var(--border))] bg-[hsl(var(--muted))]/30">
-              <tr>{['Customer','Engineer','Work Order','Operations Rating','CS Rating','Date','Actions'].map(h => <th key={h} className="px-4 py-3 text-left font-semibold">{h}</th>)}</tr>
+              <tr>{headers.map(h => <th key={h} className="px-4 py-3 text-left font-semibold whitespace-nowrap">{h}</th>)}</tr>
             </thead>
             <tbody>
               {rows.map(r => (
                 <tr key={r._id} className="border-b border-[hsl(var(--border))]/50 hover:bg-[hsl(var(--muted))]/20">
-                  <td className="px-4 py-3 font-medium">{r.customer?.name || '—'}</td>
-                  <td className="px-4 py-3">{r.engineer ? `${r.engineer.firstName} ${r.engineer.lastName}` : '—'}</td>
-                  <td className="px-4 py-3">{r.workOrder?.typeOfOrder || '—'}</td>
-                  <td className="px-4 py-3"><StarRating value={r.ratingOperation} /></td>
-                  <td className="px-4 py-3"><StarRating value={r.ratingCustomerService} /></td>
-                  <td className="px-4 py-3">{new Date(r.createdAt).toLocaleDateString()}</td>
-                  <td className="px-4 py-3"><button onClick={() => setDelId(r._id)} className="p-1 hover:text-destructive"><Trash2 className="h-4 w-4" /></button></td>
+                  {/* 1. Customer ID */}
+                  <td className="px-4 py-3 font-mono text-xs text-[hsl(var(--muted-foreground))] whitespace-nowrap">{r.customerId?.customerId || '-'}</td>
+                  {/* 2. Name */}
+                  <td className="px-4 py-3 font-medium whitespace-nowrap">{r.customerId?.name || '-'}</td>
+                  {/* 3. Phone */}
+                  <td className="px-4 py-3 font-mono text-sm whitespace-nowrap">{r.customerId?.phone || '-'}</td>
+                  {/* 4. Engineer Name */}
+                  <td className="px-4 py-3 font-medium whitespace-nowrap">{r.customerOrderId?.engineerName || '-'}</td>
+                  {/* 5. Visit Engineer Date */}
+                  <td className="px-4 py-3 text-sm whitespace-nowrap">{formatDate(r.customerOrderId?.actualVisitDate)}</td>
+                  {/* 6. Start Date */}
+                  <td className="px-4 py-3 text-sm whitespace-nowrap">{formatDate(r.customerOrderId?.startDate)}</td>
+                  {/* 7. End Date */}
+                  <td className="px-4 py-3 text-sm whitespace-nowrap">{formatDate(r.customerOrderId?.endDate)}</td>
+                  {/* 8. Solved Issue */}
+                  <td className="px-4 py-3">{r.solvedIssue ? <Badge variant={r.solvedIssue === 'Yes' ? 'default' : 'destructive'}>{r.solvedIssue}</Badge> : '-'}</td>
+                  {/* 9. Rating Operation */}
+                  <td className="px-4 py-3 text-sm font-medium">{r.ratingOperation || '-'}</td>
+                  {/* 10. Follow Up */}
+                  <td className="px-4 py-3 text-sm">{r.followUp || '-'}</td>
+                  {/* 11. Rating CS */}
+                  <td className="px-4 py-3 text-sm font-medium">{r.ratingCustomerService || '-'}</td>
+                  {/* 12. User Email */}
+                  <td className="px-4 py-3 text-sm text-[hsl(var(--muted-foreground))] whitespace-nowrap">{r.updatedBy?.email || '-'}</td>
+                  {/* 13. Notes */}
+                  <td className="px-4 py-3 text-sm max-w-[150px] truncate" title={r.notes}>{r.notes || '-'}</td>
+                  {/* Actions */}
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <button onClick={() => openE(r)} className="p-1 hover:bg-[hsl(var(--muted))] rounded transition-colors" title="Edit"><Edit2 className="h-4 w-4" /></button>
+                      <button onClick={() => setDelId(r._id)} className="p-1 hover:bg-red-50 rounded text-red-600 transition-colors" title="Delete"><Trash2 className="h-4 w-4" /></button>
+                    </div>
+                  </td>
                 </tr>
               ))}
-              {!rows.length && <tr><td colSpan={7} className="px-4 py-8 text-center text-[hsl(var(--muted-foreground))]">No feedback found.</td></tr>}
+              {!rows.length && <tr><td colSpan={14} className="px-4 py-8 text-center text-[hsl(var(--muted-foreground))]">No feedback found.</td></tr>}
             </tbody>
           </table>
         )}
@@ -94,15 +209,42 @@ export default function FeedbackPage() {
 
       {modal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="w-full max-w-lg rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6 shadow-2xl">
-            <div className="flex items-center justify-between mb-6"><h2 className="text-lg font-bold">Log Feedback</h2><button onClick={() => setModal(false)}><X className="h-5 w-5" /></button></div>
+          <div className="w-full max-w-lg rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6"><h2 className="text-lg font-bold">{editing ? 'Edit Feedback' : 'Log Feedback'}</h2><button onClick={() => setModal(false)}><X className="h-5 w-5" /></button></div>
             <form onSubmit={save} className="space-y-4">
-              <input required placeholder="Work Order ID" value={form.workOrder} onChange={u('workOrder')} className={iCls} />
-              <input required placeholder="Customer ID" value={form.customer} onChange={u('customer')} className={iCls} />
-              <input placeholder="Engineer (User ID)" value={form.engineer} onChange={u('engineer')} className={iCls} />
+              {!editing && (
+                <>
+                  <input required placeholder="Customer ID (ObjectId)" value={form.customerId} onChange={u('customerId')} className={iCls} />
+                  <input placeholder="Customer Order ID (ObjectId)" value={form.customerOrderId} onChange={u('customerOrderId')} className={iCls} />
+                </>
+              )}
               <div className="flex gap-4">
-                <div className="flex-1"><label className="text-xs text-[hsl(var(--muted-foreground))] mb-1 block">Operations Rating (1–5)</label><input type="number" min="1" max="5" value={form.ratingOperation} onChange={u('ratingOperation')} className={iCls} /></div>
-                <div className="flex-1"><label className="text-xs text-[hsl(var(--muted-foreground))] mb-1 block">Customer Service Rating (1–5)</label><input type="number" min="1" max="5" value={form.ratingCustomerService} onChange={u('ratingCustomerService')} className={iCls} /></div>
+                <div className="flex-1">
+                  <label className="text-xs text-[hsl(var(--muted-foreground))] mb-1 block">Solved Issue</label>
+                  <select value={form.solvedIssue} onChange={u('solvedIssue')} className={iCls}>
+                    <option value="">Select...</option>
+                    <option value="Yes">Yes</option>
+                    <option value="No">No</option>
+                  </select>
+                </div>
+                <div className="flex-1">
+                  <label className="text-xs text-[hsl(var(--muted-foreground))] mb-1 block">Follow Up</label>
+                  <select value={form.followUp} onChange={u('followUp')} className={iCls}>
+                    <option value="">Select...</option>
+                    <option value="Yes">Yes</option>
+                    <option value="No">No</option>
+                  </select>
+                </div>
+              </div>
+              <div className="flex gap-4">
+                <div className="flex-1">
+                  <label className="text-xs text-[hsl(var(--muted-foreground))] mb-1 block">Rating Operation (Tech/Eng)</label>
+                  <input placeholder="e.g., Excellent, Good, 5/5" value={form.ratingOperation} onChange={u('ratingOperation')} className={iCls} />
+                </div>
+                <div className="flex-1">
+                  <label className="text-xs text-[hsl(var(--muted-foreground))] mb-1 block">Rating Customer Service</label>
+                  <input placeholder="e.g., Excellent, Good, 5/5" value={form.ratingCustomerService} onChange={u('ratingCustomerService')} className={iCls} />
+                </div>
               </div>
               <textarea placeholder="Notes" value={form.notes} onChange={u('notes')} rows={3} className={iCls} />
               {error && <p className="text-sm text-destructive">{error}</p>}

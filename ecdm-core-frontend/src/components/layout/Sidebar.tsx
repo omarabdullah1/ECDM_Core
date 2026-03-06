@@ -8,7 +8,7 @@ import {
     LayoutDashboard, Users, Database, ChevronDown,
     Package, TrendingUp, ShoppingCart,
     Megaphone, Wrench, Star, Headphones, MessageSquare, ClipboardList,
-    FileText,
+    FileText, UserCog, FileEdit, Activity, Calendar, UserCheck,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useT } from '@/i18n/useT';
@@ -17,7 +17,7 @@ const iconMap: Record<string, React.ComponentType<{ size?: number; className?: s
     LayoutDashboard, Users, Database,
     Package, TrendingUp, ShoppingCart,
     Megaphone, Wrench, Star, Headphones, MessageSquare, ClipboardList,
-    FileText,
+    FileText, UserCog, FileEdit, Activity, Calendar, UserCheck,
 };
 
 interface NavChild { labelKey: string; href: string; icon: string; }
@@ -27,6 +27,8 @@ const NAV: NavItem[] = [
     { labelKey: 'dashboard', href: '/dashboard', icon: 'LayoutDashboard' },
     { labelKey: 'marketing', icon: 'Megaphone', children: [
         { labelKey: 'marketingLeads', href: '/marketing/leads', icon: 'TrendingUp' },
+        { labelKey: 'contentTracker', href: '/marketing/content', icon: 'FileText' },
+        { labelKey: 'campaignResults', href: '/marketing/campaigns', icon: 'Activity' },
     ]},
     { labelKey: 'sales', icon: 'ShoppingCart', children: [
         { labelKey: 'salesLeads',     href: '/sales/leads',      icon: 'Users' },
@@ -44,13 +46,22 @@ const NAV: NavItem[] = [
         { labelKey: 'inventoryPlus',   href: '/operations/inventory-plus', icon: 'Package' },
         { labelKey: 'reportOperation', href: '/operations/report',         icon: 'Star' },
     ]},
+    { labelKey: 'hr', icon: 'UserCheck', children: [
+        { labelKey: 'hrEmployees',  href: '/hr/employees',  icon: 'Users' },
+        { labelKey: 'hrAttendance', href: '/hr/attendance', icon: 'Calendar' },
+    ]},
+    { labelKey: 'administration', icon: 'UserCog', children: [
+        { labelKey: 'userManagement',        href: '/users',                icon: 'Users' },
+        { labelKey: 'modificationRequests',  href: '/admin/requests',       icon: 'FileEdit' },
+        { labelKey: 'auditLogs',             href: '/admin/audit-logs',     icon: 'Activity' },
+    ]},
 ];
 
 export default function Sidebar() {
     const pathname = usePathname();
     const t = useT();
     const nav = t.nav;
-    const [openGroups, setOpenGroups] = useState<string[]>(['marketing', 'sales', 'customer', 'operations']);
+    const [openGroups, setOpenGroups] = useState<string[]>(['marketing', 'sales', 'customer', 'operations', 'hr', 'administration']);
 
     const label = (key: string) => (nav as Record<string, string>)[key] ?? key;
 

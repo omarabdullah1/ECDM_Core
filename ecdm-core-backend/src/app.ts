@@ -16,6 +16,8 @@ import sharedEmployeeRoutes  from './features/shared/routes/employee.routes';
 import marketingLeadsRoutes  from './features/marketing/routes/marketing-leads.routes';
 import syncRoutes            from './features/marketing/routes/sync.routes';
 import savedSheetsRoutes     from './features/marketing/routes/saved-sheets.routes';
+import contentTrackerRoutes  from './features/marketing/routes/content-tracker.routes';
+import campaignRoutes        from './features/marketing/routes/campaign.routes';
 
 // ── Sales domain ────────────────────────────────────────────────────
 import salesLeadsRoutes      from './features/sales/routes/sales-leads.routes';
@@ -32,9 +34,18 @@ import feedbackRoutes        from './features/customer/routes/feedback.routes';
 import workOrderRoutes       from './features/operations/routes/work-order.routes';
 import inventoryPlusRoutes   from './features/operations/routes/inventory-plus.routes';
 import reportRoutes          from './features/operations/routes/report.routes';
+import sparePartRoutes       from './features/operations/routes/spare-part.routes';
 
 // ── Dashboard ───────────────────────────────────────────────────────
 import dashboardRoutes       from './features/dashboard/dashboard.routes';
+
+// ── HR domain ───────────────────────────────────────────────────────
+import hrAttendanceRoutes    from './features/hr/routes/attendance.routes';
+import hrEmployeeRoutes      from './features/hr/routes/employee.routes';
+
+// ── Admin / Maker-Checker Workflow ─────────────────────────────────
+import modificationRequestRoutes from './features/shared/routes/modification-request.routes';
+import auditLogRoutes from './features/shared/routes/audit-log.routes';
 
 const app: Application = express();
 
@@ -112,6 +123,8 @@ app.use('/api/shared/employees',  sharedEmployeeRoutes);
 app.use('/api/marketing/leads',        marketingLeadsRoutes);
 app.use('/api/marketing/sync',         syncRoutes);
 app.use('/api/marketing/saved-sheets', savedSheetsRoutes);
+app.use('/api/marketing/content',      contentTrackerRoutes);
+app.use('/api/marketing/campaigns',    campaignRoutes);
 
 // Sales
 app.use('/api/sales/leads',       salesLeadsRoutes);
@@ -128,9 +141,18 @@ app.use('/api/customer/feedback',   feedbackRoutes);
 app.use('/api/operations/work-order',      workOrderRoutes);
 app.use('/api/operations/inventory-plus',  inventoryPlusRoutes);
 app.use('/api/operations/report',          reportRoutes);
+app.use('/api/operations/spare-parts',     sparePartRoutes);
 
 // Dashboard
 app.use('/api/dashboard', dashboardRoutes);
+
+// HR
+app.use('/api/hr/attendance', hrAttendanceRoutes);
+app.use('/api/hr/employees',  hrEmployeeRoutes);
+
+// Admin
+app.use('/api/admin/modification-requests', modificationRequestRoutes);
+app.use('/api/admin/audit-logs', auditLogRoutes);
 
 // ── Global error handler (must be last) ─────────────────────────────
 app.use(errorHandler);

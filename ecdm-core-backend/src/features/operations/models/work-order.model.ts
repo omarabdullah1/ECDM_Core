@@ -2,101 +2,54 @@ import mongoose, { Schema, Model } from 'mongoose';
 import {
     IWorkOrderDocument,
     Punctuality,
-    LateDurationType,
-    DevicePickupType,
+    TaskCompleted,
+    SparePartsAvailability,
 } from '../types/work-order.types';
-import { OrderType } from '../types/work-order.types';
 
-// ── Sub-document: one phase of a multi-stage work order ──────────────────────
-const taskStageSchema = new Schema(
-    {
-        stageName: {
-            type:     String,
-            enum:     ['First', 'Second', 'Third'],
-            required: true,
-        },
-        completed:   { type: Boolean, default: false },
-        completedAt: { type: Date },
-        reason:      { type: String, maxlength: [1000, 'Reason cannot exceed 1000 characters'] },
-    },
-    { _id: false },
-);
-
-// ── Sub-document: spare part consumed during this work order ─────────────────
-const sparePartUsedSchema = new Schema(
-    {
-        inventoryItem: {
-            type:     Schema.Types.ObjectId,
-            ref:      'InventoryItem',
-            required: true,
-        },
-        quantity: {
-            type:     Number,
-            required: true,
-            min:      [0.01, 'Quantity must be greater than zero'],
-        },
-        notes: { type: String, maxlength: [500, 'Notes cannot exceed 500 characters'] },
-    },
-    { _id: true },
-);
-
-// ── Main WorkOrder schema ─────────────────────────────────────────────────────
+/**
+ * Work Order Schema - Maintenance/Workshop Module
+ * 
+ * Automatically generated when a CustomerOrder is created (cascaded from Sales Order).
+ * References CustomerOrder to inherit customer, sales, and ops data.
+ * Contains maintenance-specific fields for the workshop team.
+ */
 const workOrderSchema = new Schema<IWorkOrderDocument>(
     {
-        customer: {
+        // Required: Reference to CustomerOrder (inherits all upstream data via population)
+        customerOrderId: {
             type:     Schema.Types.ObjectId,
-            ref:      'Customer',
-            required: [true, 'Customer reference is required'],
+            ref:      'CustomerOrder',
+            required: [true, 'Customer Order reference is required'],
         },
 
-        assignedEngineer: {
-            type:     Schema.Types.ObjectId,
-            ref:      'User',
-            required: [true, 'Assigned engineer is required'],
-        },
-
-        salesOrder: {
-            type: Schema.Types.ObjectId,
-            ref:  'SalesOrder',
-        },
-
-        // New: link to CustomerOrder for full lifecycle tracking
-        customerOrder: {
-            type: Schema.Types.ObjectId,
-            ref:  'CustomerOrder',
-        },
-
-        typeOfOrder: {
-            type:     String,
-            enum:     Object.values(OrderType),
-            required: [true, 'Type of order is required'],
-        },
-
-        issue: {
-            type:      String,
-            required:  [true, 'Issue description is required'],
-            trim:      true,
-            maxlength: [2000, 'Issue description cannot exceed 2000 characters'],
-        },
-
-        visitSiteDate: { type: Date },
-
+        // Workshop / Maintenance Specific Fields
+        taskDate:           { type: Date },   // Op role task date
+        maintenanceEngineer: { type: String, default: '' },
         startMaintenanceDate: { type: Date },
         endMaintenanceDate:   { type: Date },
-        punctuality:          { type: String, enum: Object.values(Punctuality) },
-        lateDuration:         { type: Number, min: [0, 'Late duration cannot be negative'] },
-        lateDurationType:     { type: String, enum: Object.values(LateDurationType) },
-        reasonForDelay:       { type: String, maxlength: [1000, 'Reason cannot exceed 1000 characters'] },
+        punctuality: {
+            type:    String,
+            enum:    Object.values(Punctuality),
+            default: Punctuality.Empty,
+        },
+        reasonForDelay:      { type: String, default: '' },
+        taskCompleted: {
+            type:    String,
+            enum:    Object.values(TaskCompleted),
+            default: TaskCompleted.Empty,
+        },
+        reasonForIncompletion: { type: String, default: '' },
+        rating:              { type: String, default: '' },
+        sparePartsId:        { type: String, default: '' },
+        sparePartsAvailability: {
+            type:    String,
+            enum:    Object.values(SparePartsAvailability),
+            default: SparePartsAvailability.Empty,
+        },
+        notes: { type: String, default: '', maxlength: [2000, 'Notes cannot exceed 2000 characters'] },
 
-        taskCompletedStages: { type: [taskStageSchema], default: [] },
-
-        devicePickupType:   { type: String, enum: Object.values(DevicePickupType) },
-        deviceReturned:     { type: Boolean, default: false },
-        deviceReturnedDate: { type: Date },
-
-        sparePartsUsed: { type: [sparePartUsedSchema], default: [] },
-
-        notes: { type: String, maxlength: [2000, 'Notes cannot exceed 2000 characters'] },
+        // Tracking
+        updatedBy: { type: Schema.Types.ObjectId, ref: 'User' },
     },
     {
         timestamps: true,
@@ -105,14 +58,12 @@ const workOrderSchema = new Schema<IWorkOrderDocument>(
     },
 );
 
-workOrderSchema.index({ customer:         1 });
-workOrderSchema.index({ assignedEngineer: 1 });
-workOrderSchema.index({ salesOrder:       1 });
-workOrderSchema.index({ customerOrder:    1 });
-workOrderSchema.index({ punctuality:      1 });
-workOrderSchema.index({ typeOfOrder:      1 });
-workOrderSchema.index({ createdAt:        -1 });
-workOrderSchema.index({ assignedEngineer: 1, punctuality: 1 });
+// Indexes for common queries
+workOrderSchema.index({ customerOrderId: 1 });
+workOrderSchema.index({ maintenanceEngineer: 1 });
+workOrderSchema.index({ punctuality: 1 });
+workOrderSchema.index({ taskCompleted: 1 });
+workOrderSchema.index({ createdAt: -1 });
 
 const WorkOrder: Model<IWorkOrderDocument> =
     mongoose.model<IWorkOrderDocument>('WorkOrder', workOrderSchema);

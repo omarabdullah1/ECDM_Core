@@ -176,3 +176,179 @@ export const uploadExcel = multer && multer.memoryStorage ? multer({
         next(new Error('File upload not configured'));
     }
 };
+
+// ══════════════════════════════════════════════════════════════════════════════
+// DATA SHEET UPLOAD (Spare Parts Module)
+// PDF data sheets for spare parts inventory
+// ══════════════════════════════════════════════════════════════════════════════
+
+// Ensure data sheets directory exists
+const dataSheetsDir = path.join(__dirname, '../../uploads/datasheets');
+if (!fs.existsSync(dataSheetsDir)) {
+    fs.mkdirSync(dataSheetsDir, { recursive: true });
+}
+
+// Configure Multer Storage for Data Sheets
+const dataSheetStorage = multer?.diskStorage ? multer.diskStorage({
+    destination: (_req: any, _file: any, cb: any) => {
+        cb(null, dataSheetsDir);
+    },
+    filename: (_req: any, file: any, cb: any) => {
+        // Generate unique filename: datasheet-{timestamp}-{random}.ext
+        const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1E9)}`;
+        const ext = path.extname(file.originalname);
+        cb(null, `datasheet-${uniqueSuffix}${ext}`);
+    }
+}) : undefined;
+
+// File Filter for Data Sheets - Only allow PDF
+const dataSheetFileFilter = (_req: any, file: any, cb: any) => {
+    const allowedMimes = ['application/pdf'];
+    const allowedExts = ['.pdf'];
+    
+    const ext = path.extname(file.originalname).toLowerCase();
+    
+    if (allowedMimes.includes(file.mimetype) && allowedExts.includes(ext)) {
+        cb(null, true);
+    } else {
+        cb(new Error('Invalid file type. Only PDF files are allowed for data sheets.'));
+    }
+};
+
+// Multer Upload Configuration for Data Sheets
+export const uploadDataSheet = multer && dataSheetStorage ? multer({
+    storage: dataSheetStorage,
+    fileFilter: dataSheetFileFilter,
+    limits: {
+        fileSize: 10 * 1024 * 1024, // 10MB max for data sheets
+    },
+}) : {
+    single: () => (_req: Request, _res: Response, next: NextFunction) => {
+        console.error('❌ Multer not configured. Install multer package.');
+        next(new Error('File upload not configured'));
+    }
+};
+
+/**
+ * Middleware to handle data sheet file upload for Spare Parts
+ * Attaches file URL to req.body.dataSheetUrl if file is uploaded
+ * Also attaches the original filename to req.body.dataSheetFileName
+ */
+export const handleDataSheetUpload = (req: Request, _res: Response, next: NextFunction): void => {
+    if (req.file) {
+        // Generate base path from filename
+        let dbPath = `/uploads/datasheets/${req.file.filename}`;
+        
+        // Normalize Windows backslashes to forward slashes
+        dbPath = dbPath.replace(/\\/g, '/');
+        
+        // Strip 'public/' prefix if it exists (common misconfiguration)
+        dbPath = dbPath.replace(/^\/public\//, '/').replace(/^public\//, '/');
+        
+        // Ensure path starts with exactly one forward slash
+        if (!dbPath.startsWith('/')) {
+            dbPath = '/' + dbPath;
+        }
+        
+        // Double-slash cleanup
+        dbPath = dbPath.replace(/\/+/g, '/');
+        
+        console.log('📎 Normalized data sheet file path:', dbPath);
+        
+        req.body.dataSheetUrl = dbPath;
+        req.body.dataSheetFileName = req.file.originalname;
+    }
+    next();
+};
+
+// ══════════════════════════════════════════════════════════════════════════════
+// MARKETING FILE UPLOAD (Content Tracker & Campaign Results)
+// Images, PDFs, and other assets for marketing content and campaign reports
+// ══════════════════════════════════════════════════════════════════════════════
+
+// Ensure marketing documents directory exists
+const marketingDocsDir = path.join(__dirname, '../../uploads/documents');
+if (!fs.existsSync(marketingDocsDir)) {
+    fs.mkdirSync(marketingDocsDir, { recursive: true });
+}
+
+// Configure Multer Storage for Marketing Files
+const marketingFileStorage = multer?.diskStorage ? multer.diskStorage({
+    destination: (_req: any, _file: any, cb: any) => {
+        cb(null, marketingDocsDir);
+    },
+    filename: (_req: any, file: any, cb: any) => {
+        // Generate unique filename: marketing-{timestamp}-{random}.ext
+        const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1E9)}`;
+        const ext = path.extname(file.originalname);
+        cb(null, `marketing-${uniqueSuffix}${ext}`);
+    }
+}) : undefined;
+
+// File Filter for Marketing Files - Allow images and PDFs
+const marketingFileFilter = (_req: any, file: any, cb: any) => {
+    const allowedMimes = [
+        'image/jpeg',
+        'image/png',
+        'image/gif',
+        'image/webp',
+        'application/pdf',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    ];
+    const allowedExts = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.pdf', '.doc', '.docx'];
+    
+    const ext = path.extname(file.originalname).toLowerCase();
+    
+    if (allowedMimes.includes(file.mimetype) && allowedExts.includes(ext)) {
+        cb(null, true);
+    } else {
+        cb(new Error('Invalid file type. Only images (JPG, PNG, GIF, WebP), PDF, DOC, and DOCX files are allowed.'));
+    }
+};
+
+// Multer Upload Configuration for Marketing Files
+export const uploadMarketingFile = multer && marketingFileStorage ? multer({
+    storage: marketingFileStorage,
+    fileFilter: marketingFileFilter,
+    limits: {
+        fileSize: 10 * 1024 * 1024, // 10MB max for marketing files
+    },
+}) : {
+    single: () => (_req: Request, _res: Response, next: NextFunction) => {
+        console.error('❌ Multer not configured. Install multer package.');
+        next(new Error('File upload not configured'));
+    }
+};
+
+/**
+ * Middleware to handle marketing file upload
+ * Attaches file URL to req.body.fileUrl if file is uploaded
+ * Also attaches the original filename to req.body.fileName
+ */
+export const handleMarketingFileUpload = (req: Request, _res: Response, next: NextFunction): void => {
+    if (req.file) {
+        // Generate base path from filename
+        let dbPath = `/uploads/documents/${req.file.filename}`;
+        
+        // Normalize Windows backslashes to forward slashes
+        dbPath = dbPath.replace(/\\/g, '/');
+        
+        // Strip 'public/' prefix if it exists (common misconfiguration)
+        dbPath = dbPath.replace(/^\/public\//, '/').replace(/^public\//, '/');
+        
+        // Ensure path starts with exactly one forward slash
+        if (!dbPath.startsWith('/')) {
+            dbPath = '/' + dbPath;
+        }
+        
+        // Double-slash cleanup
+        dbPath = dbPath.replace(/\/+/g, '/');
+        
+        console.log('📎 Normalized marketing file path:', dbPath);
+        
+        req.body.fileUrl = dbPath;
+        req.body.fileName = req.file.originalname;
+    }
+    next();
+};

@@ -1,7 +1,8 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import api from '@/lib/axios';
-import { Users, Eye, X, Clock, TrendingUp, ShoppingCart } from 'lucide-react';
+import { Users, Eye, X, Clock, TrendingUp, ShoppingCart, FileText } from 'lucide-react';
 import { DataTable } from '@/components/ui/DataTable';
 
 interface Customer {
@@ -148,13 +149,22 @@ export default function CustomerListPage() {
 
   // ─── Row Actions ──────────────────────────────────────────────────────────────
   const renderActions = (row: Customer) => (
-    <button 
-      onClick={() => openHistory(row)} 
-      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))] hover:bg-[hsl(var(--primary))]/20 transition-colors"
-    >
-      <Clock className="h-3.5 w-3.5" />
-      History
-    </button>
+    <div className="flex items-center gap-2">
+      <Link 
+        href={`/customer/list/${row._id}`}
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))] hover:bg-[hsl(var(--primary))]/20 transition-colors"
+      >
+        <FileText className="h-3.5 w-3.5" />
+        Report
+      </Link>
+      <button 
+        onClick={() => openHistory(row)} 
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-[hsl(var(--muted))] hover:bg-[hsl(var(--muted))]/80 transition-colors"
+      >
+        <Clock className="h-3.5 w-3.5" />
+        History
+      </button>
+    </div>
   );
 
   const COLUMNS = ['Customer ID', 'Name', 'Phone', 'Address', 'Sector', 'Created', 'Actions'];

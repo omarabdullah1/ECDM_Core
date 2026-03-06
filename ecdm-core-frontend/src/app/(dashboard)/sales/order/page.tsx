@@ -5,6 +5,7 @@ import { ClipboardList, Plus, X } from 'lucide-react';
 import { DataTable } from '@/components/ui/DataTable';
 import { createSalesOrderColumns, createActionsRenderer, type SalesOrder } from './columns';
 import EditSalesOrderDialog from './EditSalesOrderDialog';
+import AddQuotationDialog from './AddQuotationDialog';
 
 const iCls = 'w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-4 py-3 text-sm placeholder:text-[hsl(var(--muted-foreground))] focus:border-[hsl(var(--primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/20 transition-all';
 const Q_STATUSES = ['Draft', 'Sent', 'Approved', 'Rejected', 'Revised'];
@@ -19,6 +20,7 @@ export default function SalesOrderPage() {
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(false);
   const [editing, setEditing] = useState<SalesOrder | null>(null);
+  const [quotationOrder, setQuotationOrder] = useState<SalesOrder | null>(null);
   const [form, setForm] = useState(blank);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -58,7 +60,9 @@ export default function SalesOrderPage() {
   const u = (f: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setForm(p => ({ ...p, [f]: e.target.value }));
 
   // ─── Column Definitions ───────────────────────────────────────────────────
-  const columns = createSalesOrderColumns();
+  const columns = createSalesOrderColumns({
+    onCreateQuotation: (row: SalesOrder) => setQuotationOrder(row)
+  });
 
   // ─── Row Actions ──────────────────────────────────────────────────────────────
   const renderActions = createActionsRenderer({
@@ -105,6 +109,18 @@ export default function SalesOrderPage() {
           onSuccess={() => {
             fetch_();
             setEditing(null);
+          }}
+        />
+      )}
+
+      {/* Add Quotation Dialog */}
+      {quotationOrder && (
+        <AddQuotationDialog
+          order={quotationOrder}
+          onClose={() => setQuotationOrder(null)}
+          onSuccess={() => {
+            fetch_();
+            setQuotationOrder(null);
           }}
         />
       )}

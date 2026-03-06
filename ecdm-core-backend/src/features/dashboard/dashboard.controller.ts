@@ -116,7 +116,11 @@ export const getStats = async (_req: Request, res: Response, next: NextFunction)
                 punctuality: 'Late',
                 endMaintenanceDate: null,
             })
-                .populate('customer', 'name phone')
+                .populate({
+                    path: 'customerOrderId',
+                    select: 'customerId',
+                    populate: { path: 'customerId', select: 'name phone' }
+                })
                 .populate('assignedEngineer', 'firstName lastName')
                 .select('typeOfOrder issue visitSiteDate startMaintenanceDate lateDuration lateDurationType reasonForDelay createdAt')
                 .sort({ createdAt: 1 })
@@ -125,9 +129,12 @@ export const getStats = async (_req: Request, res: Response, next: NextFunction)
 
             // ── List: Recent feedback ───────────────────────────
             Feedback.find()
-                .populate('customer', 'name')
-                .populate('engineer', 'firstName lastName')
-                .populate('workOrder', 'typeOfOrder')
+                .populate('customerId', 'name')
+                .populate({
+                    path: 'customerOrderId',
+                    select: 'assignedEngineer typeOfOrder',
+                    populate: { path: 'assignedEngineer', select: 'firstName lastName' }
+                })
                 .sort({ createdAt: -1 })
                 .limit(10)
                 .lean(),

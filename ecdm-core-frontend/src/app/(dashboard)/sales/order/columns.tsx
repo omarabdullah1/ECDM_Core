@@ -1,9 +1,10 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { Edit2, Trash2, History, Eye, Download, FileText } from 'lucide-react';
+import { Edit2, Trash2, History, Eye, Download, FileText, PlusCircle } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import toast from 'react-hot-toast';
 import { API_BASE_URL } from '@/lib/constants';
+import { generateQuotationPDF } from '@/utils/generateQuotationPDF';
 
 /**
  * Sales Orders Data Table - Column Definitions
@@ -76,6 +77,21 @@ export interface SalesOrder {
   finalStatus?: string;
   salesPersonId?: string;
   notes?: string;
+  
+  // Dynamic Quotation Builder
+  quotation?: {
+    items: Array<{
+      description: string;
+      quantity: number;
+      unitPrice: number;
+      total: number;
+    }>;
+    subTotal: number;
+    discount: number;
+    grandTotal: number;
+    notes?: string;
+    createdAt?: Date;
+  };
   
   // Follow-up fields
   followUpFirst?: string;
@@ -427,10 +443,11 @@ interface SalesOrderColumnsConfig {
   onEdit?: (row: SalesOrder) => void;
   onDelete?: (row: SalesOrder) => void;
   onHistory?: (row: SalesOrder) => void;
+  onCreateQuotation?: (row: SalesOrder) => void;
 }
 
 export const createSalesOrderColumns = (config?: SalesOrderColumnsConfig) => {
-  const { onEdit, onDelete, onHistory } = config || {};
+  const { onEdit, onDelete, onHistory, onCreateQuotation } = config || {};
 
   return [
     // ─────────────────────────────────────────────────────────────────────────
@@ -643,6 +660,63 @@ export const createSalesOrderColumns = (config?: SalesOrderColumnsConfig) => {
           fileName={row.quotationFileName} 
         />
       ),
+    },
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // 14b. Dynamic Quotation Builder Actions (View/Download/Create PDF)
+    // ─────────────────────────────────────────────────────────────────────────
+    {
+      key: 'quotationActions',
+      header: 'Quotation PDF',
+      render: (row: SalesOrder) => {
+        const hasQuotation = row.quotation && row.quotation.items && row.quotation.items.length > 0;
+        
+        if (hasQuotation) {
+          return (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  try {
+                    generateQuotationPDF(row, 'view');
+                  } catch (error) {
+                    console.error('Failed to generate PDF:', error);
+                    toast.error('Failed to generate PDF preview');
+                  }
+                }}
+                title="View Quotation PDF"
+                className="p-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors group"
+              >
+                <FileText className="w-4 h-4 text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform" />
+              </button>
+              <button
+                onClick={() => {
+                  try {
+                    generateQuotationPDF(row, 'download');
+                  } catch (error) {
+                    console.error('Failed to generate PDF:', error);
+                    toast.error('Failed to download PDF');
+                  }
+                }}
+                title="Download Quotation PDF"
+                className="p-2 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors group"
+              >
+                <Download className="w-4 h-4 text-green-600 dark:text-green-400 group-hover:scale-110 transition-transform" />
+              </button>
+            </div>
+          );
+        }
+        
+        return (
+          <button
+            onClick={() => onCreateQuotation?.(row)}
+            title="Create Quotation"
+            className="px-3 py-1.5 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-all text-xs font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1.5 group"
+          >
+            <PlusCircle className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
+            <span>Add</span>
+          </button>
+        );
+      },
     },
 
     // ─────────────────────────────────────────────────────────────────────────

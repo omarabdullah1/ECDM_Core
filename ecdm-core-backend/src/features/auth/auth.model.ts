@@ -54,6 +54,27 @@ const userSchema = new Schema<IUserDocument>(
             type: String,
             trim: true,
         },
+        // HR Fields
+        avatarUrl: {
+            type: String,
+            trim: true,
+        },
+        address: {
+            type: String,
+            trim: true,
+            maxlength: [500, 'Address cannot exceed 500 characters'],
+        },
+        employeeId: {
+            type: String,
+            unique: true,
+            sparse: true, // Allow null/undefined for unique index
+            trim: true,
+        },
+        documents: [{
+            title: { type: String, required: true },
+            fileUrl: { type: String, required: true },
+            uploadedAt: { type: Date, default: Date.now },
+        }],
     },
     {
         timestamps: true,
@@ -70,6 +91,35 @@ userSchema.index({ isActive: 1 });
 // ── Virtuals ────────────────────────────────────────────────────────
 userSchema.virtual('fullName').get(function (this: IUserDocument) {
     return `${this.firstName} ${this.lastName}`;
+});
+
+// ── Pre-save: auto-generate employeeId ─────────────────────────────
+userSchema.pre<IUserDocument>('save', async function (next) {
+    // Only generate if it's a new document and employeeId doesn't exist
+    if (this.isNew && !this.employeeId) {
+        try {
+            // Find the user with the highest employeeId
+            const lastUser = await (this.constructor as Model<IUserDocument>)
+                .findOne({ employeeId: { $exists: true, $ne: null } })
+                .sort({ employeeId: -1 })
+                .exec();
+
+            let nextNumber = 1001; // Starting number
+
+            if (lastUser && lastUser.employeeId) {
+                // Extract the number from the string (e.g., from 'EMP-1042' extract 1042)
+                const lastNumber = parseInt(lastUser.employeeId.replace('EMP-', ''), 10);
+                if (!isNaN(lastNumber)) {
+                    nextNumber = lastNumber + 1;
+                }
+            }
+
+            this.employeeId = `EMP-${nextNumber}`;
+        } catch (error) {
+            return next(error as Error);
+        }
+    }
+    next();
 });
 
 // ── Pre-save: hash password ─────────────────────────────────────────

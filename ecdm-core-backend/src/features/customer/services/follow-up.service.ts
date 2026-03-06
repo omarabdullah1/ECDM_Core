@@ -22,11 +22,13 @@ export const getAll = async (query: Record<string, unknown>) => {
     const skip = (Number(page) - 1) * Number(limit);
     const [data, total] = await Promise.all([
         FollowUp.find(filter)
-            .populate('customer',    'name phone region address')
-            .populate('csr',         'firstName lastName email')
-            .populate('workOrder',   'typeOfOrder issue')
+            .populate('customer',       'name phone region address')
+            .populate('csr',            'firstName lastName email')
+            .populate('customerOrderId') // New: Populate Customer Order for QC data
+            .populate('workOrder',      'typeOfOrder issue')
             .populate({ path: 'leadId',      populate: { path: 'customerId', select: 'name phone address region' } })
             .populate({ path: 'salesDataId', populate: { path: 'customer',   select: 'name phone address region' } })
+            .populate('updatedBy',      'email firstName lastName') // New: Track who modified
             .sort({ createdAt: -1 }).skip(skip).limit(Number(limit)),
         FollowUp.countDocuments(filter),
     ]);
@@ -35,11 +37,13 @@ export const getAll = async (query: Record<string, unknown>) => {
 
 export const getById = async (id: string): Promise<IFollowUpDocument> => {
     const doc = await FollowUp.findById(id)
-        .populate('customer',    'name phone region address')
-        .populate('csr',         'firstName lastName email')
+        .populate('customer',       'name phone region address')
+        .populate('csr',            'firstName lastName email')
+        .populate('customerOrderId') // New: Populate Customer Order for QC data
         .populate('workOrder')
         .populate({ path: 'leadId',      populate: { path: 'customerId', select: 'name phone address region' } })
-        .populate({ path: 'salesDataId', populate: { path: 'customer',   select: 'name phone address region' } });
+        .populate({ path: 'salesDataId', populate: { path: 'customer',   select: 'name phone address region' } })
+        .populate('updatedBy',      'email firstName lastName'); // New: Track who modified
     if (!doc) throw new AppError('Follow-up not found', 404);
     return doc;
 };

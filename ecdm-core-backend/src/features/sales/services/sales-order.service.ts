@@ -3,6 +3,7 @@ import { CreateSalesOrderInput, UpdateSalesOrderInput } from '../validation/sale
 import { ISalesOrderDocument } from '../types/sales-order.types';
 import { AppError } from '../../../utils/apiError';
 import CustomerOrder from '../../customer/models/customer-order.model';
+import WorkOrder from '../../operations/models/work-order.model';
 
 export const create = async (data: CreateSalesOrderInput): Promise<ISalesOrderDocument> =>
     SalesOrder.create(data);
@@ -122,94 +123,97 @@ export const update = async (id: string, data: UpdateSalesOrderInput): Promise<I
     if (!doc) throw new AppError('Sales order not found', 404);
     
     // ═════════════════════════════════════════════════════════════════════════
-    // CONTINUOUS SYNC: Always sync to Customer Order if it exists
+    // CONTINUOUS SYNC: Sequential Cascading Trigger (Customer Order → Work Order)
     // ═════════════════════════════════════════════════════════════════════════
-    console.log('🔍 Checking for existing Customer Order to sync...');
+    console.log('🔍 Starting sequential cascading sync...');
     console.log('📋 Sales Order ID:', doc._id);
-    console.log('📋 Sales Order typeOfOrder (before population):', doc.typeOfOrder);
-    console.log('📋 Sales Order issue (before population):', doc.issue);
     
-    // 1. Force a fresh, FULLY POPULATED fetch of the Sales Order
+    // STEP 1: Force fully populated fetch of the Sales Order
     const populatedOrder = await SalesOrder.findById(doc._id)
         .populate('salesLead')
         .populate('salesData')
         .exec();
     
     if (!populatedOrder) {
-        console.warn('⚠️ Could not populate sales order for Customer Order sync');
+        console.warn('⚠️ Could not populate sales order for cascading sync');
         return doc;
     }
     
-    console.log('📋 After Population:');
-    console.log('  - typeOfOrder:', populatedOrder.typeOfOrder);
-    console.log('  - issue:', populatedOrder.issue);
-    console.log('  - salesLead populated:', !!populatedOrder.salesLead);
-    console.log('  - salesData populated:', !!populatedOrder.salesData);
-    if (populatedOrder.salesLead) {
-        console.log('  - salesLead.typeOfOrder:', (populatedOrder.salesLead as any)?.typeOfOrder);
-        console.log('  - salesLead.issue:', (populatedOrder.salesLead as any)?.issue);
-    }
-    if (populatedOrder.salesData) {
-        console.log('  - salesData.typeOfOrder:', (populatedOrder.salesData as any)?.typeOfOrder);
-        console.log('  - salesData.issue:', (populatedOrder.salesData as any)?.issue);
-    }
+    console.log('📋 Population complete - siteInspectionDate:', populatedOrder.siteInspectionDate);
     
-    // 2. Resolve inherited values (priority: order > lead > data)
-    const resolvedType = populatedOrder.typeOfOrder || 
-                        (populatedOrder.salesLead as any)?.typeOfOrder || 
-                        (populatedOrder.salesData as any)?.typeOfOrder || 
-                        '';
-    
-    const resolvedIssue = populatedOrder.issue || 
-                         (populatedOrder.salesLead as any)?.issue || 
-                         (populatedOrder.salesData as any)?.issue || 
-                         '';
-    
-    console.log('✅ Resolved Values:');
-    console.log('  - resolvedType:', resolvedType);
-    console.log('  - resolvedIssue:', resolvedIssue);
-    
-    // 3. Check for existing Customer Order
-    const existingCustomerOrder = await CustomerOrder.findOne({ salesOrderId: populatedOrder._id });
-    
-    if (existingCustomerOrder) {
-        console.log('📦 Found existing Customer Order:', existingCustomerOrder._id);
-        console.log('  - Current typeOfOrder:', existingCustomerOrder.typeOfOrder);
-        console.log('  - Current issue:', existingCustomerOrder.issue);
+    // Only proceed with cascading if siteInspectionDate is set
+    if (populatedOrder.siteInspectionDate) {
+        console.log('✅ Site inspection date detected, proceeding with cascade...');
         
-        // ALWAYS UPDATE if it exists (Continuous Sync)
-        existingCustomerOrder.typeOfOrder = resolvedType;
-        existingCustomerOrder.issue = resolvedIssue;
-        // Only sync date if it exists in the Sales Order payload
-        if (populatedOrder.siteInspectionDate) {
+        // STEP 2: Resolve inherited values (priority: order > lead > data)
+        const resolvedType = populatedOrder.typeOfOrder || 
+                            (populatedOrder.salesLead as any)?.typeOfOrder || 
+                            (populatedOrder.salesData as any)?.typeOfOrder || 
+                            '';
+        
+        const resolvedIssue = populatedOrder.issue || 
+                             (populatedOrder.salesLead as any)?.issue || 
+                             (populatedOrder.salesData as any)?.issue || 
+                             '';
+        
+        console.log('📦 Resolved values:', { resolvedType, resolvedIssue });
+        
+        // STEP 3: Sync or Create Customer Order FIRST (sequential, blocking)
+        let targetCustomerOrderId;
+        
+        const existingCustomerOrder = await CustomerOrder.findOne({ salesOrderId: populatedOrder._id });
+        
+        if (existingCustomerOrder) {
+            console.log('📦 Found existing Customer Order:', existingCustomerOrder._id);
+            // ALWAYS UPDATE (Continuous Sync)
+            existingCustomerOrder.typeOfOrder = resolvedType;
+            existingCustomerOrder.issue = resolvedIssue;
             existingCustomerOrder.scheduledVisitDate = populatedOrder.siteInspectionDate;
-        }
-        await existingCustomerOrder.save();
-        
-        console.log('🔄 Successfully synced POPULATED data to Customer Order.');
-        console.log('  - Updated typeOfOrder:', existingCustomerOrder.typeOfOrder);
-        console.log('  - Updated issue:', existingCustomerOrder.issue);
-    } else if (populatedOrder.siteInspectionDate) {
-        console.log('✨ No existing Customer Order found, creating new one...');
-        // CREATE ONLY if it doesn't exist AND an inspection date was just added
-        try {
-            const newOrder = await CustomerOrder.create({
+            await existingCustomerOrder.save();
+            
+            targetCustomerOrderId = existingCustomerOrder._id; // Securely capture ID
+            console.log('✅ Customer Order synced, captured ID:', targetCustomerOrderId);
+        } else {
+            console.log('✨ Creating NEW Customer Order...');
+            const newCustomerOrder = await CustomerOrder.create({
                 customerId: populatedOrder.customer,
                 salesOrderId: populatedOrder._id,
                 typeOfOrder: resolvedType,
                 issue: resolvedIssue,
                 scheduledVisitDate: populatedOrder.siteInspectionDate,
-                // Keep other fields at default/empty for the engineer to fill
             });
-            console.log('✅ Created NEW Customer Order with populated data:', newOrder._id);
-            console.log('  - typeOfOrder:', newOrder.typeOfOrder);
-            console.log('  - issue:', newOrder.issue);
-        } catch (createError) {
-            console.error('❌ Failed to create Customer Order:', createError);
-            // Don't fail the sales order update if customer order creation fails
+            
+            targetCustomerOrderId = newCustomerOrder._id; // Securely capture ID
+            console.log('✅ Customer Order created, captured ID:', targetCustomerOrderId);
+        }
+        
+        // STEP 4: CASCADE TO WORK ORDER (using the securely captured ID)
+        if (targetCustomerOrderId) {
+            console.log('🔄 Cascading to Work Order with Customer Order ID:', targetCustomerOrderId);
+            
+            const existingWorkOrder = await WorkOrder.findOne({ customerOrderId: targetCustomerOrderId });
+            
+            if (!existingWorkOrder) {
+                try {
+                    const newWorkOrder = await WorkOrder.create({
+                        customerOrderId: targetCustomerOrderId,
+                        // All other fields remain empty for the maintenance team to fill
+                    });
+                    console.log('✅ SUCCESS: Work Order created:', newWorkOrder._id);
+                    console.log('   - Linked to Customer Order:', targetCustomerOrderId);
+                } catch (workOrderError) {
+                    console.error('❌ CRITICAL: Failed to create Work Order:', workOrderError);
+                    console.error('   - Target Customer Order ID:', targetCustomerOrderId);
+                    console.error('   - Error details:', (workOrderError as Error).message);
+                }
+            } else {
+                console.log('ℹ️ Work Order already exists:', existingWorkOrder._id);
+            }
+        } else {
+            console.error('❌ CRITICAL: No targetCustomerOrderId captured!');
         }
     } else {
-        console.log('ℹ️ No Customer Order exists and no siteInspectionDate set, skipping creation.');
+        console.log('ℹ️ No siteInspectionDate set, skipping cascade');
     }
     
     console.log('✅ Service: Sales order updated successfully');

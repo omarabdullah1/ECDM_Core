@@ -1,12 +1,18 @@
 import { z } from 'zod';
 
 export const createFeedbackSchema = z.object({
-    workOrder:             z.string().min(1, 'Work order ID is required'),
-    customer:              z.string().min(1, 'Customer ID is required'),
-    engineer:              z.string().min(1, 'Engineer user ID is required'),
-    ratingOperation:       z.number().int().min(1).max(5),
-    ratingCustomerService: z.number().int().min(1).max(5),
-    notes:                 z.string().max(2000).optional(),
+    customerId:            z.string().min(1, 'Customer ID is required'),
+    customerOrderId:       z.string().optional(), // To inherit Engineer & Dates
+    
+    // Feedback specific fields
+    solvedIssue:           z.enum(['Yes', 'No', '']).optional(),
+    ratingOperation:       z.string().optional(), // e.g., '1 to 5', 'Excellent', etc.
+    followUp:              z.enum(['Yes', 'No', '']).optional(), // Does this need another follow-up?
+    ratingCustomerService: z.string().optional(),
+    notes:                 z.string().optional(),
+    
+    // Audit
+    updatedBy:             z.string().optional(),
 });
 
 export const updateFeedbackSchema = createFeedbackSchema.partial();

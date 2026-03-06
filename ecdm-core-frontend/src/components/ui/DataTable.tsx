@@ -181,7 +181,7 @@ export function DataTable<T extends { _id: string }>({
         {loading ? (
           <div className="p-8 text-center text-[hsl(var(--muted-foreground))]">Loading…</div>
         ) : (
-          <table className="w-full text-sm whitespace-nowrap">
+          <table className="w-full text-sm whitespace-nowrap min-w-max">
             <thead className="border-b border-[hsl(var(--border))] bg-[hsl(var(--muted))]/30">
               <tr>
                 {/* Checkbox column - only show if user is admin and bulk delete is enabled */}

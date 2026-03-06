@@ -95,3 +95,99 @@ export const getAllUsers = async (
 
     return { users, total };
 };
+
+// ── Create user (SuperAdmin) ────────────────────────────────────────
+export const createUser = async (data: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    password: string;
+    role: UserRole;
+    phone?: string;
+    department?: string;
+    isActive?: boolean;
+}): Promise<IUserDocument> => {
+    const existing = await User.findOne({ email: data.email });
+    if (existing) {
+        throw new AppError('Email is already in use', 409);
+    }
+
+    const user = await User.create({
+        firstName: data.firstName,
+        lastName: data.lastName,
+        email: data.email,
+        password: data.password,
+        role: data.role,
+        phone: data.phone,
+        department: data.department,
+        isActive: data.isActive ?? true,
+    });
+
+    // Remove password from response
+    user.password = undefined as unknown as string;
+
+    return user;
+};
+
+// ── Get user by ID ──────────────────────────────────────────────────
+export const getUserById = async (userId: string): Promise<IUserDocument> => {
+    const user = await User.findById(userId);
+    if (!user) {
+        throw new AppError('User not found', 404);
+    }
+    return user;
+};
+
+// ── Update user (SuperAdmin) ────────────────────────────────────────
+export const updateUser = async (
+    userId: string,
+    data: {
+        firstName?: string;
+        lastName?: string;
+        email?: string;
+        password?: string;
+        role?: UserRole;
+        phone?: string;
+        department?: string;
+        isActive?: boolean;
+    },
+): Promise<IUserDocument> => {
+    const user = await User.findById(userId);
+    if (!user) {
+        throw new AppError('User not found', 404);
+    }
+
+    // Check email uniqueness if email is being updated
+    if (data.email && data.email !== user.email) {
+        const existing = await User.findOne({ email: data.email });
+        if (existing) {
+            throw new AppError('Email is already in use', 409);
+        }
+    }
+
+    // Update fields
+    if (data.firstName !== undefined) user.firstName = data.firstName;
+    if (data.lastName !== undefined) user.lastName = data.lastName;
+    if (data.email !== undefined) user.email = data.email;
+    if (data.password !== undefined) user.password = data.password;
+    if (data.role !== undefined) user.role = data.role;
+    if (data.phone !== undefined) user.phone = data.phone;
+    if (data.department !== undefined) user.department = data.department;
+    if (data.isActive !== undefined) user.isActive = data.isActive;
+
+    await user.save();
+
+    // Remove password from response
+    user.password = undefined as unknown as string;
+
+    return user;
+};
+
+// ── Delete user (SuperAdmin) ────────────────────────────────────────
+export const deleteUser = async (userId: string): Promise<void> => {
+    const user = await User.findById(userId);
+    if (!user) {
+        throw new AppError('User not found', 404);
+    }
+    await User.deleteOne({ _id: userId });
+};

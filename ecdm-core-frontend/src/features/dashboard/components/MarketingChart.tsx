@@ -10,7 +10,7 @@ export default function MarketingChart({ campaigns }: Props) {
     const d = t.dashboard;
 
     const chartData = campaigns.map((c) => ({
-        name: c.name.length > 18 ? c.name.slice(0, 16) + '…' : c.name,
+        name: c.name?.length > 18 ? c.name.slice(0, 16) + '…' : (c.name || 'Unnamed'),
         [d.impressionsKey]: c.impressions,
         [d.conversionsKey]: c.conversions,
     }));

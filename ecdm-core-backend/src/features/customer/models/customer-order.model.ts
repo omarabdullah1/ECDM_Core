@@ -9,8 +9,8 @@ import { ICustomerOrderDocument, DevicePickupType, DealStatus } from '../types/c
  */
 const customerOrderSchema = new Schema<ICustomerOrderDocument>(
     {
-        customerId:   { type: Schema.Types.ObjectId, ref: 'Customer',   required: [true, 'Customer reference is required'], index: true },
-        salesOrderId: { type: Schema.Types.ObjectId, ref: 'SalesOrder', required: [true, 'Sales order reference is required'], index: true },
+        customerId:   { type: Schema.Types.ObjectId, ref: 'Customer',   required: [true, 'Customer reference is required'] },
+        salesOrderId: { type: Schema.Types.ObjectId, ref: 'SalesOrder', required: [true, 'Sales order reference is required'] },
         
         // Inherited fields (copied at creation for historic snapshot, or populated dynamically)
         typeOfOrder:        { type: String, default: '' },
@@ -34,6 +34,8 @@ const customerOrderSchema = new Schema<ICustomerOrderDocument>(
     { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } },
 );
 
+customerOrderSchema.index({ customerId: 1 });
+customerOrderSchema.index({ salesOrderId: 1 });
 customerOrderSchema.index({ deal: 1 });
 customerOrderSchema.index({ scheduledVisitDate: 1 });
 customerOrderSchema.index({ createdAt: -1 });

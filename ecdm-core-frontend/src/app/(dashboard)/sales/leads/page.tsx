@@ -4,6 +4,15 @@ import api from '@/lib/axios';
 import { Users, Edit2, Trash2, X, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { DataTable } from '@/components/ui/DataTable';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface Customer {
   _id: string;
@@ -70,6 +79,7 @@ export default function SalesLeadsPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [delId, setDelId] = useState<string | null>(null);
+  const [showApprovalAlert, setShowApprovalAlert] = useState(false);
   const lim = 10;
   const tp = Math.ceil(total / lim);
 
@@ -116,7 +126,29 @@ export default function SalesLeadsPage() {
     }
     try {
       // Use PATCH to auto-track salesPerson from logged-in user
-      await api.patch(`/sales/leads/${editing!._id}`, pl);
+      const response = await api.patch(`/sales/leads/${editing!._id}`, pl);
+      
+      // ─────────────────────────────────────────────────────────────────────────
+      // DEBUG: Log response details
+      // ─────────────────────────────────────────────────────────────────────────
+      console.log('🔍 API Response Status:', response.status);
+      console.log('🔍 API Response Data:', response.data);
+      
+      // ─────────────────────────────────────────────────────────────────────────
+      // Handle Maker-Checker 202 Accepted Status
+      // ─────────────────────────────────────────────────────────────────────────
+      if (response.status === 202) {
+        console.log('⏳ Edit intercepted by Maker-Checker - Pending approval');
+        console.log('🔔 Setting showApprovalAlert to TRUE');
+        setSaving(false); // Reset saving state
+        setShowApprovalAlert(true);
+        return; // CRITICAL: Exit here - DO NOT call setModal(false)
+      }
+      
+      // ─────────────────────────────────────────────────────────────────────────
+      // Standard Success (200/204) - Admin or no Maker-Checker
+      // ─────────────────────────────────────────────────────────────────────────
+      console.log('✅ Lead updated successfully (Status:', response.status, ')');
       setModal(false);
       toast.success('Lead updated successfully');
       fetch_();
@@ -456,6 +488,33 @@ export default function SalesLeadsPage() {
           </div>
         </div>
       )}
+
+      {/* ═══════════════════════════════════════════════════════════════════════
+          Maker-Checker Approval Alert Dialog
+          Shown when status 202 is returned (non-admin edit pending approval)
+      ═══════════════════════════════════════════════════════════════════════ */}
+      <AlertDialog open={showApprovalAlert} onOpenChange={setShowApprovalAlert}>
+        <AlertDialogContent className="z-[9999]">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Approval Required</AlertDialogTitle>
+            <AlertDialogDescription>
+              Your modifications have been submitted successfully. However, they require Admin approval before taking effect on the system.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction
+              onClick={() => {
+                console.log('✅ User acknowledged approval requirement');
+                setShowApprovalAlert(false);
+                setModal(false); // Close the edit modal
+                fetch_(); // Refresh the data table
+              }}
+            >
+              Got it
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

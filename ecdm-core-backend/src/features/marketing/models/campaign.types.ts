@@ -5,8 +5,6 @@ export enum CampaignPlatform {
     Facebook  = 'Facebook',
     Instagram = 'Instagram',
     LinkedIn  = 'LinkedIn',
-    TikTok    = 'TikTok',
-    Other     = 'Other',
 }
 
 export enum CampaignStatus {
@@ -15,22 +13,32 @@ export enum CampaignStatus {
     Future   = 'Future',
 }
 
+export enum NextSteps {
+    Analyse  = 'Analyse',
+    Pause    = 'Pause',
+    Stop     = 'Stop',
+    Continue = 'Continue',
+}
+
 export interface ICampaign {
-    name:          string;
-    platform:      CampaignPlatform;
-    status:        CampaignStatus;
-    impressions?:  number;
-    conversions?:  number;
-    salesRevenue?: number;
-    budget?:       number;
-    startDate?:    Date;
-    endDate?:      Date;
-    notes?:        string;
-    createdAt:     Date;
-    updatedAt:     Date;
+    campaignId:          string;
+    campaignName:        string;
+    status:              CampaignStatus | '';
+    impressions:         number;
+    conversions:         number;
+    salesRevenuePercent: number;
+    region1:             string;
+    region2:             string;
+    region3:             string;
+    nextSteps:           NextSteps | '';
+    fileUrl:             string;
+    fileName:            string;
+    notes:               string;
+    createdBy?:          Types.ObjectId;
+    createdAt:           Date;
+    updatedAt:           Date;
 }
 
 export interface ICampaignDocument extends ICampaign, Document {
     _id: Types.ObjectId;
-    conversionRate?: number;
 }

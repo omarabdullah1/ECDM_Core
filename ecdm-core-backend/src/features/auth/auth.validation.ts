@@ -16,5 +16,31 @@ export const loginSchema = z.object({
     password: z.string().min(1, 'Password is required'),
 });
 
+// Schema for SuperAdmin creating new users/employees
+export const createUserSchema = z.object({
+    firstName: z.string().min(1, 'First name is required').max(50),
+    lastName: z.string().min(1, 'Last name is required').max(50),
+    email: z.string().email('Invalid email address'),
+    password: z.string().min(8, 'Password must be at least 8 characters'),
+    role: z.nativeEnum(UserRole),
+    phone: z.string().optional(),
+    department: z.string().optional(),
+    isActive: z.boolean().optional().default(true),
+});
+
+// Schema for updating user
+export const updateUserSchema = z.object({
+    firstName: z.string().min(1, 'First name is required').max(50).optional(),
+    lastName: z.string().min(1, 'Last name is required').max(50).optional(),
+    email: z.string().email('Invalid email address').optional(),
+    password: z.string().min(8, 'Password must be at least 8 characters').optional(),
+    role: z.nativeEnum(UserRole).optional(),
+    phone: z.string().optional(),
+    department: z.string().optional(),
+    isActive: z.boolean().optional(),
+});
+
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
+export type CreateUserInput = z.infer<typeof createUserSchema>;
+export type UpdateUserInput = z.infer<typeof updateUserSchema>;

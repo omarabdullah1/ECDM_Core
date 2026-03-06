@@ -17,15 +17,24 @@ export interface IFollowUp {
     workOrder?:           Types.ObjectId;    // → WorkOrder
     leadId?:              Types.ObjectId;    // → SalesLead
     salesDataId?:         Types.ObjectId;    // → SalesData
+    customerOrderId?:     Types.ObjectId;    // → CustomerOrder (New: for QC pipeline)
     
     customer:             Types.ObjectId;    // → Customer (shared SSOT)
     csr?:                 Types.ObjectId;    // → User (CustomerService role)
     
-    status:               FollowUpStatus;    // New: Workflow status
-    solvedIssue:          boolean;           // Legacy: Keep for backward compatibility
+    status:               FollowUpStatus;    // Workflow status
+    
+    // Quality Control Fields
+    punctuality?:         'Same Visit Time' | 'Late' | '';   // New QC field
+    reasonForDelay?:      string;                            // New QC field
+    solvedIssue?:         'Yes' | 'No' | '';                 // Changed from boolean to string enum
     reasonForNotSolving?: string;
+    
     followUpDate:         Date;
     notes?:               string;
+    
+    // Tracking
+    updatedBy?:           Types.ObjectId;    // → User (who last modified)
     createdAt:            Date;
     updatedAt:            Date;
 }

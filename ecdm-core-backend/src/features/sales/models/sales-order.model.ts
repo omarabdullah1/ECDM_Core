@@ -42,6 +42,21 @@ const salesOrderSchema = new Schema<ISalesOrderDocument>(
         quotationFileUrl:              { type: String, trim: true },
         quotationFileName:             { type: String, trim: true },
         
+        // Dynamic Quotation Builder (stores structured quotation data)
+        quotation: {
+            items: [{
+                description: { type: String, required: true },
+                quantity: { type: Number, required: true, default: 1 },
+                unitPrice: { type: Number, required: true, default: 0 },
+                total: { type: Number, required: true, default: 0 }
+            }],
+            subTotal: { type: Number, default: 0 },
+            discount: { type: Number, default: 0 },
+            grandTotal: { type: Number, default: 0 },
+            notes: { type: String, default: '' },
+            createdAt: { type: Date }
+        },
+        
         // First Follow-Up
         followUpFirst:                     { type: Date },
         quotationStatusFirstFollowUp:      { type: String, enum: Object.values(QuotationStatus) },
