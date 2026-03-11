@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import api from '@/lib/axios';
 import { TrendingUp, Plus, Edit2, Trash2, X, ChevronLeft, ChevronRight, Sheet, Upload, Loader2, AlertTriangle, Check, RefreshCw, Save, Database } from 'lucide-react';
+import { DataTable } from '@/components/ui/DataTable';
 
 interface Customer {
   _id: string;
@@ -68,7 +69,7 @@ export default function MarketingLeadsPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [delId, setDelId] = useState<string | null>(null);
-  
+
   // Google Sheets Sync Dialog state
   const [syncModal, setSyncModal] = useState(false);
   const [syncing, setSyncing] = useState(false);
@@ -77,18 +78,18 @@ export default function MarketingLeadsPage() {
   const [conflictResolutions, setConflictResolutions] = useState<Record<number, 'update' | 'keep'>>({});
   const [commitResult, setCommitResult] = useState<{ created: number; updated: number; skipped: number; forwarded: number; errors: string[] } | null>(null);
   const { register: regSync, handleSubmit: handleSync, formState: { errors: syncErrors }, reset: resetSync, setValue: setSyncValue, getValues: getSyncValues } = useForm<SheetSyncForm>();
-  
+
   // Saved Connections state
   const [savedConnections, setSavedConnections] = useState<SavedConnection[]>([]);
   const [selectedConnectionId, setSelectedConnectionId] = useState<string>('new');
   const [saveNewConnection, setSaveNewConnection] = useState(false);
   const [newConnectionName, setNewConnectionName] = useState('');
-  
+
   // Multi-select & Bulk Delete state
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
-  
+
   const lim = 10;
   const tp = Math.ceil(total / lim);
 
@@ -104,7 +105,7 @@ export default function MarketingLeadsPage() {
     } catch { }
     setLoading(false);
   }, [page, fType, fSector]);
-  
+
   useEffect(() => { fetch_(); }, [fetch_]);
 
   // Fetch saved sheet connections
@@ -169,7 +170,7 @@ export default function MarketingLeadsPage() {
     setError('');
     setModal(true);
   };
-  
+
   const save = async (ev: React.FormEvent) => {
     ev.preventDefault();
     setSaving(true);
@@ -186,20 +187,20 @@ export default function MarketingLeadsPage() {
     }
     setSaving(false);
   };
-  
+
   const del = async () => {
     if (!delId) return;
     try { await api.delete(`/marketing/leads/${delId}`); fetch_(); } catch { }
     setDelId(null);
   };
-  
+
   const u = (f: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setForm(p => ({ ...p, [f]: e.target.value }));
 
   // Handle JSON file upload
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    
+
     const reader = new FileReader();
     reader.onload = (event) => {
       const content = event.target?.result as string;
@@ -262,7 +263,7 @@ export default function MarketingLeadsPage() {
   // Step 2: Commit approved changes
   const handleCommit = async () => {
     if (!analysis) return;
-    
+
     setSyncing(true);
     try {
       const conflictResolutionsList = analysis.conflicts.map(c => ({
@@ -270,13 +271,13 @@ export default function MarketingLeadsPage() {
         action: conflictResolutions[c.rowIndex] || 'keep',
         data: c,
       }));
-      
+
       const response = await api.post('/marketing/sync/commit', {
         serviceAccountJson: getSyncValues('serviceAccountJson'),
         newLeads: analysis.new,
         conflictResolutions: conflictResolutionsList,
       });
-      
+
       setCommitResult(response.data.data);
       setSyncStep('done');
       fetch_(); // Refresh the table
@@ -346,8 +347,8 @@ export default function MarketingLeadsPage() {
           {SECTORS.map(s => <option key={s} value={s}>{s}</option>)}
         </select>
         {selectedRows.size > 0 && (
-          <button 
-            onClick={() => setShowBulkDeleteConfirm(true)} 
+          <button
+            onClick={() => setShowBulkDeleteConfirm(true)}
             className="flex items-center gap-2 rounded-xl bg-destructive px-4 py-2 text-sm font-semibold text-white hover:opacity-90 transition-opacity ml-auto"
           >
             <Trash2 className="h-4 w-4" />
@@ -356,61 +357,88 @@ export default function MarketingLeadsPage() {
         )}
       </div>
 
-      <div className="rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] overflow-hidden">
-        {loading ? <div className="p-8 text-center text-[hsl(var(--muted-foreground))]">Loading…</div> : (
-          <table className="w-full text-sm">
-            <thead className="border-b border-[hsl(var(--border))] bg-[hsl(var(--muted))]/30">
-              <tr>
-                <th className="px-4 py-3 text-left w-10">
-                  <input 
-                    type="checkbox" 
-                    checked={rows.length > 0 && selectedRows.size === rows.length}
-                    onChange={toggleAllSelection}
-                    className="h-4 w-4 rounded border-[hsl(var(--border))] cursor-pointer"
-                  />
-                </th>
-                {['ID', 'Name', 'Phone', 'Type', 'Sector', 'Date', 'Notes', 'Actions'].map(h => <th key={h} className="px-4 py-3 text-left font-semibold">{h}</th>)}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map(r => (
-                <tr key={r._id} className={`border-b border-[hsl(var(--border))]/50 hover:bg-[hsl(var(--muted))]/20 ${selectedRows.has(r._id) ? 'bg-[hsl(var(--primary))]/5' : ''}`}>
-                  <td className="px-4 py-3">
-                    <input 
-                      type="checkbox" 
-                      checked={selectedRows.has(r._id)}
-                      onChange={() => toggleRowSelection(r._id)}
-                      className="h-4 w-4 rounded border-[hsl(var(--border))] cursor-pointer"
-                    />
-                  </td>
-                  <td className="px-4 py-3 font-mono text-xs text-[hsl(var(--primary))]">{r.customerId?.customerId || '—'}</td>
-                  <td className="px-4 py-3 font-medium">{r.customerId?.name || '—'}</td>
-                  <td className="px-4 py-3">{r.customerId?.phone || '—'}</td>
-                  <td className="px-4 py-3"><span className="rounded-full px-2 py-0.5 text-xs font-medium bg-blue-500/10 text-blue-600">{r.customerId?.type || '—'}</span></td>
-                  <td className="px-4 py-3"><span className="rounded-full px-2 py-0.5 text-xs font-medium bg-purple-500/10 text-purple-600">{r.customerId?.sector || '—'}</span></td>
-                  <td className="px-4 py-3 text-[hsl(var(--muted-foreground))]">{formatDate(r.date)}</td>
-                  <td className="px-4 py-3 max-w-[200px] truncate text-[hsl(var(--muted-foreground))]" title={r.notes}>{r.notes || '—'}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex gap-2">
-                      <button onClick={() => openE(r)} className="p-1 hover:text-[hsl(var(--primary))]"><Edit2 className="h-4 w-4" /></button>
-                      <button onClick={() => setDelId(r._id)} className="p-1 hover:text-destructive"><Trash2 className="h-4 w-4" /></button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {!rows.length && <tr><td colSpan={9} className="px-4 py-8 text-center text-[hsl(var(--muted-foreground))]">No leads found.</td></tr>}
-            </tbody>
-          </table>
-        )}
+      <div className="overflow-x-auto">
+        <DataTable
+          data={rows}
+          columns={[
+            {
+              key: "select",
+              header: "",
+              render: (row: any) => (
+                <input
+                  type="checkbox"
+                  checked={selectedRows.has(row._id)}
+                  onChange={() => toggleRowSelection(row._id)}
+                  className="h-4 w-4 rounded border-[hsl(var(--border))] cursor-pointer"
+                />
+              ),
+              className: "w-10",
+            },
+            {
+              key: "customerId.customerId",
+              header: "ID",
+              render: (row: any) => <span className="font-mono text-xs text-[hsl(var(--primary))]">{row.customerId?.customerId || '—'}</span>,
+            },
+            {
+              key: "customerId.name",
+              header: "Name",
+              render: (row: any) => <span className="font-medium">{row.customerId?.name || '—'}</span>,
+            },
+            {
+              key: "customerId.phone",
+              header: "Phone",
+              render: (row: any) => <span>{row.customerId?.phone || '—'}</span>,
+            },
+            {
+              key: "customerId.type",
+              header: "Type",
+              render: (row: any) => <span className="rounded-full px-2 py-0.5 text-xs font-medium bg-blue-500/10 text-blue-600">{row.customerId?.type || '—'}</span>,
+            },
+            {
+              key: "customerId.sector",
+              header: "Sector",
+              render: (row: any) => <span className="rounded-full px-2 py-0.5 text-xs font-medium bg-purple-500/10 text-purple-600">{row.customerId?.sector || '—'}</span>,
+            },
+            {
+              key: "customerId.address",
+              header: "Address",
+              render: (row: any) => <span>{row.customerId?.address || '—'}</span>,
+            },
+            {
+              key: "date",
+              header: "Date",
+              render: (row: any) => <span className="text-[hsl(var(--muted-foreground))]">{formatDate(row.date)}</span>,
+            },
+            {
+              key: "notes",
+              header: "Notes",
+              render: (row: any) => <span className="max-w-[200px] truncate text-[hsl(var(--muted-foreground))]" title={row.notes}>{row.notes || '—'}</span>,
+            },
+          ]}
+          loading={loading}
+          emptyMessage="No leads found."
+          page={page}
+          totalPages={tp}
+          totalItems={total}
+          itemsPerPage={lim}
+          onPageChange={setPage}
+          renderActions={(row: any) => (
+            <div className="flex gap-2">
+              <button onClick={() => openE(row as MarketingLead)} className="p-1 hover:text-[hsl(var(--primary))]"><Edit2 className="h-4 w-4" /></button>
+              <button onClick={() => setDelId((row as MarketingLead)._id)} className="p-1 hover:text-destructive"><Trash2 className="h-4 w-4" /></button>
+            </div>
+          )}
+          defaultVisibility={{
+            "customerId.address": false,
+            "customerId.region": false,
+            "customerId.sector": false,
+            "notes": false,
+            "date": false,
+          }}
+        />
       </div>
 
-      {tp > 1 && (
-        <div className="flex items-center justify-center gap-2">
-          <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="p-2 rounded-lg hover:bg-[hsl(var(--muted))] disabled:opacity-40"><ChevronLeft className="h-4 w-4" /></button>
-          <span className="text-sm">{page} / {tp}</span>
-          <button onClick={() => setPage(p => Math.min(tp, p + 1))} disabled={page === tp} className="p-2 rounded-lg hover:bg-[hsl(var(--muted))] disabled:opacity-40"><ChevronRight className="h-4 w-4" /></button>
-        </div>
-      )}
+
 
       {/* Add/Edit Lead Modal */}
       {modal && (
@@ -636,22 +664,20 @@ export default function MarketingLeadsPage() {
                               <button
                                 type="button"
                                 onClick={() => setConflictResolutions(prev => ({ ...prev, [conflict.rowIndex]: 'update' }))}
-                                className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
-                                  conflictResolutions[conflict.rowIndex] === 'update'
-                                    ? 'bg-amber-500 text-white'
-                                    : 'bg-[hsl(var(--muted))] hover:bg-amber-500/20'
-                                }`}
+                                className={`px-2 py-1 rounded text-xs font-medium transition-colors ${conflictResolutions[conflict.rowIndex] === 'update'
+                                  ? 'bg-amber-500 text-white'
+                                  : 'bg-[hsl(var(--muted))] hover:bg-amber-500/20'
+                                  }`}
                               >
                                 <RefreshCw className="h-3 w-3 inline mr-1" />Update
                               </button>
                               <button
                                 type="button"
                                 onClick={() => setConflictResolutions(prev => ({ ...prev, [conflict.rowIndex]: 'keep' }))}
-                                className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
-                                  conflictResolutions[conflict.rowIndex] === 'keep'
-                                    ? 'bg-blue-500 text-white'
-                                    : 'bg-[hsl(var(--muted))] hover:bg-blue-500/20'
-                                }`}
+                                className={`px-2 py-1 rounded text-xs font-medium transition-colors ${conflictResolutions[conflict.rowIndex] === 'keep'
+                                  ? 'bg-blue-500 text-white'
+                                  : 'bg-[hsl(var(--muted))] hover:bg-blue-500/20'
+                                  }`}
                               >
                                 <Check className="h-3 w-3 inline mr-1" />Keep
                               </button>
@@ -767,8 +793,8 @@ export default function MarketingLeadsPage() {
               This action cannot be undone. All selected leads will be permanently removed.
             </p>
             <div className="flex gap-3">
-              <button 
-                onClick={handleBulkDelete} 
+              <button
+                onClick={handleBulkDelete}
                 disabled={bulkDeleting}
                 className="flex-1 rounded-xl bg-destructive py-2 text-sm font-semibold text-white disabled:opacity-60"
               >

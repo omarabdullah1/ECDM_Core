@@ -1,8 +1,9 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import api from '@/lib/axios';
 import { FileText, Plus, X, Upload } from 'lucide-react';
 import { DataTable } from '@/components/ui/DataTable';
+import { Pagination } from '@/components/shared/Pagination';
 import { getColumns, type ContentTracker } from './columns';
 import toast from 'react-hot-toast';
 
@@ -19,7 +20,28 @@ export default function ContentTrackerPage() {
     const [showModal, setShowModal] = useState(false);
     const [editing, setEditing] = useState<ContentTracker | null>(null);
     const [delId, setDelId] = useState<string | null>(null);
-    
+
+    const [fType, setFType] = useState('');
+    const [fStatus, setFStatus] = useState('');
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 10;
+
+    const filteredRows = useMemo(() => {
+        return rows.filter(r => {
+            if (fType && r.type !== fType) return false;
+            if (fStatus && r.status !== fStatus) return false;
+            return true;
+        });
+    }, [rows, fType, fStatus]);
+
+    // Reset to page 1 when filters change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [fType, fStatus]);
+
+    // Paginate
+    const paginatedRows = filteredRows.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
     // Form state
     const [formData, setFormData] = useState({
         contentTitle: '',
@@ -100,7 +122,7 @@ export default function ContentTrackerPage() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        
+
         if (!formData.contentTitle.trim()) {
             toast.error('Content title is required');
             return;
@@ -109,7 +131,7 @@ export default function ContentTrackerPage() {
         setSaving(true);
         try {
             const submitData = new FormData();
-            
+
             // Append all form fields
             Object.keys(formData).forEach(key => {
                 const value = formData[key as keyof typeof formData];
@@ -117,7 +139,7 @@ export default function ContentTrackerPage() {
                     submitData.append(key, value);
                 }
             });
-            
+
             // Append file if selected
             if (file) {
                 submitData.append('file', file);
@@ -130,7 +152,7 @@ export default function ContentTrackerPage() {
                 await api.post('/marketing/content', submitData);
                 toast.success('Content created successfully!');
             }
-            
+
             setShowModal(false);
             fetchData();
         } catch (err: any) {
@@ -164,14 +186,37 @@ export default function ContentTrackerPage() {
                 </button>
             </div>
 
+            <div className="flex gap-3 flex-wrap items-center">
+                <select value={fType} onChange={e => setFType(e.target.value)} className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2 text-sm">
+                    <option value="">All Types</option>
+                    {CONTENT_TYPES.filter(t => t !== '' && t !== 'All').map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+                <select value={fStatus} onChange={e => setFStatus(e.target.value)} className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2 text-sm">
+                    <option value="">All Statuses</option>
+                    {CONTENT_STATUSES.filter(s => s !== '' && s !== 'All').map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+            </div>
+
             {/* Data Table */}
-            <div className="overflow-x-auto rounded-xl border border-[hsl(var(--border))]">
+            <div className="overflow-x-auto">
                 <DataTable
-                    data={rows}
+                    data={paginatedRows}
                     columns={columns}
                     loading={loading}
                     emptyMessage="No content trackers found."
+                    defaultVisibility={{
+                        details: false,
+                        notes: false,
+                    }}
                 />
+                {!loading && filteredRows.length > 0 && (
+                    <Pagination
+                        currentPage={currentPage}
+                        totalItems={filteredRows.length}
+                        itemsPerPage={itemsPerPage}
+                        onPageChange={setCurrentPage}
+                    />
+                )}
             </div>
 
             {/* Add/Edit Dialog */}
@@ -191,7 +236,7 @@ export default function ContentTrackerPage() {
                                 <input
                                     type="text"
                                     value={formData.contentTitle}
-                                    onChange={(e) => setFormData({...formData, contentTitle: e.target.value})}
+                                    onChange={(e) => setFormData({ ...formData, contentTitle: e.target.value })}
                                     className={iCls}
                                     placeholder="Enter content title"
                                     required
@@ -203,7 +248,7 @@ export default function ContentTrackerPage() {
                                     <label className={labelCls}>Type</label>
                                     <select
                                         value={formData.type}
-                                        onChange={(e) => setFormData({...formData, type: e.target.value})}
+                                        onChange={(e) => setFormData({ ...formData, type: e.target.value })}
                                         className={iCls}
                                     >
                                         {CONTENT_TYPES.map(type => (
@@ -216,7 +261,7 @@ export default function ContentTrackerPage() {
                                     <label className={labelCls}>Status</label>
                                     <select
                                         value={formData.status}
-                                        onChange={(e) => setFormData({...formData, status: e.target.value})}
+                                        onChange={(e) => setFormData({ ...formData, status: e.target.value })}
                                         className={iCls}
                                     >
                                         {CONTENT_STATUSES.map(status => (
@@ -230,7 +275,7 @@ export default function ContentTrackerPage() {
                                 <label className={labelCls}>Details</label>
                                 <textarea
                                     value={formData.details}
-                                    onChange={(e) => setFormData({...formData, details: e.target.value})}
+                                    onChange={(e) => setFormData({ ...formData, details: e.target.value })}
                                     className={iCls}
                                     placeholder="Enter content details"
                                     rows={3}
@@ -243,7 +288,7 @@ export default function ContentTrackerPage() {
                                     <input
                                         type="text"
                                         value={formData.owner}
-                                        onChange={(e) => setFormData({...formData, owner: e.target.value})}
+                                        onChange={(e) => setFormData({ ...formData, owner: e.target.value })}
                                         className={iCls}
                                         placeholder="Content owner"
                                     />
@@ -254,7 +299,7 @@ export default function ContentTrackerPage() {
                                     <input
                                         type="date"
                                         value={formData.postDate}
-                                        onChange={(e) => setFormData({...formData, postDate: e.target.value})}
+                                        onChange={(e) => setFormData({ ...formData, postDate: e.target.value })}
                                         className={iCls}
                                     />
                                 </div>
@@ -289,7 +334,7 @@ export default function ContentTrackerPage() {
                                 <label className={labelCls}>Notes</label>
                                 <textarea
                                     value={formData.notes}
-                                    onChange={(e) => setFormData({...formData, notes: e.target.value})}
+                                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                                     className={iCls}
                                     placeholder="Additional notes"
                                     rows={3}

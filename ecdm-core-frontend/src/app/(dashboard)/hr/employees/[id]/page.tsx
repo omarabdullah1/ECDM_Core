@@ -6,11 +6,12 @@ import api from '@/lib/axios';
 import toast from 'react-hot-toast';
 import {
     ArrowLeft, User, Calendar, Briefcase, FileText,
-    Mail, Phone, MapPin, Building, Shield, Clock,
+    Mail, Phone, MapPin, Shield, Clock,
     CheckCircle, XCircle, AlertCircle, Upload, Trash2,
-    Download, ExternalLink, TrendingUp, Award
+    Download, ExternalLink, TrendingUp, Award, Target, Loader2
 } from 'lucide-react';
 import { useAuthStore } from '@/features/auth/useAuth';
+import { Progress } from '@/components/ui/progress';
 
 // ─── Types ──────────────────────────────────────────────────────────────────────
 interface EmployeeDocument {
@@ -29,12 +30,13 @@ interface Employee {
     role: string;
     isActive: boolean;
     phone?: string;
-    department?: string;
     address?: string;
     employeeId?: string;
     avatarUrl?: string;
     documents?: EmployeeDocument[];
     createdAt: string;
+    targetBudget?: number;
+    targetSales?: number;
 }
 
 interface AttendanceRecord {
@@ -134,6 +136,16 @@ export default function EmployeeProfilePage() {
     const [error, setError] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<TabKey>('info');
     
+    // Sales Performance State
+    const [salesPerformance, setSalesPerformance] = useState<{
+        targetAmount: number;
+        achievedAmount: number;
+        progressPercentage: number;
+        month: number;
+        year: number;
+    } | null>(null);
+    const [loadingSalesPerformance, setLoadingSalesPerformance] = useState(false);
+    
     // Document upload state
     const [uploadingDoc, setUploadingDoc] = useState(false);
     const [docTitle, setDocTitle] = useState('');
@@ -148,11 +160,31 @@ export default function EmployeeProfilePage() {
             try {
                 const { data } = await api.get(`/hr/employees/${employeeId}/profile`);
                 setProfile(data.data);
+
+                // Fetch sales performance if employee is in Sales role
+                if (data.data?.employee?.role === 'Sales') {
+                    fetchSalesPerformance();
+                }
             } catch (err) {
                 setError('Failed to load employee profile.');
                 console.error(err);
             }
             setLoading(false);
+        };
+
+        const fetchSalesPerformance = async () => {
+            setLoadingSalesPerformance(true);
+            try {
+                const { data } = await api.get('/sales/targets/performance', {
+                    params: { salespersonId: employeeId },
+                });
+                setSalesPerformance(data.data);
+            } catch (err) {
+                console.error('Failed to fetch sales performance:', err);
+                // Silently fail - not all sales users may have targets set
+            } finally {
+                setLoadingSalesPerformance(false);
+            }
         };
 
         fetchProfile();
@@ -284,12 +316,6 @@ export default function EmployeeProfilePage() {
                                     <span>{employee.phone}</span>
                                 </div>
                             )}
-                            {employee.department && (
-                                <div className="flex items-center gap-2">
-                                    <Building className="h-4 w-4 text-[hsl(var(--muted-foreground))]" />
-                                    <span>{employee.department}</span>
-                                </div>
-                            )}
                             {employee.address && (
                                 <div className="flex items-center gap-2">
                                     <MapPin className="h-4 w-4 text-[hsl(var(--muted-foreground))]" />
@@ -363,10 +389,6 @@ export default function EmployeeProfilePage() {
                             <div>
                                 <label className="block text-sm font-medium text-[hsl(var(--muted-foreground))] mb-1">Phone</label>
                                 <p className="text-base">{employee.phone || '—'}</p>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-[hsl(var(--muted-foreground))] mb-1">Department</label>
-                                <p className="text-base">{employee.department || '—'}</p>
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-[hsl(var(--muted-foreground))] mb-1">Employee ID</label>
@@ -503,13 +525,13 @@ export default function EmployeeProfilePage() {
                         </div>
 
                         {/* Performance Stats */}
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            <div className="rounded-xl bg-blue-50 dark:bg-blue-900/20 p-4">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                            <div className="rounded-xl bg-indigo-50 dark:bg-indigo-900/20 p-4">
                                 <div className="flex items-center gap-2 mb-2">
-                                    <Briefcase className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                                    <p className="text-sm text-blue-700 dark:text-blue-300">Total Tasks</p>
+                                    <Briefcase className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+                                    <p className="text-sm text-indigo-700 dark:text-indigo-300">Total Tasks</p>
                                 </div>
-                                <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">
+                                <p className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">
                                     {workOrders.stats.total}
                                 </p>
                             </div>
@@ -518,7 +540,7 @@ export default function EmployeeProfilePage() {
                                     <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
                                     <p className="text-sm text-green-700 dark:text-green-300">Completed</p>
                                 </div>
-                                <p className="text-3xl font-bold text-green-600 dark:text-green-400">
+                                <p className="text-2xl font-bold text-green-600 dark:text-green-400">
                                     {workOrders.stats.completed}
                                 </p>
                             </div>
@@ -527,7 +549,7 @@ export default function EmployeeProfilePage() {
                                     <TrendingUp className="h-5 w-5 text-purple-600 dark:text-purple-400" />
                                     <p className="text-sm text-purple-700 dark:text-purple-300">Completion Rate</p>
                                 </div>
-                                <p className="text-3xl font-bold text-purple-600 dark:text-purple-400">
+                                <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">
                                     {workOrders.stats.completionRate}%
                                 </p>
                             </div>
@@ -536,11 +558,115 @@ export default function EmployeeProfilePage() {
                                     <Award className="h-5 w-5 text-amber-600 dark:text-amber-400" />
                                     <p className="text-sm text-amber-700 dark:text-amber-300">Punctuality</p>
                                 </div>
-                                <p className="text-3xl font-bold text-amber-600 dark:text-amber-400">
+                                <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">
                                     {workOrders.stats.punctualityRate}%
                                 </p>
                             </div>
                         </div>
+
+                        {/* Sales Performance Widget - Only for Sales role */}
+                        {employee.role === 'Sales' && (
+                            <div className="rounded-xl border-2 border-blue-200 dark:border-blue-800 bg-gradient-to-br from-blue-50 to-white dark:from-blue-950 dark:to-gray-900 p-6 shadow-sm">
+                                <div className="flex items-center gap-2 mb-4">
+                                    <Target className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                                    <h3 className="text-lg font-bold text-blue-800 dark:text-blue-300">
+                                        Monthly Sales Target Progress
+                                    </h3>
+                                </div>
+
+                                {loadingSalesPerformance ? (
+                                    <div className="flex items-center justify-center py-8 text-[hsl(var(--muted-foreground))]">
+                                        <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                                        <span className="text-sm">Loading sales performance...</span>
+                                    </div>
+                                ) : salesPerformance ? (
+                                    <div className="space-y-4">
+                                        <div className="flex justify-between items-center">
+                                            <div>
+                                                <p className="text-sm text-gray-600 dark:text-gray-400">Achieved</p>
+                                                <p className="text-2xl font-bold text-green-600 dark:text-green-400">
+                                                    EGP {salesPerformance.achievedAmount.toLocaleString()}
+                                                </p>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="text-sm text-gray-600 dark:text-gray-400">Target</p>
+                                                <p className="text-2xl font-bold text-blue-800 dark:text-blue-300">
+                                                    EGP {salesPerformance.targetAmount.toLocaleString()}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="space-y-2">
+                                            <div className="flex justify-between text-sm font-semibold text-blue-700 dark:text-blue-400">
+                                                <span>Progress</span>
+                                                <span>{salesPerformance.progressPercentage}%</span>
+                                            </div>
+                                            <Progress 
+                                                value={salesPerformance.progressPercentage} 
+                                                max={100}
+                                                className="h-3 bg-blue-100 dark:bg-blue-900"
+                                                indicatorClassName="bg-blue-600 dark:bg-blue-400"
+                                            />
+                                        </div>
+
+                                        <p className="text-xs text-center text-gray-500 dark:text-gray-400 mt-3 pt-3 border-t border-blue-200 dark:border-blue-800">
+                                            {new Date(salesPerformance.year, salesPerformance.month - 1).toLocaleString('default', { month: 'long', year: 'numeric' })} Performance
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <div className="py-6 text-center">
+                                        <p className="text-sm text-gray-600 dark:text-gray-400">No sales target set for this month</p>
+                                        <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">Contact management to set a target</p>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Marketing Budget Progress Widget - Only for Marketing role */}
+                        {employee.role === 'Marketing' && (
+                            <div className="rounded-xl border-2 border-emerald-200 dark:border-emerald-800 bg-gradient-to-br from-emerald-50 to-white dark:from-emerald-950 dark:to-gray-900 p-6 shadow-sm">
+                                <div className="flex items-center gap-2 mb-4">
+                                    <TrendingUp className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                                    <h3 className="text-lg font-bold text-emerald-800 dark:text-emerald-300">
+                                        Monthly Marketing Budget Progress
+                                    </h3>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <div className="flex justify-between items-center">
+                                        <div>
+                                            <p className="text-sm text-gray-600 dark:text-gray-400">Spent / Achieved</p>
+                                            <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+                                                EGP 0
+                                            </p>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="text-sm text-gray-600 dark:text-gray-400">Target Budget</p>
+                                            <p className="text-2xl font-bold text-emerald-800 dark:text-emerald-300">
+                                                EGP {(employee.targetBudget || 0).toLocaleString()}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <div className="flex justify-between text-sm font-semibold text-emerald-700 dark:text-emerald-400">
+                                            <span>Progress</span>
+                                            <span>0%</span>
+                                        </div>
+                                        <Progress
+                                            value={0}
+                                            max={100}
+                                            className="h-3 bg-emerald-100 dark:bg-emerald-900"
+                                            indicatorClassName="bg-emerald-500 dark:bg-emerald-400"
+                                        />
+                                    </div>
+
+                                    <p className="text-xs text-center text-gray-500 dark:text-gray-400 mt-3 pt-3 border-t border-emerald-200 dark:border-emerald-800">
+                                        {new Date().toLocaleString('default', { month: 'long', year: 'numeric' })} Performance
+                                    </p>
+                                </div>
+                            </div>
+                        )}
 
                         {/* Work Orders Table */}
                         <div className="overflow-x-auto">

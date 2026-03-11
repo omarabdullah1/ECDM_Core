@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { X, Upload, FileText } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '@/lib/axios';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 /**
  * Add Spare Part Dialog
@@ -90,26 +91,26 @@ export default function AddSparePartDialog({ onClose, onSuccess }: AddSparePartD
 
         try {
             const formData = new FormData();
-            
+
             // ─── Append text fields ───────────────────────────────────────────────
             formData.append('itemName', values.itemName);
-            
+
             if (values.specification) {
                 formData.append('specification', values.specification);
             }
-            
+
             if (values.category) {
                 formData.append('category', values.category);
             }
-            
+
             if (values.unitPrice !== undefined) {
                 formData.append('unitPrice', String(values.unitPrice));
             }
-            
+
             if (values.notes) {
                 formData.append('notes', values.notes);
             }
-            
+
             // ─── Handle File Upload ───────────────────────────────────────────────
             if (dataSheetFile) {
                 formData.append('dataSheet', dataSheetFile);
@@ -124,10 +125,10 @@ export default function AddSparePartDialog({ onClose, onSuccess }: AddSparePartD
 
             // API call - Let axios handle Content-Type automatically for FormData
             await api.post('/operations/spare-parts', formData);
-            
+
             console.log('✅ Spare part created successfully');
             toast.success('Spare part created successfully!');
-            
+
             onSuccess();
             onClose();
         } catch (err: unknown) {
@@ -140,28 +141,29 @@ export default function AddSparePartDialog({ onClose, onSuccess }: AddSparePartD
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 overflow-y-auto">
-            <div className="w-full max-w-2xl rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] shadow-2xl my-8">
-                
+        <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
+            <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto overflow-x-hidden p-6 outline-none">
+
                 {/* ─── Header ─────────────────────────────────────────────────── */}
-                <div className="flex items-center justify-between border-b border-[hsl(var(--border))] px-6 py-4 sticky top-0 bg-[hsl(var(--card))] z-10 rounded-t-2xl">
+                <DialogHeader className="flex flex-row items-center justify-between border-b border-[hsl(var(--border))] pb-4 mb-4 space-y-0">
                     <div>
-                        <h2 className="text-xl font-bold">Add Spare Part</h2>
+                        <DialogTitle className="text-xl font-bold">Add Spare Part</DialogTitle>
                         <p className="text-xs text-[hsl(var(--muted-foreground))] mt-0.5">
                             Create a new spare part inventory item
                         </p>
                     </div>
-                    <button 
+                    <button
+                        type="button"
                         onClick={onClose}
                         className="p-2 hover:bg-[hsl(var(--muted))] rounded-lg transition-colors"
                     >
                         <X className="h-5 w-5" />
                     </button>
-                </div>
+                </DialogHeader>
 
                 <form onSubmit={form.handleSubmit(onSubmit, onError)}>
-                    <div className="p-6 space-y-6 max-h-[calc(100vh-200px)] overflow-y-auto">
-                        
+                    <div className="space-y-6">
+
                         {/* ─── Item Name (Required) ──────────────────────────────── */}
                         <div>
                             <label className={labelCls}>Item Name *</label>
@@ -267,7 +269,7 @@ export default function AddSparePartDialog({ onClose, onSuccess }: AddSparePartD
                     </div>
 
                     {/* ─── Footer ─────────────────────────────────────────────────── */}
-                    <div className="flex items-center justify-end gap-3 border-t border-[hsl(var(--border))] px-6 py-4">
+                    <div className="flex items-center justify-end gap-3 border-t border-[hsl(var(--border))] pt-4 mt-6">
                         <button
                             type="button"
                             onClick={onClose}
@@ -284,7 +286,7 @@ export default function AddSparePartDialog({ onClose, onSuccess }: AddSparePartD
                         </button>
                     </div>
                 </form>
-            </div>
-        </div>
+            </DialogContent>
+        </Dialog>
     );
 }

@@ -1,0 +1,22 @@
+src/app/(dashboard)/customer/follow-up/page.tsx(115,53): error TS2345: Argument of type '(r: FollowUp) => void' is not assignable to parameter of type '(row: FollowUp) => void'.
+  Types of parameters 'r' and 'row' are incompatible.
+    Type 'import("C:/Users/Omar/Documents/ECDM_Core/ecdm-core-frontend/src/app/(dashboard)/customer/follow-up/columns").FollowUp' is not assignable to type 'FollowUp'.
+      Types of property 'solvedIssue' are incompatible.
+        Type 'string | undefined' is not assignable to type 'boolean'.
+          Type 'undefined' is not assignable to type 'boolean'.
+src/app/(dashboard)/customer/follow-up/page.tsx(192,9): error TS2322: Type 'FollowUp[]' is not assignable to type 'import("C:/Users/Omar/Documents/ECDM_Core/ecdm-core-frontend/src/app/(dashboard)/customer/follow-up/columns").FollowUp[]'.
+  Type 'FollowUp' is not assignable to type 'import("C:/Users/Omar/Documents/ECDM_Core/ecdm-core-frontend/src/app/(dashboard)/customer/follow-up/columns").FollowUp'.
+    Types of property 'solvedIssue' are incompatible.
+      Type 'boolean' is not assignable to type 'string'.
+src/app/(dashboard)/sales/order/columns.tsx(681,42): error TS2345: Argument of type 'SalesOrder' is not assignable to parameter of type 'SalesOrderForPDF'.
+  Types of property 'quotation' are incompatible.
+    Type '{ items: { description: string; quantity: number; unitPrice: number; total: number; }[]; subTotal: number; discount: number; grandTotal: number; notes?: string | undefined; createdAt?: Date | undefined; } | undefined' is not assignable to type 'Quotation'.
+      Type 'undefined' is not assignable to type 'Quotation'.
+src/app/(dashboard)/sales/order/columns.tsx(695,42): error TS2345: Argument of type 'SalesOrder' is not assignable to parameter of type 'SalesOrderForPDF'.
+  Types of property 'quotation' are incompatible.
+    Type '{ items: { description: string; quantity: number; unitPrice: number; total: number; }[]; subTotal: number; discount: number; grandTotal: number; notes?: string | undefined; createdAt?: Date | undefined; } | undefined' is not assignable to type 'Quotation'.
+      Type 'undefined' is not assignable to type 'Quotation'.
+src/app/(dashboard)/sales/order/EditSalesOrderDialog.tsx(588,63): error TS2345: Argument of type 'SalesOrder' is not assignable to parameter of type 'SalesOrderForPDF'.
+  Types of property 'quotation' are incompatible.
+    Type '{ items: { description: string; quantity: number; unitPrice: number; total: number; }[]; subTotal: number; discount: number; grandTotal: number; notes?: string | undefined; createdAt?: Date | undefined; } | undefined' is not assignable to type 'Quotation'.
+      Type 'undefined' is not assignable to type 'Quotation'.

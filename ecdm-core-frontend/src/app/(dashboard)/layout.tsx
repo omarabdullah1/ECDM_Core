@@ -1,14 +1,30 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/features/auth/useAuth';
 import Sidebar from '@/components/layout/Sidebar';
 import Header from '@/components/layout/Header';
 
+const COLLAPSED_KEY = 'ecdm_sidebar_collapsed';
+
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
     const router = useRouter();
     const { isAuthenticated, isLoading, loadUser } = useAuthStore();
+    const [isCollapsed, setIsCollapsed] = useState(false);
+
+    // Restore collapse preference from localStorage
+    useEffect(() => {
+        const stored = localStorage.getItem(COLLAPSED_KEY);
+        if (stored === 'true') setIsCollapsed(true);
+    }, []);
+
+    const handleToggle = () => {
+        setIsCollapsed(prev => {
+            localStorage.setItem(COLLAPSED_KEY, String(!prev));
+            return !prev;
+        });
+    };
 
     useEffect(() => {
         loadUser();
@@ -30,12 +46,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
     if (!isAuthenticated) return null;
 
+    /* Dynamic sidebar offset: collapsed=56px, expanded=220px */
+    const sidebarMs = isCollapsed ? 'ms-[var(--sidebar-collapsed-width)]' : 'ms-[var(--sidebar-width)]';
+
     return (
         <div className="flex min-h-screen">
-            <Sidebar />
-            <div className="flex-1 ms-[var(--sidebar-width)]">
+            <Sidebar isCollapsed={isCollapsed} onToggle={handleToggle} />
+            <div className={`flex-1 transition-all duration-300 ease-in-out ${sidebarMs}`}>
                 <Header />
-                <main className="p-6 animate-fade-in">
+                <main className="p-3 animate-fade-in">
                     {children}
                 </main>
             </div>

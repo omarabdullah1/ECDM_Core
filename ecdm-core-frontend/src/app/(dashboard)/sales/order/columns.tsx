@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { Edit2, Trash2, History, Eye, Download, FileText, PlusCircle } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import toast from 'react-hot-toast';
+import api from '@/lib/axios';
 import { API_BASE_URL } from '@/lib/constants';
 import { generateQuotationPDF } from '@/utils/generateQuotationPDF';
 
@@ -53,13 +54,13 @@ interface SalesData {
 export interface SalesOrder {
   _id: string;
   salesOrderId?: string;
-  
+
   // Populated references (SSOT)
   customer?: Customer;
   customerId?: Customer; // Alternative population field name
   salesLead?: SalesLead;
   salesData?: SalesData;
-  
+
   // Core order fields
   issueDescription?: string;
   issue?: string;  // Editable issue field for order phase
@@ -75,9 +76,10 @@ export interface SalesOrder {
   quotationStatus?: string;
   reasonOfQuotation?: string;
   finalStatus?: string;
-  salesPersonId?: string;
+  salesPerson?: string; // Reference to User (salesperson)
+  salesPersonId?: string; // Alternative field name for backward compatibility
   notes?: string;
-  
+
   // Dynamic Quotation Builder
   quotation?: {
     items: Array<{
@@ -92,7 +94,7 @@ export interface SalesOrder {
     notes?: string;
     createdAt?: Date;
   };
-  
+
   // Follow-up fields
   followUpFirst?: string;
   quotationStatusFirstFollowUp?: string;
@@ -100,7 +102,7 @@ export interface SalesOrder {
   statusSecondFollowUp?: string;
   followUpThird?: string;
   finalStatusThirdFollowUp?: string;
-  
+
   // Timestamps
   createdAt?: string;
   updatedAt?: string;
@@ -116,16 +118,16 @@ export interface SalesOrder {
  */
 const getFileUrl = (relativePath: string): string => {
   if (!relativePath) return '';
-  
+
   // Safely remove /api and trailing slashes from the base URL
   const baseUrl = API_BASE_URL.replace(/\/api\/?$/, '').replace(/\/$/, '');
-  
+
   // Ensure the relative path starts with exactly one slash
   const cleanPath = relativePath.startsWith('/') ? relativePath : `/${relativePath}`;
-  
+
   // Construct the full URL
   const fullUrl = `${baseUrl}${cleanPath}`;
-  
+
   console.log('🔗 Constructed file URL:', fullUrl);
   return fullUrl;
 };
@@ -138,18 +140,18 @@ const getFileUrl = (relativePath: string): string => {
 const handleDownload = async (url: string, filename: string) => {
   try {
     console.log('⬇️ Attempting download from:', url);
-    
+
     const response = await fetch(url);
     const contentType = response.headers.get('content-type');
-    
+
     console.log('📊 Response status:', response.status);
     console.log('📄 Content-Type:', contentType);
-    
+
     // Guard: If not OK, or if the server returned an HTML error page instead of a file
     if (!response.ok || (contentType && contentType.includes('text/html'))) {
       throw new Error('File not found or invalid response from server');
     }
-    
+
     const blob = await response.blob();
     const downloadUrl = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -159,7 +161,7 @@ const handleDownload = async (url: string, filename: string) => {
     link.click();
     document.body.removeChild(link);
     window.URL.revokeObjectURL(downloadUrl);
-    
+
     console.log('✅ Download successful:', filename);
     toast.success('File downloaded successfully!');
   } catch (err) {
@@ -183,7 +185,7 @@ function QuotationCell({ fileUrl, fileName }: QuotationCellProps) {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
-  
+
   // Memory cleanup: Revoke blob URL when dialog closes or component unmounts
   useEffect(() => {
     if (!isPreviewOpen && blobUrl) {
@@ -192,21 +194,21 @@ function QuotationCell({ fileUrl, fileName }: QuotationCellProps) {
       setBlobUrl(null);
     }
   }, [isPreviewOpen, blobUrl]);
-  
+
   if (!fileUrl) {
     return <span className="text-gray-400 text-xs">No File</span>;
   }
 
   const fullFileUrl = getFileUrl(fileUrl);
   const displayFileName = fileName || 'Document';
-  
+
   // Detect file type
   const fileExtension = fileName?.split('.').pop()?.toLowerCase();
   const isPdf = fileExtension === 'pdf';
   const isWordDoc = fileExtension === 'doc' || fileExtension === 'docx';
-  
+
   // Localhost detection (Microsoft Office Viewer cannot access localhost files)
-  const isLocalhost = typeof window !== 'undefined' && 
+  const isLocalhost = typeof window !== 'undefined' &&
     (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
 
   /**
@@ -217,7 +219,7 @@ function QuotationCell({ fileUrl, fileName }: QuotationCellProps) {
    */
   const handleView = async () => {
     setIsPreviewOpen(true);
-    
+
     // For Word docs, skip blob fetching (use MS Office Viewer or show fallback)
     if (isWordDoc) {
       console.log('📝 Word document detected:', displayFileName);
@@ -228,24 +230,24 @@ function QuotationCell({ fileUrl, fileName }: QuotationCellProps) {
       }
       return;
     }
-    
+
     // For PDFs: Fetch as Blob
     if (isPdf) {
       setIsLoadingPreview(true);
-      
+
       try {
         console.log('👁️ Loading PDF preview from:', fullFileUrl);
-        
+
         const response = await fetch(fullFileUrl);
         const contentType = response.headers.get('content-type');
-        
+
         if (!response.ok || (contentType && contentType.includes('text/html'))) {
           throw new Error('Failed to fetch file for preview');
         }
-        
+
         const blob = await response.blob();
         const objectUrl = window.URL.createObjectURL(blob);
-        
+
         console.log('✅ Blob URL created:', objectUrl);
         setBlobUrl(objectUrl);
       } catch (error) {
@@ -257,7 +259,7 @@ function QuotationCell({ fileUrl, fileName }: QuotationCellProps) {
       }
     }
   };
-  
+
   /**
    * Render Dialog Content based on file type
    */
@@ -272,17 +274,17 @@ function QuotationCell({ fileUrl, fileName }: QuotationCellProps) {
           </div>
         );
       }
-      
+
       if (blobUrl) {
         return (
-          <iframe 
-            src={blobUrl} 
-            className="w-full h-full border-0" 
+          <iframe
+            src={blobUrl}
+            className="w-full h-full border-0"
             title="PDF Viewer"
           />
         );
       }
-      
+
       return (
         <div className="flex flex-col items-center gap-2">
           <span className="text-gray-500 dark:text-gray-400">Preview not available</span>
@@ -295,7 +297,7 @@ function QuotationCell({ fileUrl, fileName }: QuotationCellProps) {
         </div>
       );
     }
-    
+
     // Word Doc on Localhost: Show fallback UI
     if (isWordDoc && isLocalhost) {
       return (
@@ -327,21 +329,21 @@ function QuotationCell({ fileUrl, fileName }: QuotationCellProps) {
         </div>
       );
     }
-    
+
     // Word Doc on Live Domain: Use Microsoft Office Viewer
     if (isWordDoc && !isLocalhost) {
       // Construct full URL for Microsoft Office Viewer
       const msViewerUrl = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(fullFileUrl)}`;
-      
+
       return (
-        <iframe 
-          src={msViewerUrl} 
-          className="w-full h-full border-0" 
+        <iframe
+          src={msViewerUrl}
+          className="w-full h-full border-0"
           title="Word Document Viewer"
         />
       );
     }
-    
+
     // Unsupported file type
     return (
       <div className="flex flex-col items-center gap-4">
@@ -362,27 +364,27 @@ function QuotationCell({ fileUrl, fileName }: QuotationCellProps) {
 
   return (
     <>
-      <div className="flex items-center gap-2">
-        <span className="truncate max-w-[100px] text-sm" title={displayFileName}>
+      <div className="flex items-center gap-1">
+        <span className="truncate max-w-[80px] text-xs" title={displayFileName}>
           {displayFileName}
         </span>
-        
-        {/* View Button - Opens Smart Viewer Dialog */}
+
+        {/* View Button */}
         <button
           onClick={handleView}
-          className="p-1.5 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded text-blue-500 transition-colors"
+          className="p-1 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded text-blue-500 transition-colors"
           title="View File"
         >
-          <Eye className="h-4 w-4" />
+          <Eye className="h-3.5 w-3.5" />
         </button>
-        
-        {/* Download Button - Robust Fetch Download */}
+
+        {/* Download Button */}
         <button
           onClick={() => handleDownload(fullFileUrl, displayFileName)}
-          className="p-1.5 hover:bg-green-50 dark:hover:bg-green-900/20 rounded text-green-500 transition-colors"
+          className="p-1 hover:bg-green-50 dark:hover:bg-green-900/20 rounded text-green-500 transition-colors"
           title="Download File"
         >
-          <Download className="h-4 w-4" />
+          <Download className="h-3.5 w-3.5" />
         </button>
       </div>
 
@@ -418,17 +420,17 @@ function QuotationCell({ fileUrl, fileName }: QuotationCellProps) {
  */
 const formatDateTime = (dateValue: string | Date | null | undefined): string => {
   if (!dateValue) return '-';
-  
+
   try {
     const date = new Date(dateValue);
     if (isNaN(date.getTime())) return '-';
-    
+
     const day = String(date.getDate()).padStart(2, '0');
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const year = date.getFullYear();
     const hours = String(date.getHours()).padStart(2, '0');
     const minutes = String(date.getMinutes()).padStart(2, '0');
-    
+
     return `${day}/${month}/${year} ${hours}:${minutes}`;
   } catch {
     return '-';
@@ -517,9 +519,9 @@ export const createSalesOrderColumns = (config?: SalesOrderColumnsConfig) => {
         const customer = row.customer || row.customerId;
         const address = customer?.address;
         return (
-          <span className="text-sm max-w-[200px] truncate block" title={address}>
+          <div className="max-w-[150px] truncate text-sm" title={address}>
             {address || '-'}
-          </span>
+          </div>
         );
       },
     },
@@ -550,9 +552,9 @@ export const createSalesOrderColumns = (config?: SalesOrderColumnsConfig) => {
       render: (row: SalesOrder) => {
         const issue = row.salesLead?.issue || row.salesData?.issue || '-';
         return (
-          <span className="text-sm max-w-[150px] truncate block text-gray-500 dark:text-gray-400" title={issue}>
+          <div className="max-w-[150px] truncate text-sm text-gray-500 dark:text-gray-400" title={issue}>
             {issue}
-          </span>
+          </div>
         );
       },
     },
@@ -566,9 +568,9 @@ export const createSalesOrderColumns = (config?: SalesOrderColumnsConfig) => {
       render: (row: SalesOrder) => {
         const issue = row.issue || '-';
         return (
-          <span className="text-sm max-w-[150px] truncate block font-medium" title={issue}>
+          <div className="max-w-[150px] truncate font-medium text-sm" title={issue}>
             {issue}
-          </span>
+          </div>
         );
       },
     },
@@ -638,11 +640,10 @@ export const createSalesOrderColumns = (config?: SalesOrderColumnsConfig) => {
       key: 'isTechnicalInspectionRequired',
       header: 'Technical Inspection',
       render: (row: SalesOrder) => (
-        <span className={`text-xs font-medium px-2 py-1 rounded-full ${
-          row.isTechnicalInspectionRequired 
-            ? 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400'
-            : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
-        }`}>
+        <span className={`text-xs font-medium px-2 py-1 rounded-full ${row.isTechnicalInspectionRequired
+          ? 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400'
+          : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+          }`}>
           {row.isTechnicalInspectionRequired ? 'Yes' : 'No'}
         </span>
       ),
@@ -655,10 +656,35 @@ export const createSalesOrderColumns = (config?: SalesOrderColumnsConfig) => {
       key: 'quotationFileUrl',
       header: 'Quotation',
       render: (row: SalesOrder) => (
-        <QuotationCell 
-          fileUrl={row.quotationFileUrl} 
-          fileName={row.quotationFileName} 
-        />
+        <div className="flex items-center gap-2">
+          <QuotationCell
+            fileUrl={row.quotationFileUrl}
+            fileName={row.quotationFileName}
+          />
+          {row.quotationFileUrl && (
+            <button
+              onClick={async () => {
+                if (!window.confirm('Remove uploaded quotation?')) return;
+                try {
+                  const response = await api.patch(`/sales/orders/${row._id}`, {
+                    quotationFileUrl: '',
+                    quotationFileName: ''
+                  });
+                  if (response.status === 200 || response.status === 204 || response.status === 202) {
+                    toast.success('Removed successfully');
+                    window.location.reload();
+                  }
+                } catch (error) {
+                  toast.error('Failed to remove');
+                }
+              }}
+              title="Remove File"
+              className="text-red-500 hover:text-red-700 transition-colors p-1 rounded hover:bg-red-50"
+            >
+              <Trash2 className="w-3 h-3" />
+            </button>
+          )}
+        </div>
       ),
     },
 
@@ -670,50 +696,71 @@ export const createSalesOrderColumns = (config?: SalesOrderColumnsConfig) => {
       header: 'Quotation PDF',
       render: (row: SalesOrder) => {
         const hasQuotation = row.quotation && row.quotation.items && row.quotation.items.length > 0;
-        
+
         if (hasQuotation) {
+          // If quotation EXISTS: Hide the '+' button and show View/Download
           return (
             <div className="flex items-center gap-2">
               <button
                 onClick={() => {
                   try {
-                    generateQuotationPDF(row, 'view');
+                    generateQuotationPDF(row as any, 'view');
                   } catch (error) {
                     console.error('Failed to generate PDF:', error);
                     toast.error('Failed to generate PDF preview');
                   }
                 }}
-                title="View Quotation PDF"
-                className="p-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors group"
+                title="View PDF"
+                className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors border border-blue-200 text-blue-600 hover:bg-blue-50 h-8 px-3"
               >
-                <FileText className="w-4 h-4 text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform" />
+                <FileText className="w-4 h-4 mr-1" /> View
               </button>
               <button
                 onClick={() => {
                   try {
-                    generateQuotationPDF(row, 'download');
+                    generateQuotationPDF(row as any, 'download');
                   } catch (error) {
                     console.error('Failed to generate PDF:', error);
                     toast.error('Failed to download PDF');
                   }
                 }}
-                title="Download Quotation PDF"
-                className="p-2 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors group"
+                title="Download PDF"
+                className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors border border-green-200 text-green-600 hover:bg-green-50 h-8 px-3"
               >
-                <Download className="w-4 h-4 text-green-600 dark:text-green-400 group-hover:scale-110 transition-transform" />
+                <Download className="w-4 h-4" />
+              </button>
+              <button
+                onClick={async () => {
+                  if (!window.confirm('Delete system quotation?')) return;
+                  try {
+                    const response = await api.patch(`/sales/orders/${row._id}`, {
+                      quotation: null
+                    });
+                    if (response.status === 200 || response.status === 204 || response.status === 202) {
+                      toast.success('Quotation removed');
+                      window.location.reload();
+                    }
+                  } catch (error) {
+                    toast.error('Failed to remove');
+                  }
+                }}
+                title="Remove Quotation"
+                className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors border border-red-200 text-red-600 hover:bg-red-50 h-8 px-2"
+              >
+                <Trash2 className="w-4 h-4" />
               </button>
             </div>
           );
         }
-        
+
+        // If NO quotation: Show the '+' button ONLY
         return (
           <button
             onClick={() => onCreateQuotation?.(row)}
             title="Create Quotation"
-            className="px-3 py-1.5 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-all text-xs font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1.5 group"
+            className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors bg-gray-100 text-gray-900 hover:bg-gray-200 h-8 px-3"
           >
-            <PlusCircle className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
-            <span>Add</span>
+            <PlusCircle className="w-4 h-4 mr-2" /> Create
           </button>
         );
       },
@@ -815,7 +862,7 @@ export const createSalesOrderColumns = (config?: SalesOrderColumnsConfig) => {
           }
           return 'bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))]';
         };
-        
+
         return (
           <span className={`text-xs px-2 py-1 rounded-full font-medium ${getStatusColor()}`}>
             {status || '-'}
@@ -832,13 +879,13 @@ export const createSalesOrderColumns = (config?: SalesOrderColumnsConfig) => {
       header: 'SalesPerson ID',
       render: (row: SalesOrder) => {
         // Try to get from multiple possible sources
-        const salesPersonId = row.salesPersonId 
-          || row.salesLead?.salesPerson 
+        const salesPersonId = row.salesPersonId
+          || row.salesLead?.salesPerson
           || row.salesData?.salesPerson?._id
           || (row.salesData?.salesPerson?.firstName && row.salesData?.salesPerson?.lastName
-              ? `${row.salesData.salesPerson.firstName} ${row.salesData.salesPerson.lastName}`
-              : null);
-        
+            ? `${row.salesData.salesPerson.firstName} ${row.salesData.salesPerson.lastName}`
+            : null);
+
         return (
           <span className="text-sm font-mono">
             {salesPersonId || '-'}
@@ -854,9 +901,9 @@ export const createSalesOrderColumns = (config?: SalesOrderColumnsConfig) => {
       key: 'notes',
       header: 'Notes',
       render: (row: SalesOrder) => (
-        <span className="text-sm max-w-[200px] truncate block" title={row.notes}>
+        <div className="max-w-[120px] truncate text-gray-500 text-sm" title={row.notes}>
           {row.notes || '-'}
-        </span>
+        </div>
       ),
     },
 
@@ -878,33 +925,33 @@ export const createActionsRenderer = (config: {
   onHistory?: (row: SalesOrder) => void;
 }) => {
   return (row: SalesOrder) => (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-1">
       {/* Edit Button */}
       <button
         onClick={() => config.onEdit(row)}
-        className="p-1.5 hover:text-[hsl(var(--primary))] transition-colors"
+        className="p-1 hover:text-[hsl(var(--primary))] transition-colors"
         title="Edit Order"
       >
-        <Edit2 className="h-4 w-4" />
+        <Edit2 className="h-3.5 w-3.5" />
       </button>
 
       {/* Delete Button */}
       <button
         onClick={() => config.onDelete(row)}
-        className="p-1.5 hover:text-destructive transition-colors"
+        className="p-1 hover:text-destructive transition-colors"
         title="Delete Order"
       >
-        <Trash2 className="h-4 w-4" />
+        <Trash2 className="h-3.5 w-3.5" />
       </button>
 
       {/* History Button (Optional) */}
       {config.onHistory && (
         <button
           onClick={() => config.onHistory?.(row)}
-          className="p-1.5 hover:text-[hsl(var(--primary))] transition-colors"
+          className="p-1 hover:text-[hsl(var(--primary))] transition-colors"
           title="View History"
         >
-          <History className="h-4 w-4" />
+          <History className="h-3.5 w-3.5" />
         </button>
       )}
     </div>

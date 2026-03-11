@@ -50,10 +50,7 @@ const userSchema = new Schema<IUserDocument>(
             type: String,
             trim: true,
         },
-        department: {
-            type: String,
-            trim: true,
-        },
+
         // HR Fields
         avatarUrl: {
             type: String,
@@ -75,6 +72,14 @@ const userSchema = new Schema<IUserDocument>(
             fileUrl: { type: String, required: true },
             uploadedAt: { type: Date, default: Date.now },
         }],
+        targetBudget: {
+            type: Number,
+            default: 0,
+        },
+        targetSales: {
+            type: Number,
+            default: 0,
+        },
     },
     {
         timestamps: true,

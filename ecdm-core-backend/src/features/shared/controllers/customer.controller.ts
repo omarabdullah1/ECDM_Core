@@ -7,7 +7,27 @@ export const getAll  = async (req: Request, res: Response, next: NextFunction) =
 export const getById = async (req: Request, res: Response, next: NextFunction) => { try { sendSuccess(res, { customer: await svc.getCustomerById(String(req.params.id)) }); } catch (e) { next(e); } };
 export const getHistory = async (req: Request, res: Response, next: NextFunction) => { try { sendSuccess(res, { history: await svc.getCustomerHistory(String(req.params.id)) }); } catch (e) { next(e); } };
 export const getReport = async (req: Request, res: Response, next: NextFunction) => { try { sendSuccess(res, await svc.getCustomerReport(String(req.params.id))); } catch (e) { next(e); } };
-export const update  = async (req: Request, res: Response, next: NextFunction) => { try { sendSuccess(res, { customer: await svc.updateCustomer(String(req.params.id), req.body) }, 'Customer updated'); } catch (e) { next(e); } };
+
+/**
+ * PUT /api/shared/customers/:id
+ * Admin-only: Update customer details including customerId
+ * Handles duplicate customerId errors gracefully
+ */
+export const update  = async (req: Request, res: Response, next: NextFunction) => { 
+    try { 
+        sendSuccess(res, { customer: await svc.updateCustomer(String(req.params.id), req.body) }, 'Customer updated'); 
+    } catch (e: any) {
+        // Handle MongoDB duplicate key error (E11000)
+        if (e.code === 11000 && e.keyPattern?.customerId) {
+            return next(new (require('../../../utils/apiError').AppError)('This Customer ID already exists. Please use a different ID.', 400));
+        }
+        if (e.code === 11000 && e.keyPattern?.phone) {
+            return next(new (require('../../../utils/apiError').AppError)('This phone number is already registered to another customer.', 400));
+        }
+        next(e);
+    } 
+};
+
 export const remove  = async (req: Request, res: Response, next: NextFunction) => { try { await svc.deleteCustomer(String(req.params.id)); sendSuccess(res, null, 'Customer deleted'); } catch (e) { next(e); } };
 
 /**
@@ -25,6 +45,22 @@ export const bulkDelete = async (req: Request, res: Response, next: NextFunction
         
         const result = await svc.bulkDelete(ids);
         sendSuccess(res, { deletedCount: result.deletedCount }, `Successfully deleted ${result.deletedCount} customers`);
+    } catch (e) {
+        next(e);
+    }
+};
+
+/**
+ * GET /api/shared/customers/next-id
+ * Admin-only: Get the next available Customer ID using smart auto-increment
+ * 
+ * This endpoint uses mathematical analysis of existing IDs to prevent conflicts
+ * even when admins manually override IDs.
+ */
+export const getNextId = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+        const nextId = await svc.getNextCustomerId();
+        sendSuccess(res, { nextId }, 'Next available ID generated');
     } catch (e) {
         next(e);
     }

@@ -196,12 +196,38 @@ export default function WorkOrderPage() {
           emptyMessage="No work orders found. Work orders are automatically created when a site inspection date is set on a Sales Order."
           page={page}
           totalPages={tp}
+          totalItems={total}
+          itemsPerPage={lim}
           onPageChange={setPage}
           bulkDeleteEndpoint="/operations/work-order/bulk-delete"
           onBulkDeleteSuccess={fetch_}
           meta={{
             onEdit: openE,
             onDelete: (id: string) => setDelId(id),
+          }}
+          defaultVisibility={{
+            address: false,
+            region: false,
+            sector: false,
+            visitSite: false,
+            engineerName: false,
+            actualVisitDate: false,
+            devicePickupType: false,
+            startDateOrder: false,
+            taskDate: false,
+            maintenanceEngineer: false,
+            startMaintenanceDate: false,
+            endMaintenanceDate: false,
+            punctuality: false,
+            late: false,
+            reasonForDelay: false,
+            reasonForIncompletion: false,
+            rating: false,
+            endDateOrder: false,
+            deviceReturned: false,
+            sparePartsId: false,
+            sparePartsAvailability: false,
+            notes: false,
           }}
         />
       </div>

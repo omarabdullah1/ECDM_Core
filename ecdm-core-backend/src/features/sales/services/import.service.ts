@@ -211,6 +211,22 @@ export const commitLeads = async (newLeads: AnalyzedLead[]): Promise<CommitResul
         errors: [],
     };
 
+    // ═══════════════════════════════════════════════════════════════════════
+    // SMART AUTO-INCREMENT SETUP
+    // Instead of relying on the counter, we use mathematical analysis to find
+    // the highest existing customer ID to prevent E11000 duplicate key errors
+    // ═══════════════════════════════════════════════════════════════════════
+    const existingCustomersForId = await Customer.find({}, { customerId: 1 }).lean();
+    let currentMaxId = 0;
+    for (const c of existingCustomersForId) {
+        if (c.customerId && c.customerId.startsWith('CUS-')) {
+            const num = parseInt(c.customerId.replace('CUS-', ''), 10);
+            if (!isNaN(num) && num > currentMaxId) currentMaxId = num;
+        }
+    }
+
+    console.log(`📊 Smart Auto-Increment (Sales Import): Starting from CUS-${currentMaxId + 1}`);
+
     for (const lead of newLeads) {
         try {
             const normalizedPhone = normalizePhone(lead.data.phone);
@@ -222,8 +238,12 @@ export const commitLeads = async (newLeads: AnalyzedLead[]): Promise<CommitResul
             let customerDoc = await Customer.findOne({ phone: normalizedPhone });
 
             if (!customerDoc) {
-                // Create new customer - triggers pre('save') hook to generate 'CUS-XXXX'
+                // Create new customer with smart auto-increment ID
+                currentMaxId++;
+                const newCustomerId = `CUS-${currentMaxId}`;
+                
                 customerDoc = new Customer({
+                    customerId: newCustomerId,  // Explicitly assign to bypass pre-save hook
                     phone: normalizedPhone,
                     name: lead.data.name,
                     address: lead.data.address,
@@ -233,6 +253,7 @@ export const commitLeads = async (newLeads: AnalyzedLead[]): Promise<CommitResul
                     notes: lead.data.notes,
                 });
                 await customerDoc.save();
+                console.log(`✅ Created customer with ID: ${newCustomerId}`);
             }
             // If customer exists, we don't update it - we only create the SalesData link
 

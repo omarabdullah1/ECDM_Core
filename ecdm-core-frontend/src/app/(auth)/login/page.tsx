@@ -12,21 +12,25 @@ import { useT } from '@/i18n/useT';
 
 export default function LoginPage() {
     const router = useRouter();
-    const { login, isLoading } = useAuthStore();
+    const { login } = useAuthStore();
     const t = useT();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
+        setIsSubmitting(true);
         try {
             await login(email, password);
+            // Keep spinner active while navigating to dashboard
             router.push('/dashboard');
         } catch (err: unknown) {
             setError((err as Error).message);
+            setIsSubmitting(false); // Unlock button on failure
         }
     };
 
@@ -100,13 +104,13 @@ export default function LoginPage() {
                             </div>
                         </div>
 
-                        <button type="submit" disabled={isLoading}
+                        <button type="submit" disabled={isSubmitting}
                             className={cn(
                                 'w-full rounded-xl bg-[hsl(var(--primary))] px-4 py-3 text-sm font-semibold text-white',
                                 'hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/50 transition-all',
                                 'disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2'
                             )}>
-                            {isLoading ? (
+                            {isSubmitting ? (
                                 <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
                             ) : (
                                 <><LogIn size={18} /> {t.auth.signIn}</>
@@ -114,12 +118,6 @@ export default function LoginPage() {
                         </button>
                     </form>
 
-                    <p className="mt-6 text-center text-sm text-[hsl(var(--muted-foreground))]">
-                        {t.auth.noAccount}{' '}
-                        <Link href="/register" className="text-[hsl(var(--primary))] hover:underline font-medium">
-                            <UserPlus size={14} className="inline mr-1" />{t.auth.createAccount}
-                        </Link>
-                    </p>
                 </div>
             </div>
         </div>

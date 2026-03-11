@@ -1,12 +1,25 @@
 @import "tailwindcss";
 
+/* ═══════════════════════════════════════════════════════════════
+   GLOBAL 75% SCALE FOR ULTRA-DENSE UI
+   ═══════════════════════════════════════════════════════════════
+   Default browser font-size: 16px → Setting to 12px = 75% scale
+   All Tailwind rem-based utilities (text-*, p-*, m-*, w-*, h-*, etc.)
+   will automatically scale down proportionately by 25%.
+   ═══════════════════════════════════════════════════════════════ */
+html {
+  font-size: 12px !important;
+}
+
 /* Arabic RTL — switch to Cairo when direction is RTL */
 html[dir="rtl"] {
   font-family: var(--font-cairo), 'Cairo', system-ui, sans-serif;
   letter-spacing: 0;
 }
+
 html[dir="rtl"] * {
-  text-align: start; /* let Tailwind text-* overrides still work */
+  text-align: start;
+  /* let Tailwind text-* overrides still work */
 }
 
 @layer base {
@@ -36,8 +49,9 @@ html[dir="rtl"] * {
     --input: 214 32% 91%;
     --ring: 217 91% 60%;
     --radius: 0.75rem;
-    --sidebar-width: 260px;
-    --header-height: 64px;
+    --sidebar-width: 220px;           /* Keep menubar at full size for visibility */
+    --sidebar-collapsed-width: 56px;  /* Collapsed sidebar width (fixed) */
+    --header-height: 64px;            /* Increased from 48px for better menubar item visibility */
   }
 
   /* ── Dark theme ──────────────────────── */
@@ -94,10 +108,10 @@ html[dir="rtl"] * {
   }
 }
 
-/* ── Scrollbar ─────────────────────────────────── */
+/* ── Scrollbar (global — thin vertical) ────────── */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 0.375rem;  /* 6px ÷ 16 = 0.375rem → scales to ~4.5px at 75% */
+  height: 0.375rem;
 }
 
 ::-webkit-scrollbar-track {
@@ -111,6 +125,46 @@ html[dir="rtl"] * {
 
 ::-webkit-scrollbar-thumb:hover {
   background: hsl(var(--muted-foreground));
+}
+
+/* ── Horizontal DataTable Scrollbar (thicker, always visible) ── */
+.overflow-x-auto::-webkit-scrollbar,
+.custom-table-scrollbar::-webkit-scrollbar {
+  height: 0.75rem; /* 12px ÷ 16 = 0.75rem → scales to 9px at 75% */
+}
+
+.overflow-x-auto::-webkit-scrollbar-track,
+.custom-table-scrollbar::-webkit-scrollbar-track {
+  background: #f8fafc;
+  border-radius: 0.5rem;
+}
+
+.overflow-x-auto::-webkit-scrollbar-thumb,
+.custom-table-scrollbar::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 0.5rem;
+  border: 0.1875rem solid #f8fafc; /* 3px ÷ 16 = 0.1875rem → scales to ~2.25px at 75% */
+}
+
+.overflow-x-auto::-webkit-scrollbar-thumb:hover,
+.custom-table-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+.dark .overflow-x-auto::-webkit-scrollbar-track,
+.dark .custom-table-scrollbar::-webkit-scrollbar-track {
+  background: #1e293b;
+}
+
+.dark .overflow-x-auto::-webkit-scrollbar-thumb,
+.dark .custom-table-scrollbar::-webkit-scrollbar-thumb {
+  background: #475569;
+  border-color: #1e293b;
+}
+
+.dark .overflow-x-auto::-webkit-scrollbar-thumb:hover,
+.dark .custom-table-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
 }
 
 /* ── Glass card ────────────────────────────────── */

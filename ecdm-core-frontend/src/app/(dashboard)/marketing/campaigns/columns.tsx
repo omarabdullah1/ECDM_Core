@@ -20,10 +20,14 @@ export interface Campaign {
     status: string;
     impressions: number;
     conversions: number;
-    salesRevenuePercent: number;
+    salesRevenue: number; // Changed from salesRevenuePercent to salesRevenue (currency)
+    salesRevenuePercent?: number; // Keep for backward compatibility
     region1: string;
     region2: string;
     region3: string;
+    adSpend: number;
+    cpa: number;
+    roas: number;
     nextSteps: string;
     fileUrl: string;
     fileName: string;
@@ -98,13 +102,13 @@ export const getColumns = ({ onEdit, onDelete }: ColumnProps) => [
         render: (row: Campaign) => {
             const status = row.status;
             const statusColors: Record<string, string> = {
-                'Previous': 'bg-gray-100 text-gray-700',
-                'Current': 'bg-green-100 text-green-700',
-                'Future': 'bg-blue-100 text-blue-700',
+                'Previous': 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
+                'Current': 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
+                'Future': 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
             };
             return (
-                <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColors[status] || ''}`}>
-                    {status || '-'}
+                <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${statusColors[status] || ''}`}>
+                    {status || 'Draft'}
                 </span>
             );
         },
@@ -113,21 +117,23 @@ export const getColumns = ({ onEdit, onDelete }: ColumnProps) => [
         key: 'impressions',
         header: 'Impressions',
         render: (row: Campaign) => (
-            <span className="font-mono">{row.impressions?.toLocaleString() || '0'}</span>
+            <span className="font-mono">{Number(row.impressions || 0).toLocaleString()}</span>
         ),
     },
     {
         key: 'conversions',
         header: 'Conversions',
         render: (row: Campaign) => (
-            <span className="font-mono">{row.conversions?.toLocaleString() || '0'}</span>
+            <span className="font-mono">{Number(row.conversions || 0).toLocaleString()}</span>
         ),
     },
     {
-        key: 'salesRevenuePercent',
-        header: '% Sales Revenue',
+        key: 'salesRevenue',
+        header: 'Sales Revenue',
         render: (row: Campaign) => (
-            <span className="font-mono">{row.salesRevenuePercent || 0}%</span>
+            <span className="font-medium text-emerald-600 dark:text-emerald-400">
+                EGP {Number(row.salesRevenue || row.salesRevenuePercent || 0).toLocaleString()}
+            </span>
         ),
     },
     {
@@ -136,22 +142,64 @@ export const getColumns = ({ onEdit, onDelete }: ColumnProps) => [
         render: (row: Campaign) => row.region1 || '-',
     },
     {
+        key: 'region2',
+        header: 'Region 2',
+        render: (row: Campaign) => row.region2 || '-',
+    },
+    {
+        key: 'region3',
+        header: 'Region 3',
+        render: (row: Campaign) => row.region3 || '-',
+    },
+    {
+        key: 'adSpend',
+        header: 'Ad Spend',
+        render: (row: Campaign) => (
+            <span className="text-blue-600 dark:text-blue-400">
+                EGP {Number(row.adSpend || 0).toLocaleString()}
+            </span>
+        ),
+    },
+    {
+        key: 'cpa',
+        header: 'CPA',
+        render: (row: Campaign) => (
+            <span className="font-mono">{Number(row.cpa || 0).toFixed(2)}</span>
+        ),
+    },
+    {
+        key: 'roas',
+        header: 'ROAS',
+        render: (row: Campaign) => (
+            <span className="font-semibold">{Number(row.roas || 0).toFixed(2)}x</span>
+        ),
+    },
+    {
         key: 'nextSteps',
         header: 'Next Steps',
         render: (row: Campaign) => {
             const nextSteps = row.nextSteps;
             const stepColors: Record<string, string> = {
-                'Analyse': 'bg-purple-100 text-purple-700',
-                'Pause': 'bg-yellow-100 text-yellow-700',
-                'Stop': 'bg-red-100 text-red-700',
-                'Continue': 'bg-green-100 text-green-700',
+                'Analyse': 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
+                'Pause': 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
+                'Stop': 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+                'Continue': 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
             };
             return (
-                <span className={`px-2 py-1 rounded-full text-xs font-medium ${stepColors[nextSteps] || ''}`}>
+                <span className={`px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${stepColors[nextSteps] || ''}`}>
                     {nextSteps || '-'}
                 </span>
             );
         },
+    },
+    {
+        key: 'notes',
+        header: 'Notes',
+        render: (row: Campaign) => (
+            <span className="truncate max-w-[150px] inline-block" title={row.notes}>
+                {row.notes || '-'}
+            </span>
+        ),
     },
     {
         key: 'file',
@@ -186,15 +234,6 @@ export const getColumns = ({ onEdit, onDelete }: ColumnProps) => [
                 </div>
             );
         },
-    },
-    {
-        key: 'notes',
-        header: 'Notes',
-        render: (row: Campaign) => (
-            <span className="truncate max-w-[120px] inline-block" title={row.notes}>
-                {row.notes || '-'}
-            </span>
-        ),
     },
     {
         key: 'actions',

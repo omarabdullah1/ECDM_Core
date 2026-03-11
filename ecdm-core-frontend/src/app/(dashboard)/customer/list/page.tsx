@@ -2,8 +2,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import api from '@/lib/axios';
-import { Users, Eye, X, Clock, TrendingUp, ShoppingCart, FileText } from 'lucide-react';
+import { Users, Eye, X, Clock, TrendingUp, ShoppingCart, FileText, Edit } from 'lucide-react';
 import { DataTable } from '@/components/ui/DataTable';
+import { useAuthStore } from '@/features/auth/useAuth';
+import EditCustomerDialog from './EditCustomerDialog';
 
 interface Customer {
   _id: string;
@@ -15,6 +17,7 @@ interface Customer {
   address?: string;
   email?: string;
   company?: string;
+  isNonPotential?: boolean;
   createdAt: string;
 }
 
@@ -37,18 +40,27 @@ interface CustomerHistory {
 const SECTORS = ['B2B', 'B2C', 'B2G', 'Hybrid', 'Other'];
 
 export default function CustomerListPage() {
+  const { user } = useAuthStore();
   const [rows, setRows] = useState<Customer[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [fSector, setFSector] = useState('');
+  const [fPotentialStatus, setFPotentialStatus] = useState('');
   const [loading, setLoading] = useState(true);
-  
+
   // History modal state
   const [historyModal, setHistoryModal] = useState(false);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [history, setHistory] = useState<CustomerHistory | null>(null);
-  
+
+  // Edit modal state
+  const [editModal, setEditModal] = useState(false);
+  const [customerToEdit, setCustomerToEdit] = useState<Customer | null>(null);
+
+  // Check if user is Admin (SuperAdmin or Manager)
+  const isAdmin = user?.role === 'SuperAdmin' || user?.role === 'Manager';
+
   const lim = 10;
   const tp = Math.ceil(total / lim);
 
@@ -57,13 +69,14 @@ export default function CustomerListPage() {
     try {
       const p: Record<string, string | number> = { page, limit: lim };
       if (fSector) p.sector = fSector;
+      if (fPotentialStatus) p.potentialStatus = fPotentialStatus;
       const { data } = await api.get('/shared/customers', { params: p });
       setRows(data.data.data);
       setTotal(data.data.pagination.total);
     } catch { /* ignore */ }
     setLoading(false);
-  }, [page, fSector]);
-  
+  }, [page, fSector, fPotentialStatus]);
+
   useEffect(() => { fetch_(); }, [fetch_]);
 
   const openHistory = async (customer: Customer) => {
@@ -71,7 +84,7 @@ export default function CustomerListPage() {
     setHistoryModal(true);
     setHistoryLoading(true);
     setHistory(null);
-    
+
     try {
       const { data } = await api.get(`/shared/customers/${customer._id}/history`);
       setHistory(data.data.history);
@@ -119,6 +132,24 @@ export default function CustomerListPage() {
       render: (row: Customer) => row.phone,
     },
     {
+      key: 'potentialStatus',
+      header: 'Status',
+      render: (row: Customer) => {
+        if (row.isNonPotential) {
+          return (
+            <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-red-100 text-red-800 border border-red-200">
+              Non-Potential
+            </span>
+          );
+        }
+        return (
+          <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-green-100 text-green-800 border border-green-200">
+            Potential
+          </span>
+        );
+      },
+    },
+    {
       key: 'address',
       header: 'Address',
       render: (row: Customer) => (
@@ -150,15 +181,28 @@ export default function CustomerListPage() {
   // ─── Row Actions ──────────────────────────────────────────────────────────────
   const renderActions = (row: Customer) => (
     <div className="flex items-center gap-2">
-      <Link 
+      {isAdmin && (
+        <button
+          onClick={() => {
+            setCustomerToEdit(row);
+            setEditModal(true);
+          }}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 transition-colors"
+          title="Edit customer (Admin only)"
+        >
+          <Edit className="h-3.5 w-3.5" />
+          Edit
+        </button>
+      )}
+      <Link
         href={`/customer/list/${row._id}`}
         className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))] hover:bg-[hsl(var(--primary))]/20 transition-colors"
       >
         <FileText className="h-3.5 w-3.5" />
         Report
       </Link>
-      <button 
-        onClick={() => openHistory(row)} 
+      <button
+        onClick={() => openHistory(row)}
         className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-[hsl(var(--muted))] hover:bg-[hsl(var(--muted))]/80 transition-colors"
       >
         <Clock className="h-3.5 w-3.5" />
@@ -167,7 +211,7 @@ export default function CustomerListPage() {
     </div>
   );
 
-  const COLUMNS = ['Customer ID', 'Name', 'Phone', 'Address', 'Sector', 'Created', 'Actions'];
+  const COLUMNS = ['Customer ID', 'Name', 'Phone', 'Status', 'Address', 'Sector', 'Created', 'Actions'];
 
   return (
     <div className="space-y-6">
@@ -192,6 +236,15 @@ export default function CustomerListPage() {
           <option value="">All Sectors</option>
           {SECTORS.map(s => <option key={s} value={s}>{s}</option>)}
         </select>
+        <select
+          value={fPotentialStatus}
+          onChange={e => { setFPotentialStatus(e.target.value); setPage(1); }}
+          className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2 text-sm"
+        >
+          <option value="">All Customers</option>
+          <option value="Potential">Potential</option>
+          <option value="Non-Potential">Non-Potential</option>
+        </select>
       </div>
 
       {/* DataTable with RBAC-Protected Bulk Delete */}
@@ -202,10 +255,19 @@ export default function CustomerListPage() {
         emptyMessage="No customers found."
         page={page}
         totalPages={tp}
+        totalItems={total}
+        itemsPerPage={lim}
         onPageChange={setPage}
         bulkDeleteEndpoint="/shared/customers/bulk-delete"
         onBulkDeleteSuccess={fetch_}
         renderActions={renderActions}
+        defaultVisibility={{
+          address: false,
+          sector: false,
+          region: false,
+          notes: false,
+          createdAt: false,
+        }}
       />
 
       {/* History Modal */}
@@ -282,8 +344,8 @@ export default function CustomerListPage() {
             )}
 
             <div className="flex justify-end mt-6">
-              <button 
-                onClick={() => setHistoryModal(false)} 
+              <button
+                onClick={() => setHistoryModal(false)}
                 className="px-4 py-2 rounded-xl border border-[hsl(var(--border))] text-sm"
               >
                 Close
@@ -291,6 +353,22 @@ export default function CustomerListPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Edit Customer Modal (Admin Only) */}
+      {editModal && customerToEdit && (
+        <EditCustomerDialog
+          customer={customerToEdit}
+          onClose={() => {
+            setEditModal(false);
+            setCustomerToEdit(null);
+          }}
+          onSuccess={() => {
+            setEditModal(false);
+            setCustomerToEdit(null);
+            fetch_();
+          }}
+        />
       )}
     </div>
   );

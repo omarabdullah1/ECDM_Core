@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '@/lib/axios';
 import { MessageSquare, Plus, Trash2, X, ChevronLeft, ChevronRight, Edit2 } from 'lucide-react';
+import { DataTable } from '@/components/ui/DataTable';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TypeScript Interfaces
@@ -66,13 +67,13 @@ const formatDate = (dateValue: string | Date | null | undefined): string => {
 
 const Badge = ({ children, variant = 'outline' }: { children: React.ReactNode; variant?: 'default' | 'destructive' | 'outline' }) => {
   const baseClasses = "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap";
-  
+
   const variantClasses: Record<string, string> = {
-    'default':     'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
+    'default': 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
     'destructive': 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
-    'outline':     'border border-gray-300 text-gray-700 dark:border-gray-600 dark:text-gray-300',
+    'outline': 'border border-gray-300 text-gray-700 dark:border-gray-600 dark:text-gray-300',
   };
-  
+
   return <span className={`${baseClasses} ${variantClasses[variant]}`}>{children || '-'}</span>;
 };
 
@@ -149,63 +150,45 @@ export default function FeedbackPage() {
         <button onClick={openC} className="flex items-center gap-2 rounded-xl bg-[hsl(var(--primary))] px-4 py-2 text-sm font-semibold text-[hsl(var(--primary-foreground))] hover:opacity-90 transition-opacity"><Plus className="h-4 w-4" />Add</button>
       </div>
 
-      <div className="rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] overflow-hidden overflow-x-auto">
-        {loading ? <div className="p-8 text-center text-[hsl(var(--muted-foreground))]">Loading…</div> : (
-          <table className="w-full text-sm min-w-[1400px]">
-            <thead className="border-b border-[hsl(var(--border))] bg-[hsl(var(--muted))]/30">
-              <tr>{headers.map(h => <th key={h} className="px-4 py-3 text-left font-semibold whitespace-nowrap">{h}</th>)}</tr>
-            </thead>
-            <tbody>
-              {rows.map(r => (
-                <tr key={r._id} className="border-b border-[hsl(var(--border))]/50 hover:bg-[hsl(var(--muted))]/20">
-                  {/* 1. Customer ID */}
-                  <td className="px-4 py-3 font-mono text-xs text-[hsl(var(--muted-foreground))] whitespace-nowrap">{r.customerId?.customerId || '-'}</td>
-                  {/* 2. Name */}
-                  <td className="px-4 py-3 font-medium whitespace-nowrap">{r.customerId?.name || '-'}</td>
-                  {/* 3. Phone */}
-                  <td className="px-4 py-3 font-mono text-sm whitespace-nowrap">{r.customerId?.phone || '-'}</td>
-                  {/* 4. Engineer Name */}
-                  <td className="px-4 py-3 font-medium whitespace-nowrap">{r.customerOrderId?.engineerName || '-'}</td>
-                  {/* 5. Visit Engineer Date */}
-                  <td className="px-4 py-3 text-sm whitespace-nowrap">{formatDate(r.customerOrderId?.actualVisitDate)}</td>
-                  {/* 6. Start Date */}
-                  <td className="px-4 py-3 text-sm whitespace-nowrap">{formatDate(r.customerOrderId?.startDate)}</td>
-                  {/* 7. End Date */}
-                  <td className="px-4 py-3 text-sm whitespace-nowrap">{formatDate(r.customerOrderId?.endDate)}</td>
-                  {/* 8. Solved Issue */}
-                  <td className="px-4 py-3">{r.solvedIssue ? <Badge variant={r.solvedIssue === 'Yes' ? 'default' : 'destructive'}>{r.solvedIssue}</Badge> : '-'}</td>
-                  {/* 9. Rating Operation */}
-                  <td className="px-4 py-3 text-sm font-medium">{r.ratingOperation || '-'}</td>
-                  {/* 10. Follow Up */}
-                  <td className="px-4 py-3 text-sm">{r.followUp || '-'}</td>
-                  {/* 11. Rating CS */}
-                  <td className="px-4 py-3 text-sm font-medium">{r.ratingCustomerService || '-'}</td>
-                  {/* 12. User Email */}
-                  <td className="px-4 py-3 text-sm text-[hsl(var(--muted-foreground))] whitespace-nowrap">{r.updatedBy?.email || '-'}</td>
-                  {/* 13. Notes */}
-                  <td className="px-4 py-3 text-sm max-w-[150px] truncate" title={r.notes}>{r.notes || '-'}</td>
-                  {/* Actions */}
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <button onClick={() => openE(r)} className="p-1 hover:bg-[hsl(var(--muted))] rounded transition-colors" title="Edit"><Edit2 className="h-4 w-4" /></button>
-                      <button onClick={() => setDelId(r._id)} className="p-1 hover:bg-red-50 rounded text-red-600 transition-colors" title="Delete"><Trash2 className="h-4 w-4" /></button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {!rows.length && <tr><td colSpan={14} className="px-4 py-8 text-center text-[hsl(var(--muted-foreground))]">No feedback found.</td></tr>}
-            </tbody>
-          </table>
-        )}
+      <div className="overflow-x-auto">
+        <DataTable
+          data={rows as any}
+          columns={[
+            { key: "customerId.customerId", header: "Customer ID", render: (row: any) => <span className="font-mono text-xs text-[hsl(var(--muted-foreground))] whitespace-nowrap">{row.customerId?.customerId || '-'}</span> },
+            { key: "customerId.name", header: "Name", render: (row: any) => <span className="font-medium whitespace-nowrap">{row.customerId?.name || '-'}</span> },
+            { key: "customerId.phone", header: "Phone", render: (row: any) => <span className="font-mono text-sm whitespace-nowrap">{row.customerId?.phone || '-'}</span> },
+            { key: "customerOrderId.engineerName", header: "Engineer Name", render: (row: any) => <span className="font-medium whitespace-nowrap">{row.customerOrderId?.engineerName || '-'}</span> },
+            { key: "customerOrderId.actualVisitDate", header: "Visit Engineer Date", render: (row: any) => <span className="text-sm whitespace-nowrap">{formatDate(row.customerOrderId?.actualVisitDate)}</span> },
+            { key: "customerOrderId.startDate", header: "Start Date", render: (row: any) => <span className="text-sm whitespace-nowrap">{formatDate(row.customerOrderId?.startDate)}</span> },
+            { key: "customerOrderId.endDate", header: "End Date", render: (row: any) => <span className="text-sm whitespace-nowrap">{formatDate(row.customerOrderId?.endDate)}</span> },
+            { key: "solvedIssue", header: "Solved Issue", render: (row: any) => <span>{row.solvedIssue ? <Badge variant={row.solvedIssue === 'Yes' ? 'default' : 'destructive'}>{row.solvedIssue}</Badge> : '-'}</span> },
+            { key: "ratingOperation", header: "Rating Operation", render: (row: any) => <span className="text-sm font-medium">{row.ratingOperation || '-'}</span> },
+            { key: "followUp", header: "Follow Up", render: (row: any) => <span className="text-sm">{row.followUp || '-'}</span> },
+            { key: "ratingCustomerService", header: "Rating CS", render: (row: any) => <span className="text-sm font-medium">{row.ratingCustomerService || '-'}</span> },
+            { key: "updatedBy.email", header: "User Email", render: (row: any) => <span className="text-sm text-[hsl(var(--muted-foreground))] whitespace-nowrap">{row.updatedBy?.email || '-'}</span> },
+            { key: "notes", header: "Notes", render: (row: any) => <span className="text-sm max-w-[150px] truncate" title={row.notes}>{row.notes || '-'}</span> },
+          ]}
+          loading={loading}
+          emptyMessage="No feedback found."
+          page={page}
+          totalPages={tp}
+          totalItems={total}
+          itemsPerPage={lim}
+          onPageChange={setPage}
+          renderActions={(row: any) => (
+            <div className="flex items-center gap-2">
+              <button onClick={() => openE(row as Feedback)} className="p-1 hover:bg-[hsl(var(--muted))] rounded transition-colors" title="Edit"><Edit2 className="h-4 w-4" /></button>
+              <button onClick={() => setDelId((row as Feedback)._id)} className="p-1 hover:bg-red-50 rounded text-red-600 transition-colors" title="Delete"><Trash2 className="h-4 w-4" /></button>
+            </div>
+          )}
+          defaultVisibility={{
+            detailedFeedback: false,
+            notes: false,
+          }}
+        />
       </div>
 
-      {tp > 1 && (
-        <div className="flex items-center justify-center gap-2">
-          <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="p-2 rounded-lg hover:bg-[hsl(var(--muted))] disabled:opacity-40"><ChevronLeft className="h-4 w-4" /></button>
-          <span className="text-sm">{page} / {tp}</span>
-          <button onClick={() => setPage(p => Math.min(tp, p + 1))} disabled={page === tp} className="p-2 rounded-lg hover:bg-[hsl(var(--muted))] disabled:opacity-40"><ChevronRight className="h-4 w-4" /></button>
-        </div>
-      )}
+
 
       {modal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">

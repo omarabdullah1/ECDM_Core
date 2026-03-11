@@ -39,23 +39,23 @@ export interface ModificationRequest {
 
 const StatusBadge = ({ status }: { status: string }) => {
     const styles: Record<string, { bg: string; icon: typeof CheckCircle }> = {
-        Pending: { 
+        Pending: {
             bg: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border border-amber-200 dark:border-amber-800',
             icon: Clock
         },
-        Approved: { 
+        Approved: {
             bg: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 border border-green-200 dark:border-green-800',
             icon: CheckCircle
         },
-        Rejected: { 
+        Rejected: {
             bg: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 border border-red-200 dark:border-red-800',
             icon: XCircle
         },
     };
-    
+
     const style = styles[status] || styles.Pending;
     const Icon = style.icon;
-    
+
     return (
         <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${style.bg}`}>
             <Icon className="h-3 w-3" />
@@ -84,7 +84,7 @@ const ModuleBadge = ({ moduleName }: { moduleName: string }) => {
         Customer: 'Customer',
         Employee: 'Employee',
     };
-    
+
     return (
         <span className="inline-flex items-center rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10 dark:bg-blue-900/20 dark:text-blue-400 dark:ring-blue-400/30">
             {moduleLabels[moduleName] || moduleName}
@@ -101,7 +101,7 @@ const inputClass = 'w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl
 export default function ModificationRequestsPage() {
     const router = useRouter();
     const { user: currentUser } = useAuthStore();
-    
+
     // State
     const [requests, setRequests] = useState<ModificationRequest[]>([]);
     const [total, setTotal] = useState(0);
@@ -109,23 +109,23 @@ export default function ModificationRequestsPage() {
     const [loading, setLoading] = useState(true);
     const [filterStatus, setFilterStatus] = useState('');
     const [filterModule, setFilterModule] = useState('');
-    
+
     // Review Dialog
     const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
     const [selectedRequest, setSelectedRequest] = useState<ModificationRequest | null>(null);
-    
+
     const limit = 10;
     const totalPages = Math.ceil(total / limit);
-    
+
     // Check admin access
     const isAdmin = currentUser?.role === 'SuperAdmin' || currentUser?.role === 'Manager';
-    
+
     useEffect(() => {
         if (!isAdmin) {
             router.replace('/dashboard');
         }
     }, [isAdmin, router]);
-    
+
     // Fetch modification requests
     const fetchRequests = useCallback(async () => {
         setLoading(true);
@@ -133,7 +133,7 @@ export default function ModificationRequestsPage() {
             const params: Record<string, string | number> = { page, limit };
             if (filterStatus) params.status = filterStatus;
             if (filterModule) params.moduleName = filterModule;
-            
+
             const { data } = await api.get('/admin/modification-requests', { params });
             setRequests(data.data.data);
             setTotal(data.data.pagination.total);
@@ -142,29 +142,29 @@ export default function ModificationRequestsPage() {
         }
         setLoading(false);
     }, [page, filterStatus, filterModule]);
-    
+
     useEffect(() => {
         if (isAdmin) {
             fetchRequests();
         }
     }, [fetchRequests, isAdmin]);
-    
+
     // Handle review button click
     const handleReview = (request: ModificationRequest) => {
         setSelectedRequest(request);
         setReviewDialogOpen(true);
     };
-    
+
     // Handle review submission
     const handleReviewSubmit = async (status: 'Approved' | 'Rejected', reviewNotes: string) => {
         if (!selectedRequest) return;
-        
+
         try {
             await api.post(`/admin/modification-requests/${selectedRequest._id}/review`, {
                 status,
                 reviewNotes,
             });
-            
+
             toast.success(`Request ${status.toLowerCase()} successfully`);
             setReviewDialogOpen(false);
             setSelectedRequest(null);
@@ -174,7 +174,7 @@ export default function ModificationRequestsPage() {
             toast.error(error.response?.data?.message || 'Failed to process request');
         }
     };
-    
+
     // Format date
     const formatDate = (dateStr: string) => {
         return new Date(dateStr).toLocaleString('en-GB', {
@@ -185,7 +185,7 @@ export default function ModificationRequestsPage() {
             minute: '2-digit',
         });
     };
-    
+
     // Table columns
     const columns = [
         {
@@ -224,11 +224,10 @@ export default function ModificationRequestsPage() {
                 <button
                     onClick={() => handleReview(row)}
                     disabled={row.status !== 'Pending'}
-                    className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-all ${
-                        row.status === 'Pending'
+                    className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-all ${row.status === 'Pending'
                             ? 'bg-[hsl(var(--primary))] text-white hover:bg-[hsl(var(--primary))]/90'
                             : 'bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))] cursor-not-allowed'
-                    }`}
+                        }`}
                 >
                     <FileEdit className="h-4 w-4" />
                     {row.status === 'Pending' ? 'Review' : 'Reviewed'}
@@ -236,9 +235,9 @@ export default function ModificationRequestsPage() {
             ),
         },
     ];
-    
+
     if (!isAdmin) return null;
-    
+
     return (
         <div className="space-y-6">
             {/* Header */}
@@ -251,7 +250,7 @@ export default function ModificationRequestsPage() {
                         Review and approve/reject pending modification requests from users
                     </p>
                 </div>
-                
+
                 {/* Pending Count Badge */}
                 {requests.filter(r => r.status === 'Pending').length > 0 && (
                     <div className="flex items-center gap-2 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 px-4 py-2 rounded-xl">
@@ -262,7 +261,7 @@ export default function ModificationRequestsPage() {
                     </div>
                 )}
             </div>
-            
+
             {/* Filters */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="relative">
@@ -281,7 +280,7 @@ export default function ModificationRequestsPage() {
                         <option value="Rejected">Rejected</option>
                     </select>
                 </div>
-                
+
                 <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[hsl(var(--muted-foreground))]" />
                     <select
@@ -303,7 +302,7 @@ export default function ModificationRequestsPage() {
                     </select>
                 </div>
             </div>
-            
+
             {/* Data Table */}
             <DataTable
                 data={requests}
@@ -312,10 +311,15 @@ export default function ModificationRequestsPage() {
                 emptyMessage="No modification requests found."
                 page={page}
                 totalPages={totalPages}
+                totalItems={total}
+                itemsPerPage={limit}
                 onPageChange={setPage}
                 selectionDisabled={true}
+                defaultVisibility={{
+                    createdAt: false,
+                }}
             />
-            
+
             {/* Review Dialog */}
             {selectedRequest && (
                 <ReviewRequestDialog

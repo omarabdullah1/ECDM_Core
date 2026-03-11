@@ -7,14 +7,18 @@ const campaignSchema = new Schema<ICampaignDocument>(
     {
         campaignId:          { type: String, unique: true, sparse: true },
         campaignName:        { type: String, required: [true, 'Campaign name is required'], trim: true, maxlength: [200, 'Campaign name cannot exceed 200 characters'] },
-        status:              { type: String, enum: [...Object.values(CampaignStatus), ''], default: '' },
+        status:              { type: String, default: '', trim: true },
         impressions:         { type: Number, min: [0, 'Impressions cannot be negative'], default: 0 },
         conversions:         { type: Number, min: [0, 'Conversions cannot be negative'], default: 0 },
+        salesRevenue:        { type: Number, min: [0, 'Sales revenue cannot be negative'], default: 0 },
         salesRevenuePercent: { type: Number, min: [0, 'Sales revenue percent cannot be negative'], default: 0 },
-        region1:             { type: String, default: '' },
-        region2:             { type: String, default: '' },
-        region3:             { type: String, default: '' },
-        nextSteps:           { type: String, enum: [...Object.values(NextSteps), ''], default: '' },
+        region1:             { type: String, default: '', trim: true },
+        region2:             { type: String, default: '', trim: true },
+        region3:             { type: String, default: '', trim: true },
+        adSpend:             { type: Number, min: [0, 'Ad spend cannot be negative'], default: 0 },
+        cpa:                 { type: Number, min: [0, 'CPA cannot be negative'], default: 0 },
+        roas:                { type: Number, min: [0, 'ROAS cannot be negative'], default: 0 },
+        nextSteps:           { type: String, default: '', trim: true },
         fileUrl:             { type: String, default: '' },
         fileName:            { type: String, default: '' },
         notes:               { type: String, default: '', maxlength: [2000, 'Notes cannot exceed 2000 characters'] },
@@ -23,7 +27,6 @@ const campaignSchema = new Schema<ICampaignDocument>(
     { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } },
 );
 
-campaignSchema.index({ campaignId: 1 });
 campaignSchema.index({ status: 1 });
 campaignSchema.index({ campaignName: 'text' });
 

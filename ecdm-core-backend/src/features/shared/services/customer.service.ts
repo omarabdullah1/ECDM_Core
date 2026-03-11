@@ -31,17 +31,46 @@ export const createCustomer = async (data: Record<string, unknown>): Promise<ICu
     Customer.create(data);
 
 export const getCustomers = async (query: Record<string, unknown>) => {
-    const { page = 1, limit = 10, search, sector, type } = query;
+    const { page = 1, limit = 10, search, sector, type, potentialStatus } = query;
     const filter: Record<string, unknown> = {};
     if (search) filter.$text = { $search: search as string };
     if (sector) filter.sector = sector;
     if (type)   filter.type   = type;
+    
     const skip = (Number(page) - 1) * Number(limit);
-    const [data, total] = await Promise.all([
-        Customer.find(filter).sort({ createdAt: -1 }).skip(skip).limit(Number(limit)),
-        Customer.countDocuments(filter),
-    ]);
-    return { data, pagination: { page: Number(page), limit: Number(limit), total, pages: Math.ceil(total / Number(limit)) } };
+    
+    // Get customers first
+    let customers = await Customer.find(filter).sort({ createdAt: -1 }).skip(skip).limit(Number(limit)).lean();
+    const total = await Customer.countDocuments(filter);
+    
+    // Enrich each customer with potential status by checking SalesOrder
+    const enrichedData = await Promise.all(
+        customers.map(async (customer) => {
+            // Check if customer has any sales order marked as "Not Potential"
+            const hasNonPotentialOrder = await SalesOrder.exists({ 
+                customer: customer._id, 
+                finalStatusThirdFollowUp: 'Not Potential' 
+            });
+            
+            return {
+                ...customer,
+                isNonPotential: !!hasNonPotentialOrder
+            };
+        })
+    );
+    
+    // Apply potential status filter if provided
+    let data = enrichedData;
+    let filteredTotal = total;
+    if (potentialStatus === 'Potential') {
+        data = enrichedData.filter(c => !c.isNonPotential);
+        filteredTotal = data.length;
+    } else if (potentialStatus === 'Non-Potential') {
+        data = enrichedData.filter(c => c.isNonPotential);
+        filteredTotal = data.length;
+    }
+    
+    return { data, pagination: { page: Number(page), limit: Number(limit), total: filteredTotal, pages: Math.ceil(filteredTotal / Number(limit)) } };
 };
 
 export const getCustomerById = async (id: string): Promise<ICustomerDocument> => {
@@ -166,6 +195,35 @@ export const getCustomerReport = async (id: string): Promise<Customer360Report> 
             feedbacks,
         },
     };
+};
+
+/**
+ * Smart Auto-Increment: Get next available Customer ID
+ * 
+ * This function uses a mathematical approach to find the highest existing
+ * customerId in the database, ensuring no conflicts even when IDs are
+ * manually overridden by admins.
+ * 
+ * @returns The next available customerId (e.g., "CUS-61")
+ */
+export const getNextCustomerId = async (): Promise<string> => {
+    // Fetch all customer IDs to find the absolute mathematical maximum
+    const customers = await Customer.find({}, { customerId: 1 }).lean();
+    
+    let maxNumber = 0;
+    
+    for (const customer of customers) {
+        if (customer.customerId && customer.customerId.startsWith('CUS-')) {
+            // Extract the number part
+            const numPart = parseInt(customer.customerId.replace('CUS-', ''), 10);
+            if (!isNaN(numPart) && numPart > maxNumber) {
+                maxNumber = numPart;
+            }
+        }
+    }
+    
+    // Return the next ID
+    return `CUS-${maxNumber + 1}`;
 };
 
 /**

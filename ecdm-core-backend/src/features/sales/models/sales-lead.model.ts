@@ -50,7 +50,6 @@ const salesLeadSchema = new Schema<ISalesLeadDocument>(
 salesLeadSchema.index({ status:          1 });
 salesLeadSchema.index({ salesPerson:     1 });
 salesLeadSchema.index({ marketingLeadId: 1 });
-salesLeadSchema.index({ customerId:      1 });
 
 const SalesLead: Model<ISalesLeadDocument> = mongoose.model<ISalesLeadDocument>('SalesLead', salesLeadSchema);
 export default SalesLead;

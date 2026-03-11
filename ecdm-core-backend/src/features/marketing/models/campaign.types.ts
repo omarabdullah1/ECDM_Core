@@ -23,14 +23,18 @@ export enum NextSteps {
 export interface ICampaign {
     campaignId:          string;
     campaignName:        string;
-    status:              CampaignStatus | '';
+    status:              string;
     impressions:         number;
     conversions:         number;
-    salesRevenuePercent: number;
+    salesRevenue:        number; // New: Actual sales revenue in currency
+    salesRevenuePercent: number; // Keep for backward compatibility
     region1:             string;
     region2:             string;
     region3:             string;
-    nextSteps:           NextSteps | '';
+    adSpend:             number; // New: Ad spend amount
+    cpa:                 number; // New: Cost per acquisition
+    roas:                number; // New: Return on ad spend
+    nextSteps:           string;
     fileUrl:             string;
     fileName:            string;
     notes:               string;

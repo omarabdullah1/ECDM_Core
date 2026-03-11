@@ -1,6 +1,8 @@
 'use client';
-import { useState, useCallback } from 'react';
-import { Trash2, ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { Trash2, ChevronLeft, ChevronRight, AlertTriangle, Settings2, Check } from 'lucide-react';
+import { Pagination } from '@/components/shared/Pagination';
+import { useReactTable, getCoreRowModel, VisibilityState, getPaginationRowModel, getFilteredRowModel } from '@tanstack/react-table';
 import { useAuthStore } from '@/features/auth/useAuth';
 import toast from 'react-hot-toast';
 import api from '@/lib/axios';
@@ -47,6 +49,8 @@ interface DataTableProps<T extends { _id: string }> {
   // Pagination
   page?: number;
   totalPages?: number;
+  totalItems?: number;
+  itemsPerPage?: number;
   onPageChange?: (page: number) => void;
   // Bulk delete - Option 1: API endpoint (recommended)
   bulkDeleteEndpoint?: string;
@@ -60,6 +64,7 @@ interface DataTableProps<T extends { _id: string }> {
   selectionDisabled?: boolean;
   // Meta object for custom handlers (e.g., onEdit, onDelete)
   meta?: any;
+  defaultVisibility?: VisibilityState;
 }
 
 // Admin roles that can perform bulk delete
@@ -72,6 +77,8 @@ export function DataTable<T extends { _id: string }>({
   emptyMessage = 'No data found.',
   page = 1,
   totalPages = 1,
+  totalItems,
+  itemsPerPage = 10,
   onPageChange,
   bulkDeleteEndpoint,
   onBulkDelete,
@@ -79,11 +86,61 @@ export function DataTable<T extends { _id: string }>({
   renderActions,
   selectionDisabled = false,
   meta,
+  defaultVisibility = {},
 }: DataTableProps<T>) {
   const { user } = useAuthStore();
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  // Column visibility state and dropdown management
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(defaultVisibility);
+  const [globalFilter, setGlobalFilter] = useState('');
+  const [showColumnDropdown, setShowColumnDropdown] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowColumnDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const reactTableColumns = useMemo(() => {
+    return columns.map(col => ({
+      id: String(col.key),
+      header: col.header,
+      accessorFn: (row: T) => row, // required by tanstack table
+    }));
+  }, [columns]);
+
+  const table = useReactTable({
+    data,
+    columns: reactTableColumns,
+    getCoreRowModel: getCoreRowModel(),
+    onColumnVisibilityChange: setColumnVisibility,
+    onGlobalFilterChange: setGlobalFilter,
+    getPaginationRowModel: getPaginationRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    state: {
+      columnVisibility,
+      globalFilter,
+      // When using server-side pagination (onPageChange provided), set large page size
+      // to avoid client-side pagination hiding rows that the server already returned
+      pagination: {
+        pageIndex: 0,
+        pageSize: onPageChange ? 9999 : 10,
+      },
+    },
+  });
+
+  const visibleColumns = columns.filter(col => {
+    const tableCol = table.getColumn(String(col.key));
+    return tableCol ? tableCol.getIsVisible() : true;
+  });
 
   // Check if current user has admin privileges for bulk delete
   const isAdmin = user?.role && ADMIN_ROLES.includes(user.role);
@@ -117,14 +174,14 @@ export function DataTable<T extends { _id: string }>({
     setDeleting(true);
     try {
       const ids = Array.from(selectedRows);
-      
+
       // Use custom callback if provided, otherwise use the API endpoint
       if (onBulkDelete) {
         await onBulkDelete(ids);
       } else if (bulkDeleteEndpoint) {
         await api.post(bulkDeleteEndpoint, { ids });
       }
-      
+
       toast.success(`Successfully deleted ${selectedRows.size} item(s)`);
       setSelectedRows(new Set());
       onBulkDeleteSuccess?.();
@@ -176,8 +233,54 @@ export function DataTable<T extends { _id: string }>({
         </div>
       )}
 
+      {/* Search and Column Visibility Toggle */}
+      <div className="flex items-center justify-between py-2 gap-3">
+        <input
+          placeholder="Search all columns..."
+          value={globalFilter ?? ""}
+          onChange={(event) => setGlobalFilter(event.target.value)}
+          className="max-w-sm w-full h-7 rounded-md border border-[hsl(var(--border))] px-2 py-0 text-xs focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/20 bg-transparent"
+        />
+
+        <div className="flex-1 text-xs text-[hsl(var(--muted-foreground))] hidden sm:block">
+          {selectedRows.size} of {data.length} row(s) selected.
+        </div>
+
+        <div className="relative" ref={dropdownRef}>
+          <button
+            onClick={() => setShowColumnDropdown(!showColumnDropdown)}
+            className="ml-auto hidden h-7 lg:flex items-center justify-center rounded-md border border-[hsl(var(--border))] bg-transparent px-2.5 text-xs font-medium shadow-sm hover:bg-[hsl(var(--muted))] hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring transition-colors"
+          >
+            <Settings2 className="mr-1.5 h-3.5 w-3.5" />
+            View Columns
+          </button>
+
+          {showColumnDropdown && (
+            <div className="absolute right-0 top-full z-50 mt-1 w-[180px] rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-1 shadow-md max-h-[60vh] overflow-y-auto">
+              {table.getAllLeafColumns().map((col) => {
+                const isVisible = col.getIsVisible();
+                const originalCol = columns.find(c => String(c.key) === col.id);
+                if (!originalCol) return null;
+                return (
+                  <button
+                    key={col.id}
+                    onClick={() => col.toggleVisibility(!isVisible)}
+                    className="relative flex w-full cursor-pointer select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none hover:bg-[hsl(var(--muted))] hover:text-accent-foreground capitalize"
+                  >
+                    <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
+                      {isVisible && <Check className="h-4 w-4" />}
+                    </span>
+                    {originalCol.header}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Data Table */}
-      <div className="rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] overflow-x-auto">
+      <div className="relative w-full overflow-x-auto custom-table-scrollbar rounded-md border border-gray-200 bg-white shadow-sm">
         {loading ? (
           <div className="p-8 text-center text-[hsl(var(--muted-foreground))]">Loading…</div>
         ) : (
@@ -186,63 +289,94 @@ export function DataTable<T extends { _id: string }>({
               <tr>
                 {/* Checkbox column - only show if user is admin and bulk delete is enabled */}
                 {canBulkDelete && (
-                  <th className="px-4 py-3 text-left w-10">
+                  <th className="sticky left-0 z-30 px-2 py-1.5 text-left w-10 bg-gray-100 border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]">
                     <input
                       type="checkbox"
                       checked={data.length > 0 && selectedRows.size === data.length}
                       onChange={toggleAllSelection}
-                      className="h-4 w-4 rounded border-[hsl(var(--border))] cursor-pointer"
+                      className="h-3.5 w-3.5 rounded border-[hsl(var(--border))] cursor-pointer"
                     />
                   </th>
                 )}
-                {columns.map(col => (
-                  <th
-                    key={String(col.key)}
-                    className={`px-3 py-3 text-left font-semibold text-xs uppercase tracking-wide ${col.className || ''}`}
-                  >
-                    {col.header}
-                  </th>
-                ))}
+                {visibleColumns.map((col, colIndex) => {
+                  const isFirstDataCol = colIndex === 0 && !canBulkDelete;
+                  const isLastDataCol = colIndex === visibleColumns.length - 1 && !renderActions;
+                  return (
+                    <th
+                      key={String(col.key)}
+                      className={[
+                        `px-2 py-1.5 text-left font-semibold text-[11px] uppercase tracking-wide whitespace-nowrap`,
+                        col.className || '',
+                        isFirstDataCol
+                          ? 'sticky left-0 z-30 bg-gray-100 border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]'
+                          : '',
+                        isLastDataCol
+                          ? 'sticky right-0 z-30 bg-gray-100 border-l border-gray-200 shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.1)]'
+                          : '',
+                      ].join(' ')}
+                    >
+                      {col.header}
+                    </th>
+                  );
+                })}
                 {renderActions && (
-                  <th className="px-3 py-3 text-left font-semibold text-xs uppercase tracking-wide">
+                  <th className="sticky right-0 z-30 px-2 py-1.5 text-left font-semibold text-[11px] uppercase tracking-wide bg-gray-100 border-l border-gray-200 shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.1)]">
                     Actions
                   </th>
                 )}
               </tr>
             </thead>
             <tbody>
-              {data.map(row => (
-                <tr
-                  key={row._id}
-                  className={`border-b border-[hsl(var(--border))]/50 hover:bg-[hsl(var(--muted))]/20 ${
-                    selectedRows.has(row._id) ? 'bg-[hsl(var(--primary))]/5' : ''
-                  }`}
-                >
-                  {/* Checkbox cell */}
-                  {canBulkDelete && (
-                    <td className="px-4 py-3">
-                      <input
-                        type="checkbox"
-                        checked={selectedRows.has(row._id)}
-                        onChange={() => toggleRowSelection(row._id)}
-                        className="h-4 w-4 rounded border-[hsl(var(--border))] cursor-pointer"
-                      />
-                    </td>
-                  )}
-                  {columns.map(col => (
-                    <td key={String(col.key)} className={`px-3 py-3 ${col.className || ''}`}>
-                      {col.render
-                        ? col.render(row, meta)
-                        : String(getCellValue(row, col.key) ?? '-')}
-                    </td>
-                  ))}
-                  {renderActions && <td className="px-3 py-3">{renderActions(row)}</td>}
-                </tr>
-              ))}
-              {!data.length && (
+              {table.getRowModel().rows.map(tableRow => {
+                const row = tableRow.original;
+                return (
+                  <tr
+                    key={row._id}
+                    className={`border-b border-[hsl(var(--border))]/50 hover:bg-[hsl(var(--muted))]/20 ${selectedRows.has(row._id) ? 'bg-[hsl(var(--primary))]/5' : ''
+                      }`}
+                  >
+                    {/* Checkbox cell */}
+                    {canBulkDelete && (
+                      <td className="sticky left-0 z-20 px-2 py-1.5 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.08)]">
+                        <input
+                          type="checkbox"
+                          checked={selectedRows.has(row._id)}
+                          onChange={() => toggleRowSelection(row._id)}
+                          className="h-3.5 w-3.5 rounded border-[hsl(var(--border))] cursor-pointer"
+                        />
+                      </td>
+                    )}
+                    {visibleColumns.map((col, colIndex) => {
+                      const isFirstDataCol = colIndex === 0 && !canBulkDelete;
+                      const isLastDataCol = colIndex === visibleColumns.length - 1 && !renderActions;
+                      return (
+                        <td
+                          key={String(col.key)}
+                          className={[
+                            `px-2 py-1.5 text-[13px]`,
+                            col.className || '',
+                            isFirstDataCol
+                              ? 'sticky left-0 z-20 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.08)]'
+                              : '',
+                            isLastDataCol
+                              ? 'sticky right-0 z-20 bg-white border-l border-gray-200 shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]'
+                              : '',
+                          ].join(' ')}
+                        >
+                          {col.render
+                            ? col.render(row, meta)
+                            : String(getCellValue(row, col.key) ?? '-')}
+                        </td>
+                      );
+                    })}
+                    {renderActions && <td className="sticky right-0 z-20 px-2 py-1.5 bg-white border-l border-gray-200 shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">{renderActions(row)}</td>}
+                  </tr>
+                )
+              })}
+              {!table.getRowModel().rows.length && (
                 <tr>
                   <td
-                    colSpan={columns.length + (canBulkDelete ? 1 : 0) + (renderActions ? 1 : 0)}
+                    colSpan={visibleColumns.length + (canBulkDelete ? 1 : 0) + (renderActions ? 1 : 0)}
                     className="px-4 py-8 text-center text-[hsl(var(--muted-foreground))]"
                   >
                     {emptyMessage}
@@ -255,27 +389,21 @@ export function DataTable<T extends { _id: string }>({
       </div>
 
       {/* Pagination */}
-      {totalPages > 1 && onPageChange && (
-        <div className="flex items-center justify-center gap-2">
-          <button
-            onClick={() => handlePageChange(Math.max(1, page - 1))}
-            disabled={page === 1}
-            className="p-2 rounded-lg hover:bg-[hsl(var(--muted))] disabled:opacity-40"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </button>
-          <span className="text-sm">
-            {page} / {totalPages}
-          </span>
-          <button
-            onClick={() => handlePageChange(Math.min(totalPages, page + 1))}
-            disabled={page === totalPages}
-            className="p-2 rounded-lg hover:bg-[hsl(var(--muted))] disabled:opacity-40"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </button>
-        </div>
-      )}
+      {onPageChange && totalItems != null && totalItems > 0 ? (
+        <Pagination
+          currentPage={page}
+          totalItems={totalItems}
+          itemsPerPage={itemsPerPage}
+          onPageChange={handlePageChange}
+        />
+      ) : onPageChange ? (
+        <Pagination
+          currentPage={page}
+          totalItems={totalPages * itemsPerPage}
+          itemsPerPage={itemsPerPage}
+          onPageChange={handlePageChange}
+        />
+      ) : null}
 
       {/* Bulk Delete Confirmation Modal */}
       {showBulkDeleteConfirm && (

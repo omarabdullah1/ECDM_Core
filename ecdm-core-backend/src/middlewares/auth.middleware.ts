@@ -41,9 +41,18 @@ export const authenticate = (req: Request, _res: Response, next: NextFunction): 
 /**
  * Factory — restrict access to specific roles.
  */
-export const authorise = (...roles: UserRole[]) => {
+export const authorise = (...roles: (UserRole | string)[]) => {
     return (req: Request, _res: Response, next: NextFunction): void => {
-        if (!req.user || !roles.includes(req.user.role)) {
+        if (!req.user) {
+            return next(new AppError('Forbidden: Authentication required', 401));
+        }
+        
+        // Normalize role to lowercase and remove spaces, underscores, and ampersands
+        const normalize = (r: string) => (r || '').toLowerCase().replace(/[\s_&]/g, '');
+        const userRole = normalize(req.user.role);
+        const isAllowed = roles.some(role => normalize(role as string) === userRole);
+
+        if (!isAllowed) {
             return next(new AppError('Forbidden: insufficient permissions', 403));
         }
         next();

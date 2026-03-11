@@ -11,6 +11,10 @@ export enum UserRole {
     MaintenanceEngineer = 'MaintenanceEngineer',
     Technician = 'Technician',
     CustomerService = 'CustomerService',
+    RndEngineer = 'R&D_Engineer',
+    Admin = 'Admin',
+    Marketing = 'Marketing',
+    RND = 'R&D',
 }
 
 // ── HR Document type for employee profile ──────────────────────────
@@ -32,10 +36,11 @@ export interface IUser {
     avatar?: string;
     avatarUrl?: string;              // HR: Profile picture URL
     phone?: string;
-    department?: string;
     address?: string;                // HR: Employee address
     employeeId?: string;             // HR: External employee ID for linking with attendance
     documents?: IEmployeeDocument[]; // HR: Employee documents (contracts, IDs, etc.)
+    targetBudget?: number;           // Target budget for marketing
+    targetSales?: number;            // Target sales for sales reps
     createdAt: Date;
     updatedAt: Date;
 }

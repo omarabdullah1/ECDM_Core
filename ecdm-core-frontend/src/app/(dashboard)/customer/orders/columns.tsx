@@ -76,17 +76,17 @@ interface User {
 
 export interface CustomerOrder {
   _id: string;
-  
+
   // Populated references (SSOT)
   customerId?: Customer;
   salesOrderId?: SalesOrder;
   updatedBy?: User;
-  
+
   // Inherited fields
   typeOfOrder?: string;
   issue?: string;
   scheduledVisitDate?: string;
-  
+
   // Operational fields
   engineerName?: string;
   actualVisitDate?: string;
@@ -97,7 +97,7 @@ export interface CustomerOrder {
   endDate?: string;
   deviceReturnedDate?: string;
   notes?: string;
-  
+
   // Timestamps
   createdAt?: string;
   updatedAt?: string;
@@ -109,18 +109,18 @@ export interface CustomerOrder {
 
 const Badge = ({ children, variant = 'outline' }: { children: React.ReactNode; variant?: string }) => {
   const baseClasses = "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold";
-  
+
   const variantClasses: Record<string, string> = {
-    'Pending':  'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
+    'Pending': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
     'Approved': 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
     'Rejected': 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
-    'Done':     'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
-    'outline':  'border border-gray-300 text-gray-700 dark:border-gray-600 dark:text-gray-300',
+    'Done': 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
+    'outline': 'border border-gray-300 text-gray-700 dark:border-gray-600 dark:text-gray-300',
   };
-  
+
   const statusVariant = typeof children === 'string' ? children : 'outline';
   const classes = `${baseClasses} ${variantClasses[statusVariant] || variantClasses['outline']}`;
-  
+
   return <span className={classes}>{children || '-'}</span>;
 };
 
@@ -133,11 +133,11 @@ export const columns: Array<{
   header: string;
   render: (row: CustomerOrder, meta?: any) => React.ReactNode;
 }> = [
-    
+
     // ═════════════════════════════════════════════════════════════════════════
     // SECTION 1: Customer Info (SSOT from Customer Population) - 6 Columns
     // ═════════════════════════════════════════════════════════════════════════
-    
+
     // ─────────────────────────────────────────────────────────────────────────
     // 1. Customer ID (SSOT from Customer)
     // ─────────────────────────────────────────────────────────────────────────
@@ -233,11 +233,11 @@ export const columns: Array<{
         );
       },
     },
-    
+
     // ═════════════════════════════════════════════════════════════════════════
     // SECTION 2: Inherited Order Details - 3 Columns
     // ═════════════════════════════════════════════════════════════════════════
-    
+
     // ─────────────────────────────────────────────────────────────────────────
     // 7. Type Of Order
     // ─────────────────────────────────────────────────────────────────────────
@@ -279,11 +279,11 @@ export const columns: Array<{
         return <span className="text-sm font-mono">{formatDateTime(row.scheduledVisitDate)}</span>;
       },
     },
-    
+
     // ═════════════════════════════════════════════════════════════════════════
     // SECTION 3: Operational Data - 8 Columns
     // ═════════════════════════════════════════════════════════════════════════
-    
+
     // ─────────────────────────────────────────────────────────────────────────
     // 10. Engineer Name
     // ─────────────────────────────────────────────────────────────────────────
@@ -383,11 +383,11 @@ export const columns: Array<{
         return <span className="text-sm font-mono">{formatDate(row.deviceReturnedDate)}</span>;
       },
     },
-    
+
     // ═════════════════════════════════════════════════════════════════════════
     // SECTION 4: Audit & Notes - 2 Columns
     // ═════════════════════════════════════════════════════════════════════════
-    
+
     // ─────────────────────────────────────────────────────────────────────────
     // 18. Last Updated By
     // ─────────────────────────────────────────────────────────────────────────
@@ -419,11 +419,11 @@ export const columns: Array<{
         );
       },
     },
-    
+
     // ═════════════════════════════════════════════════════════════════════════
     // SECTION 5: Actions - Edit & Delete
     // ═════════════════════════════════════════════════════════════════════════
-    
+
     // ─────────────────────────────────────────────────────────────────────────
     // 20. Actions
     // ─────────────────────────────────────────────────────────────────────────
@@ -432,24 +432,24 @@ export const columns: Array<{
       header: 'Actions',
       render: (row: CustomerOrder, meta?: any) => {
         return (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
             <button
               onClick={() => meta?.onEdit?.(row)}
-              className="p-2 hover:bg-blue-500/10 rounded-lg transition-colors"
+              className="p-1 hover:bg-blue-500/10 rounded transition-colors"
               title="Edit Order"
             >
-              <Edit className="h-4 w-4 text-blue-500" />
+              <Edit className="h-3.5 w-3.5 text-blue-500" />
             </button>
             <button
               onClick={() => meta?.onDelete?.(row._id)}
-              className="p-2 hover:bg-red-500/10 rounded-lg transition-colors"
+              className="p-1 hover:bg-red-500/10 rounded transition-colors"
               title="Delete Order"
             >
-              <Trash2 className="h-4 w-4 text-red-500" />
+              <Trash2 className="h-3.5 w-3.5 text-red-500" />
             </button>
           </div>
         );
       },
     },
-    
-];
+
+  ];

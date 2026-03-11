@@ -28,7 +28,6 @@ export const registerUser = async (data: RegisterInput): Promise<{ user: IUserDo
         password: data.password,
         role: data.role || UserRole.Sales,
         phone: data.phone,
-        department: data.department,
     });
 
     const token = signToken(user);
@@ -104,8 +103,9 @@ export const createUser = async (data: {
     password: string;
     role: UserRole;
     phone?: string;
-    department?: string;
     isActive?: boolean;
+    targetBudget?: number;
+    targetSales?: number;
 }): Promise<IUserDocument> => {
     const existing = await User.findOne({ email: data.email });
     if (existing) {
@@ -119,8 +119,9 @@ export const createUser = async (data: {
         password: data.password,
         role: data.role,
         phone: data.phone,
-        department: data.department,
         isActive: data.isActive ?? true,
+        targetBudget: data.targetBudget ?? 0,
+        targetSales: data.targetSales ?? 0,
     });
 
     // Remove password from response
@@ -148,8 +149,9 @@ export const updateUser = async (
         password?: string;
         role?: UserRole;
         phone?: string;
-        department?: string;
         isActive?: boolean;
+        targetBudget?: number;
+        targetSales?: number;
     },
 ): Promise<IUserDocument> => {
     const user = await User.findById(userId);
@@ -172,8 +174,9 @@ export const updateUser = async (
     if (data.password !== undefined) user.password = data.password;
     if (data.role !== undefined) user.role = data.role;
     if (data.phone !== undefined) user.phone = data.phone;
-    if (data.department !== undefined) user.department = data.department;
     if (data.isActive !== undefined) user.isActive = data.isActive;
+    if (data.targetBudget !== undefined) user.targetBudget = data.targetBudget;
+    if (data.targetSales !== undefined) user.targetSales = data.targetSales;
 
     await user.save();
 

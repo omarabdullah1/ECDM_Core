@@ -8,6 +8,7 @@ import toast from 'react-hot-toast';
 import api from '@/lib/axios';
 import { SparePart } from './columns';
 import { API_BASE_URL } from '@/lib/constants';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 /**
  * Edit Spare Part Dialog
@@ -104,26 +105,26 @@ export default function EditSparePartDialog({ sparePart, onClose, onSuccess }: E
 
         try {
             const formData = new FormData();
-            
+
             // ─── Append text fields ───────────────────────────────────────────────
             formData.append('itemName', values.itemName);
-            
+
             if (values.specification !== undefined) {
                 formData.append('specification', values.specification || '');
             }
-            
+
             if (values.category !== undefined) {
                 formData.append('category', values.category || '');
             }
-            
+
             if (values.unitPrice !== undefined) {
                 formData.append('unitPrice', String(values.unitPrice));
             }
-            
+
             if (values.notes !== undefined) {
                 formData.append('notes', values.notes || '');
             }
-            
+
             // ─── Handle File Upload ───────────────────────────────────────────────
             if (dataSheetFile) {
                 formData.append('dataSheet', dataSheetFile);
@@ -139,10 +140,10 @@ export default function EditSparePartDialog({ sparePart, onClose, onSuccess }: E
 
             // API call - Let axios handle Content-Type automatically for FormData
             await api.patch(`/operations/spare-parts/${sparePart._id}`, formData);
-            
+
             console.log('✅ Spare part updated successfully');
             toast.success('Spare part updated successfully!');
-            
+
             onSuccess();
             onClose();
         } catch (err: unknown) {
@@ -155,28 +156,29 @@ export default function EditSparePartDialog({ sparePart, onClose, onSuccess }: E
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 overflow-y-auto">
-            <div className="w-full max-w-2xl rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] shadow-2xl my-8">
-                
+        <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
+            <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto overflow-x-hidden p-6 outline-none">
+
                 {/* ─── Header ─────────────────────────────────────────────────── */}
-                <div className="flex items-center justify-between border-b border-[hsl(var(--border))] px-6 py-4 sticky top-0 bg-[hsl(var(--card))] z-10 rounded-t-2xl">
+                <DialogHeader className="flex flex-row items-center justify-between border-b border-[hsl(var(--border))] pb-4 mb-4 space-y-0">
                     <div>
-                        <h2 className="text-xl font-bold">Edit Spare Part</h2>
+                        <DialogTitle className="text-xl font-bold">Edit Spare Part</DialogTitle>
                         <p className="text-xs text-[hsl(var(--muted-foreground))] mt-0.5">
                             ID: {sparePart.sparePartsId}
                         </p>
                     </div>
-                    <button 
+                    <button
+                        type="button"
                         onClick={onClose}
                         className="p-2 hover:bg-[hsl(var(--muted))] rounded-lg transition-colors"
                     >
                         <X className="h-5 w-5" />
                     </button>
-                </div>
+                </DialogHeader>
 
                 <form onSubmit={form.handleSubmit(onSubmit, onError)}>
-                    <div className="p-6 space-y-6 max-h-[calc(100vh-200px)] overflow-y-auto">
-                        
+                    <div className="space-y-6">
+
                         {/* ─── Item Name (Required) ──────────────────────────────── */}
                         <div>
                             <label className={labelCls}>Item Name *</label>
@@ -242,7 +244,7 @@ export default function EditSparePartDialog({ sparePart, onClose, onSuccess }: E
                         {/* ─── Data Sheet Upload ─────────────────────────────────── */}
                         <div>
                             <label className={labelCls}>Data Sheet (PDF)</label>
-                            
+
                             {/* Show existing file if present */}
                             {sparePart.dataSheetUrl && !dataSheetFile && (
                                 <div className="mb-3 p-3 rounded-xl bg-[hsl(var(--muted))]/30 border border-[hsl(var(--border))]">
@@ -272,7 +274,7 @@ export default function EditSparePartDialog({ sparePart, onClose, onSuccess }: E
                                     </div>
                                 </div>
                             )}
-                            
+
                             <div className="border-2 border-dashed border-[hsl(var(--border))] rounded-xl p-6 text-center hover:border-[hsl(var(--primary))] transition-colors">
                                 {dataSheetFile ? (
                                     <div className="flex items-center justify-center gap-3">
@@ -313,7 +315,7 @@ export default function EditSparePartDialog({ sparePart, onClose, onSuccess }: E
                     </div>
 
                     {/* ─── Footer ─────────────────────────────────────────────────── */}
-                    <div className="flex items-center justify-end gap-3 border-t border-[hsl(var(--border))] px-6 py-4">
+                    <div className="flex items-center justify-end gap-3 border-t border-[hsl(var(--border))] pt-4 mt-6">
                         <button
                             type="button"
                             onClick={onClose}
@@ -330,7 +332,7 @@ export default function EditSparePartDialog({ sparePart, onClose, onSuccess }: E
                         </button>
                     </div>
                 </form>
-            </div>
-        </div>
+            </DialogContent>
+        </Dialog>
     );
 }

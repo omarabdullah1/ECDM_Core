@@ -1,19 +1,19 @@
 'use client';
 import { useState, useMemo } from 'react';
-import { 
-    Dialog, 
-    DialogContent, 
-    DialogHeader, 
-    DialogTitle, 
-    DialogDescription, 
-    DialogFooter 
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
+    DialogFooter
 } from '@/components/ui/dialog';
-import { 
-    CheckCircle, 
-    XCircle, 
-    ArrowRight, 
-    User, 
-    Calendar, 
+import {
+    CheckCircle,
+    XCircle,
+    ArrowRight,
+    User,
+    Calendar,
     FileText,
     AlertTriangle,
     Minus,
@@ -82,10 +82,10 @@ const valuesAreEqual = (a: unknown, b: unknown): boolean => {
 
 // Fields to exclude from the diff display
 const EXCLUDED_FIELDS = [
-    '_id', 
-    '__v', 
-    'createdAt', 
-    'updatedAt', 
+    '_id',
+    '__v',
+    'createdAt',
+    'updatedAt',
     'id',
     'customer', // populated field (use customerId instead)
     'salesLead',
@@ -105,23 +105,23 @@ export default function ReviewRequestDialog({
     const [reviewNotes, setReviewNotes] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [activeTab, setActiveTab] = useState<'changes' | 'full'>('changes');
-    
+
     // Calculate the diff between original and proposed data
     const diff = useMemo<DiffItem[]>(() => {
         const allKeys = new Set([
             ...Object.keys(request.originalData),
             ...Object.keys(request.proposedData),
         ]);
-        
+
         const items: DiffItem[] = [];
-        
+
         allKeys.forEach((key) => {
             if (EXCLUDED_FIELDS.includes(key)) return;
-            
+
             const originalValue = request.originalData[key];
             const proposedValue = request.proposedData[key];
             const hasChanged = !valuesAreEqual(originalValue, proposedValue);
-            
+
             items.push({
                 key,
                 label: formatFieldLabel(key),
@@ -130,7 +130,7 @@ export default function ReviewRequestDialog({
                 hasChanged,
             });
         });
-        
+
         // Sort: changed items first, then alphabetically
         return items.sort((a, b) => {
             if (a.hasChanged && !b.hasChanged) return -1;
@@ -138,10 +138,10 @@ export default function ReviewRequestDialog({
             return a.label.localeCompare(b.label);
         });
     }, [request]);
-    
+
     const changedItems = diff.filter((item) => item.hasChanged);
     const displayItems = activeTab === 'changes' ? changedItems : diff;
-    
+
     const handleSubmit = async (status: 'Approved' | 'Rejected') => {
         setIsSubmitting(true);
         try {
@@ -151,7 +151,7 @@ export default function ReviewRequestDialog({
             setReviewNotes('');
         }
     };
-    
+
     const formatDate = (dateStr: string) => {
         return new Date(dateStr).toLocaleString('en-GB', {
             day: '2-digit',
@@ -161,10 +161,10 @@ export default function ReviewRequestDialog({
             minute: '2-digit',
         });
     };
-    
+
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-4xl">
+            <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto overflow-x-hidden p-6 outline-none">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
                         <FileText className="h-5 w-5 text-[hsl(var(--primary))]" />
@@ -174,7 +174,7 @@ export default function ReviewRequestDialog({
                         Compare the original and proposed changes below. You can approve or reject this request.
                     </DialogDescription>
                 </DialogHeader>
-                
+
                 {/* Request Meta Info */}
                 <div className="flex flex-wrap gap-4 p-4 bg-[hsl(var(--muted))]/50 rounded-xl text-sm">
                     <div className="flex items-center gap-2">
@@ -194,31 +194,29 @@ export default function ReviewRequestDialog({
                         <span className="font-medium">{formatDate(request.createdAt)}</span>
                     </div>
                 </div>
-                
+
                 {/* Tab Buttons */}
                 <div className="flex gap-2 border-b border-[hsl(var(--border))]">
                     <button
                         onClick={() => setActiveTab('changes')}
-                        className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-                            activeTab === 'changes'
+                        className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === 'changes'
                                 ? 'border-[hsl(var(--primary))] text-[hsl(var(--primary))]'
                                 : 'border-transparent text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]'
-                        }`}
+                            }`}
                     >
                         Changes Only ({changedItems.length})
                     </button>
                     <button
                         onClick={() => setActiveTab('full')}
-                        className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-                            activeTab === 'full'
+                        className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === 'full'
                                 ? 'border-[hsl(var(--primary))] text-[hsl(var(--primary))]'
                                 : 'border-transparent text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]'
-                        }`}
+                            }`}
                     >
                         All Fields ({diff.length})
                     </button>
                 </div>
-                
+
                 {/* Diff Comparison */}
                 <div className="max-h-[400px] overflow-y-auto space-y-2">
                     {displayItems.length === 0 ? (
@@ -230,11 +228,10 @@ export default function ReviewRequestDialog({
                         displayItems.map((item) => (
                             <div
                                 key={item.key}
-                                className={`p-3 rounded-lg border ${
-                                    item.hasChanged
+                                className={`p-3 rounded-lg border ${item.hasChanged
                                         ? 'border-amber-200 bg-amber-50/50 dark:border-amber-800 dark:bg-amber-900/10'
                                         : 'border-[hsl(var(--border))] bg-[hsl(var(--card))]'
-                                }`}
+                                    }`}
                             >
                                 <div className="flex items-center gap-2 mb-2">
                                     {item.hasChanged ? (
@@ -247,14 +244,13 @@ export default function ReviewRequestDialog({
                                         {item.label}
                                     </span>
                                 </div>
-                                
+
                                 <div className="grid grid-cols-[1fr_auto_1fr] gap-3 items-center">
                                     {/* Original Value */}
-                                    <div className={`p-2 rounded text-sm ${
-                                        item.hasChanged 
-                                            ? 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400' 
+                                    <div className={`p-2 rounded text-sm ${item.hasChanged
+                                            ? 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400'
                                             : 'bg-[hsl(var(--muted))]/50 text-[hsl(var(--foreground))]'
-                                    }`}>
+                                        }`}>
                                         <div className="flex items-center gap-1 text-xs font-medium mb-1">
                                             {item.hasChanged && <Minus className="h-3 w-3" />}
                                             Original
@@ -263,20 +259,18 @@ export default function ReviewRequestDialog({
                                             {formatValue(item.originalValue)}
                                         </div>
                                     </div>
-                                    
+
                                     {/* Arrow */}
-                                    <ArrowRight className={`h-4 w-4 ${
-                                        item.hasChanged 
-                                            ? 'text-amber-500' 
+                                    <ArrowRight className={`h-4 w-4 ${item.hasChanged
+                                            ? 'text-amber-500'
                                             : 'text-[hsl(var(--muted-foreground))]'
-                                    }`} />
-                                    
+                                        }`} />
+
                                     {/* Proposed Value */}
-                                    <div className={`p-2 rounded text-sm ${
-                                        item.hasChanged 
-                                            ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400' 
+                                    <div className={`p-2 rounded text-sm ${item.hasChanged
+                                            ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400'
                                             : 'bg-[hsl(var(--muted))]/50 text-[hsl(var(--foreground))]'
-                                    }`}>
+                                        }`}>
                                         <div className="flex items-center gap-1 text-xs font-medium mb-1">
                                             {item.hasChanged && <Plus className="h-3 w-3" />}
                                             Proposed
@@ -290,7 +284,7 @@ export default function ReviewRequestDialog({
                         ))
                     )}
                 </div>
-                
+
                 {/* Review Notes */}
                 <div>
                     <label className="block text-sm font-medium text-[hsl(var(--foreground))] mb-2">
@@ -304,7 +298,7 @@ export default function ReviewRequestDialog({
                         className="w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-4 py-3 text-sm placeholder:text-[hsl(var(--muted-foreground))] focus:border-[hsl(var(--primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/20 transition-all resize-none"
                     />
                 </div>
-                
+
                 {/* Action Buttons */}
                 <DialogFooter className="flex-col sm:flex-row gap-2">
                     <button
@@ -314,7 +308,7 @@ export default function ReviewRequestDialog({
                     >
                         Cancel
                     </button>
-                    
+
                     <button
                         onClick={() => handleSubmit('Rejected')}
                         disabled={isSubmitting}
@@ -323,7 +317,7 @@ export default function ReviewRequestDialog({
                         <XCircle className="h-4 w-4" />
                         {isSubmitting ? 'Processing...' : 'Reject'}
                     </button>
-                    
+
                     <button
                         onClick={() => handleSubmit('Approved')}
                         disabled={isSubmitting}

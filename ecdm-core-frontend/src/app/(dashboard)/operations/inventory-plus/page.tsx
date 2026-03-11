@@ -1,7 +1,8 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import api from '@/lib/axios';
-import { Package, Plus, Edit2, Trash2, X, ChevronLeft, ChevronRight, Boxes, Tag, ArrowUpDown } from 'lucide-react';
+import { Package, Plus, Edit2, Trash2, X, Boxes, Tag, ArrowUpDown } from 'lucide-react';
+import { Pagination } from '@/components/shared/Pagination';
 
 type Tab = 'items' | 'products' | 'categories' | 'movements';
 
@@ -20,6 +21,8 @@ export default function InventoryPlusPage() {
   const [movements, setMovements] = useState<StockMovement[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
+  const [fItemStatus, setFItemStatus] = useState('');
+  const [fMovementType, setFMovementType] = useState('');
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(false);
   const [form, setForm] = useState<Record<string, string>>({});
@@ -27,6 +30,24 @@ export default function InventoryPlusPage() {
   const [error, setError] = useState('');
   const [delId, setDelId] = useState<string | null>(null);
   const lim = 10; const tp = Math.ceil(total / lim);
+
+  const filteredItems = useMemo(() => {
+    if (!fItemStatus) return items;
+    return items.filter(r => r.status === fItemStatus);
+  }, [items, fItemStatus]);
+
+  const filteredProducts = useMemo(() => {
+    if (!fItemStatus) return products;
+    if (fItemStatus === 'In Stock') return products.filter(r => r.currentStock > r.lowStockThreshold);
+    if (fItemStatus === 'Low Stock') return products.filter(r => r.currentStock <= r.lowStockThreshold && r.currentStock > 0);
+    if (fItemStatus === 'Out of Stock') return products.filter(r => r.currentStock === 0);
+    return products;
+  }, [products, fItemStatus]);
+
+  const filteredMovements = useMemo(() => {
+    if (!fMovementType) return movements;
+    return movements.filter(r => r.type === fMovementType);
+  }, [movements, fMovementType]);
 
   const fetch_ = useCallback(async () => {
     setLoading(true);
@@ -46,7 +67,7 @@ export default function InventoryPlusPage() {
     ev.preventDefault(); setSaving(true); setError('');
     const pl: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(form)) {
-      if (v !== '') pl[k] = ['stockCount','price','quantity','unitPrice','costPrice','currentStock','lowStockThreshold'].includes(k) ? Number(v) : v;
+      if (v !== '') pl[k] = ['stockCount', 'price', 'quantity', 'unitPrice', 'costPrice', 'currentStock', 'lowStockThreshold'].includes(k) ? Number(v) : v;
     }
     try {
       const base = '/operations/inventory-plus';
@@ -89,44 +110,75 @@ export default function InventoryPlusPage() {
         ))}
       </div>
 
+      <div className="flex gap-3 flex-wrap items-center">
+        {(tab === 'items') && (
+          <select value={fItemStatus} onChange={e => { setFItemStatus(e.target.value); }} className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2 text-sm">
+            <option value="">All Statuses</option>
+            <option value="In Stock">In Stock</option>
+            <option value="Low Stock">Low Stock</option>
+            <option value="Out of Stock">Out of Stock</option>
+          </select>
+        )}
+        {(tab === 'products') && (
+          <select value={fItemStatus} onChange={e => { setFItemStatus(e.target.value); }} className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2 text-sm">
+            <option value="">All Stock Levels</option>
+            <option value="In Stock">In Stock</option>
+            <option value="Low Stock">Low Stock</option>
+            <option value="Out of Stock">Out of Stock</option>
+          </select>
+        )}
+        {(tab === 'movements') && (
+          <select value={fMovementType} onChange={e => { setFMovementType(e.target.value); }} className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2 text-sm">
+            <option value="">All Movement Types</option>
+            <option value="IN">IN</option>
+            <option value="OUT">OUT</option>
+            <option value="ADJUST">ADJUST</option>
+          </select>
+        )}
+      </div>
+
       <div className="rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] overflow-hidden">
         {loading ? <div className="p-8 text-center text-[hsl(var(--muted-foreground))]">Loading…</div> : (
           <>
             {tab === 'items' && (
               <table className="w-full text-sm">
-                <thead className="border-b border-[hsl(var(--border))] bg-[hsl(var(--muted))]/30"><tr>{['Item Name','Stock #','Count','Status','Price','Category','Actions'].map(h => <th key={h} className="px-4 py-3 text-left font-semibold">{h}</th>)}</tr></thead>
-                <tbody>{items.map(r => <tr key={r._id} className="border-b border-[hsl(var(--border))]/50 hover:bg-[hsl(var(--muted))]/20"><td className="px-4 py-3 font-medium">{r.itemName}</td><td className="px-4 py-3">{r.stockNumber}</td><td className="px-4 py-3">{r.stockCount}</td><td className="px-4 py-3"><span className="rounded-full px-2 py-0.5 text-xs font-medium bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))]">{r.status}</span></td><td className="px-4 py-3">EGP {r.price.toLocaleString()}</td><td className="px-4 py-3">{r.category?.name || '—'}</td><td className="px-4 py-3"><button onClick={() => setDelId(r._id)} className="p-1 hover:text-destructive"><Trash2 className="h-4 w-4" /></button></td></tr>)}{!items.length && <tr><td colSpan={7} className="px-4 py-8 text-center text-[hsl(var(--muted-foreground))]">No items found.</td></tr>}</tbody>
+                <thead className="border-b border-[hsl(var(--border))] bg-[hsl(var(--muted))]/30"><tr>{['Item Name', 'Stock #', 'Count', 'Status', 'Price', 'Category', 'Actions'].map(h => <th key={h} className="px-4 py-3 text-left font-semibold">{h}</th>)}</tr></thead>
+                <tbody>{filteredItems.map(r => <tr key={r._id} className="border-b border-[hsl(var(--border))]/50 hover:bg-[hsl(var(--muted))]/20"><td className="px-4 py-3 font-medium">{r.itemName}</td><td className="px-4 py-3">{r.stockNumber}</td><td className="px-4 py-3">{r.stockCount}</td><td className="px-4 py-3"><span className="rounded-full px-2 py-0.5 text-xs font-medium bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))]">{r.status}</span></td><td className="px-4 py-3">EGP {r.price.toLocaleString()}</td><td className="px-4 py-3">{r.category?.name || '—'}</td><td className="px-4 py-3"><button onClick={() => setDelId(r._id)} className="p-1 hover:text-destructive"><Trash2 className="h-4 w-4" /></button></td></tr>)}{!filteredItems.length && <tr><td colSpan={7} className="px-4 py-8 text-center text-[hsl(var(--muted-foreground))]">No items found.</td></tr>}</tbody>
               </table>
             )}
             {tab === 'products' && (
               <table className="w-full text-sm">
-                <thead className="border-b border-[hsl(var(--border))] bg-[hsl(var(--muted))]/30"><tr>{['SKU','Name','Stock','Low Thresh.','Price','Category','Actions'].map(h => <th key={h} className="px-4 py-3 text-left font-semibold">{h}</th>)}</tr></thead>
-                <tbody>{products.map(r => <tr key={r._id} className="border-b border-[hsl(var(--border))]/50 hover:bg-[hsl(var(--muted))]/20"><td className="px-4 py-3 font-medium">{r.sku}</td><td className="px-4 py-3">{r.name}</td><td className={`px-4 py-3 font-semibold ${r.currentStock <= r.lowStockThreshold ? 'text-red-500' : ''}`}>{r.currentStock}</td><td className="px-4 py-3">{r.lowStockThreshold}</td><td className="px-4 py-3">EGP {r.unitPrice.toLocaleString()}</td><td className="px-4 py-3">{r.category?.name || '—'}</td><td className="px-4 py-3"><button onClick={() => setDelId(r._id)} className="p-1 hover:text-destructive"><Trash2 className="h-4 w-4" /></button></td></tr>)}{!products.length && <tr><td colSpan={7} className="px-4 py-8 text-center text-[hsl(var(--muted-foreground))]">No products found.</td></tr>}</tbody>
+                <thead className="border-b border-[hsl(var(--border))] bg-[hsl(var(--muted))]/30"><tr>{['SKU', 'Name', 'Stock', 'Low Thresh.', 'Price', 'Category', 'Actions'].map(h => <th key={h} className="px-4 py-3 text-left font-semibold">{h}</th>)}</tr></thead>
+                <tbody>{filteredProducts.map(r => <tr key={r._id} className="border-b border-[hsl(var(--border))]/50 hover:bg-[hsl(var(--muted))]/20"><td className="px-4 py-3 font-medium">{r.sku}</td><td className="px-4 py-3">{r.name}</td><td className={`px-4 py-3 font-semibold ${r.currentStock <= r.lowStockThreshold ? 'text-red-500' : ''}`}>{r.currentStock}</td><td className="px-4 py-3">{r.lowStockThreshold}</td><td className="px-4 py-3">EGP {r.unitPrice.toLocaleString()}</td><td className="px-4 py-3">{r.category?.name || '—'}</td><td className="px-4 py-3"><button onClick={() => setDelId(r._id)} className="p-1 hover:text-destructive"><Trash2 className="h-4 w-4" /></button></td></tr>)}{!filteredProducts.length && <tr><td colSpan={7} className="px-4 py-8 text-center text-[hsl(var(--muted-foreground))]">No products found.</td></tr>}</tbody>
               </table>
             )}
             {tab === 'categories' && (
               <table className="w-full text-sm">
-                <thead className="border-b border-[hsl(var(--border))] bg-[hsl(var(--muted))]/30"><tr>{['Name','Description','Active','Actions'].map(h => <th key={h} className="px-4 py-3 text-left font-semibold">{h}</th>)}</tr></thead>
+                <thead className="border-b border-[hsl(var(--border))] bg-[hsl(var(--muted))]/30"><tr>{['Name', 'Description', 'Active', 'Actions'].map(h => <th key={h} className="px-4 py-3 text-left font-semibold">{h}</th>)}</tr></thead>
                 <tbody>{categories.map(r => <tr key={r._id} className="border-b border-[hsl(var(--border))]/50 hover:bg-[hsl(var(--muted))]/20"><td className="px-4 py-3 font-medium">{r.name}</td><td className="px-4 py-3">{r.description || '—'}</td><td className="px-4 py-3"><span className={`rounded-full px-2 py-0.5 text-xs font-medium ${r.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>{r.isActive ? 'Active' : 'Inactive'}</span></td><td className="px-4 py-3"><button onClick={() => setDelId(r._id)} className="p-1 hover:text-destructive"><Trash2 className="h-4 w-4" /></button></td></tr>)}{!categories.length && <tr><td colSpan={4} className="px-4 py-8 text-center text-[hsl(var(--muted-foreground))]">No categories found.</td></tr>}</tbody>
               </table>
             )}
             {tab === 'movements' && (
               <table className="w-full text-sm">
-                <thead className="border-b border-[hsl(var(--border))] bg-[hsl(var(--muted))]/30"><tr>{['Product','Type','Qty','Reason','By','Date'].map(h => <th key={h} className="px-4 py-3 text-left font-semibold">{h}</th>)}</tr></thead>
-                <tbody>{movements.map(r => <tr key={r._id} className="border-b border-[hsl(var(--border))]/50 hover:bg-[hsl(var(--muted))]/20"><td className="px-4 py-3 font-medium">{r.product?.name || '—'}</td><td className="px-4 py-3"><span className={`rounded-full px-2 py-0.5 text-xs font-medium ${r.type === 'IN' ? 'bg-green-100 text-green-700' : r.type === 'OUT' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`}>{r.type}</span></td><td className="px-4 py-3">{r.quantity}</td><td className="px-4 py-3">{r.reason || '—'}</td><td className="px-4 py-3">{r.performedBy ? `${r.performedBy.firstName} ${r.performedBy.lastName}` : '—'}</td><td className="px-4 py-3">{new Date(r.createdAt).toLocaleDateString()}</td></tr>)}{!movements.length && <tr><td colSpan={6} className="px-4 py-8 text-center text-[hsl(var(--muted-foreground))]">No movements found.</td></tr>}</tbody>
+                <thead className="border-b border-[hsl(var(--border))] bg-[hsl(var(--muted))]/30"><tr>{['Product', 'Type', 'Qty', 'Reason', 'By', 'Date'].map(h => <th key={h} className="px-4 py-3 text-left font-semibold">{h}</th>)}</tr></thead>
+                <tbody>{filteredMovements.map(r => <tr key={r._id} className="border-b border-[hsl(var(--border))]/50 hover:bg-[hsl(var(--muted))]/20"><td className="px-4 py-3 font-medium">{r.product?.name || '—'}</td><td className="px-4 py-3"><span className={`rounded-full px-2 py-0.5 text-xs font-medium ${r.type === 'IN' ? 'bg-green-100 text-green-700' : r.type === 'OUT' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`}>{r.type}</span></td><td className="px-4 py-3">{r.quantity}</td><td className="px-4 py-3">{r.reason || '—'}</td><td className="px-4 py-3">{r.performedBy ? `${r.performedBy.firstName} ${r.performedBy.lastName}` : '—'}</td><td className="px-4 py-3">{new Date(r.createdAt).toLocaleDateString()}</td></tr>)}{!filteredMovements.length && <tr><td colSpan={6} className="px-4 py-8 text-center text-[hsl(var(--muted-foreground))]">No movements found.</td></tr>}</tbody>
               </table>
             )}
           </>
         )}
       </div>
 
-      {tp > 1 && (
-        <div className="flex items-center justify-center gap-2">
-          <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="p-2 rounded-lg hover:bg-[hsl(var(--muted))] disabled:opacity-40"><ChevronLeft className="h-4 w-4" /></button>
-          <span className="text-sm">{page} / {tp}</span>
-          <button onClick={() => setPage(p => Math.min(tp, p + 1))} disabled={page === tp} className="p-2 rounded-lg hover:bg-[hsl(var(--muted))] disabled:opacity-40"><ChevronRight className="h-4 w-4" /></button>
-        </div>
+      {/* Pagination */}
+      {!loading && total > 0 && (
+        <Pagination
+          currentPage={page}
+          totalItems={total}
+          itemsPerPage={lim}
+          onPageChange={setPage}
+        />
       )}
+
+
 
       {modal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">

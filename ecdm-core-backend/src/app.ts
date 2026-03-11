@@ -24,6 +24,7 @@ import salesLeadsRoutes      from './features/sales/routes/sales-leads.routes';
 import salesDataRoutes       from './features/sales/routes/sales-data.routes';
 import salesOrderRoutes      from './features/sales/routes/sales-order.routes';
 import salesFollowUpRoutes   from './features/sales/routes/sales-followup.routes';
+import salesTargetRoutes     from './features/sales/routes/sales-target.routes';
 
 // ── Customer domain ─────────────────────────────────────────────────
 import customerOrderRoutes   from './features/customer/routes/customer-order.routes';
@@ -42,6 +43,9 @@ import dashboardRoutes       from './features/dashboard/dashboard.routes';
 // ── HR domain ───────────────────────────────────────────────────────
 import hrAttendanceRoutes    from './features/hr/routes/attendance.routes';
 import hrEmployeeRoutes      from './features/hr/routes/employee.routes';
+
+// ── R&D domain ──────────────────────────────────────────────────────
+import rndRoutes             from './features/rnd/routes/rnd.routes';
 
 // ── Admin / Maker-Checker Workflow ─────────────────────────────────
 import modificationRequestRoutes from './features/shared/routes/modification-request.routes';
@@ -131,6 +135,7 @@ app.use('/api/sales/leads',       salesLeadsRoutes);
 app.use('/api/sales/data',        salesDataRoutes);
 app.use('/api/sales/orders',      salesOrderRoutes);
 app.use('/api/sales/follow-ups',  salesFollowUpRoutes);
+app.use('/api/sales/targets',     salesTargetRoutes);
 
 // Customer
 app.use('/api/customer/orders',     customerOrderRoutes);
@@ -149,6 +154,9 @@ app.use('/api/dashboard', dashboardRoutes);
 // HR
 app.use('/api/hr/attendance', hrAttendanceRoutes);
 app.use('/api/hr/employees',  hrEmployeeRoutes);
+
+// R&D
+app.use('/api/rnd', rndRoutes);
 
 // Admin
 app.use('/api/admin/modification-requests', modificationRequestRoutes);

@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import api from '@/lib/axios';
 import { Package } from 'lucide-react';
 import DataTable from '@/components/ui/DataTable';
@@ -14,13 +14,28 @@ export default function CustomerOrdersPage() {
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<CustomerOrder | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+
+  const [fDeal, setFDeal] = useState('');
+  const [fTypeOfOrder, setFTypeOfOrder] = useState('');
+
+  const DEAL_OPTIONS = ['Pending', 'Approved', 'Rejected', 'Done'];
+  const TYPE_OPTIONS = ['Maintenance', 'General supplies', 'Supply and installation'];
+
+  const filteredOrders = useMemo(() => {
+    return orders.filter(o => {
+      if (fDeal && o.deal !== fDeal) return false;
+      if (fTypeOfOrder && o.typeOfOrder !== fTypeOfOrder) return false;
+      return true;
+    });
+  }, [orders, fDeal, fTypeOfOrder]);
+
   const limit = 10;
   const totalPages = Math.ceil(total / limit);
 
   const fetchOrders = useCallback(async () => {
     setLoading(true);
     try {
-      const params: Record<string, string | number> = {page, limit };
+      const params: Record<string, string | number> = { page, limit };
       const { data } = await api.get('/customer/orders', { params });
       setOrders(data.data.data);
       setTotal(data.data.pagination.total);
@@ -77,19 +92,47 @@ export default function CustomerOrdersPage() {
         </div>
       </div>
 
+      {/* Filters */}
+      <div className="flex gap-3 flex-wrap items-center">
+        <select value={fDeal} onChange={e => { setFDeal(e.target.value); setPage(1); }} className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2 text-sm">
+          <option value="">All Deal Statuses</option>
+          {DEAL_OPTIONS.map(d => <option key={d} value={d}>{d}</option>)}
+        </select>
+        <select value={fTypeOfOrder} onChange={e => { setFTypeOfOrder(e.target.value); setPage(1); }} className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2 text-sm">
+          <option value="">All Order Types</option>
+          {TYPE_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
+        </select>
+      </div>
+
       {/* Data Table with Horizontal Scrolling */}
       <div className="overflow-x-auto w-full">
         <DataTable
-          data={orders}
+          data={filteredOrders}
           columns={columns}
           loading={loading}
           emptyMessage="No customer orders found."
           page={page}
           totalPages={totalPages}
+          totalItems={total}
+          itemsPerPage={limit}
           onPageChange={setPage}
           meta={{
             onEdit: handleEdit,
             onDelete: handleDelete,
+          }}
+          defaultVisibility={{
+            "customer.address": false,
+            "customer.region": false,
+            "customer.sector": false,
+            scheduledVisitDate: false,
+            engineerName: false,
+            actualVisitDate: false,
+            devicePickupType: false,
+            startDate: false,
+            endDate: false,
+            deviceReturnedDate: false,
+            updatedBy: false,
+            notes: false,
           }}
         />
       </div>

@@ -3,11 +3,14 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { X, Upload, FileText, FilePlus, Edit } from 'lucide-react';
+import { X, Upload, FileText, FilePlus, Edit, PlusCircle, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '@/lib/axios';
 import { SalesOrder } from './columns';
 import AddQuotationDialog from './AddQuotationDialog';
+import { FieldEditRequest } from '@/components/FieldEditRequest';
+import { generateQuotationPDF } from '@/utils/generateQuotationPDF';
+import { useAuthStore } from '@/features/auth/useAuth';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,6 +20,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 /**
  * Edit Sales Order Dialog - CEO-Approved Advanced UX
@@ -148,6 +152,36 @@ export default function EditSalesOrderDialog({ order, onClose, onSuccess }: Edit
   const [showApprovalAlert, setShowApprovalAlert] = useState(false);
   const [showQuotationBuilder, setShowQuotationBuilder] = useState(false);
 
+  // ═══════════════════════════════════════════════════════════════════
+  // OWNERSHIP & READ-ONLY LOGIC
+  // ═══════════════════════════════════════════════════════════════════
+  const { user: currentUser } = useAuthStore();
+  
+  // Safely extract current user ID and role
+  const currentUserId = currentUser?._id;
+  const currentUserRole = currentUser?.role;
+  
+  // Safely extract order owner ID (handle both populated object and string ID)
+  const ownerId = typeof order.salesPerson === 'object' 
+    ? (order.salesPerson as any)?._id 
+    : order.salesPerson;
+  
+  // Determine if user is admin or owner
+  const isAdmin = currentUserRole === 'Admin' || currentUserRole === 'SuperAdmin' || currentUserRole === 'Manager';
+  const isOwner = currentUserId && ownerId && currentUserId.toString() === ownerId.toString();
+  
+  // Read-only mode: NOT admin AND NOT owner
+  const isReadOnly = !isAdmin && !isOwner;
+  
+  console.log('🔒 EditSalesOrderDialog - Access Control:', {
+    currentUserId,
+    currentUserRole,
+    ownerId,
+    isAdmin,
+    isOwner,
+    isReadOnly
+  });
+
   // Initialize react-hook-form with Zod validation
   const form = useForm<FormSchema>({
     resolver: zodResolver(formSchema),
@@ -173,22 +207,28 @@ export default function EditSalesOrderDialog({ order, onClose, onSuccess }: Edit
   });
 
   // ─── Watch Pattern for Conditional Rendering ────────────────────────────────
-  
+
   // Watch: Technical Inspection Required
   const watchTechnicalInspection = form.watch('isTechnicalInspectionRequired');
-  
+
   // Watch: Reason of Quotation (disabled when Accepted)
   const watchQuotationStatus = form.watch('quotationStatusFirstFollowUp');
   const isReasonDisabled = watchQuotationStatus === 'Accepted';
-  
+
   // Watch: Second Follow-Up Guard (requires first follow-up)
   const watchFollowUpFirst = form.watch('followUpFirst');
-  const isFollowUp2Disabled = !watchFollowUpFirst;
-  
+
   // Watch: Third Follow-Up Pipeline Guard (requires second follow-up with status)
   const watchFollowUpSecond = form.watch('followUpSecond');
   const watchStatusSecond = form.watch('statusSecondFollowUp');
-  const isFollowUp3Disabled = !watchFollowUpSecond || !watchStatusSecond;
+
+  // Progressive Locking Logic
+  const positiveStatuses = ['Accepted', 'Scheduled'];
+  const isFirstPositive = positiveStatuses.includes(watchQuotationStatus || '');
+  const isSecondPositive = positiveStatuses.includes(watchStatusSecond || '');
+
+  const disableSecondFollowUp = !watchFollowUpFirst || isFirstPositive;
+  const disableThirdFollowUp = !watchFollowUpSecond || !watchStatusSecond || isFirstPositive || isSecondPositive;
 
   // Clear dependent fields when toggling technical inspection off
   useEffect(() => {
@@ -199,7 +239,7 @@ export default function EditSalesOrderDialog({ order, onClose, onSuccess }: Edit
   }, [watchTechnicalInspection, form]);
 
   // ─── Form Handlers ──────────────────────────────────────────────────────────
-  
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null;
     setQuotationFile(file);
@@ -212,26 +252,58 @@ export default function EditSalesOrderDialog({ order, onClose, onSuccess }: Edit
     toast.error('Please fill in all required fields correctly.');
   };
 
+  // ─── Quotation Deletion Handler ────────────────────────────────────────────
+  const handleRemoveQuotation = async () => {
+    if (!window.confirm('Are you sure you want to completely remove this quotation? This action cannot be undone.')) {
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const response = await api.patch(`/sales/orders/${order._id}`, {
+        quotation: null,
+        quotationFileUrl: '',
+        quotationFileName: ''
+      });
+
+      if (response.status === 200 || response.status === 204 || response.status === 202) {
+        toast.success('Quotation removed successfully!');
+        window.location.reload(); // Refresh to update the UI correctly
+      }
+    } catch (error: any) {
+      console.error('Failed to remove quotation:', error);
+      alert(`Error: ${error.response?.data?.message || 'Failed to remove quotation.'}`);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   // ─── Submit Handler (API Request with FormData) ────────────────────────────
   const onSubmit = async (values: FormSchema) => {
+    // Additional safety check: prevent submission in read-only mode
+    if (isReadOnly) {
+      toast.error('You cannot modify this order.');
+      return;
+    }
+    
     console.log('✅ Form validation passed. Submitting:', values);
     setSaving(true);
 
     try {
       // Use FormData for file upload with explicit type handling
       const formData = new FormData();
-      
+
       // ─────────────────────────────────────────────────────────────────────────
       // Systematically append all string fields
       // ─────────────────────────────────────────────────────────────────────────
       const stringFields = [
         'issue',
-        'salesPlatform', 
-        'technicalInspectionDetails', 
-        'reasonOfQuotation', 
+        'salesPlatform',
+        'technicalInspectionDetails',
+        'reasonOfQuotation',
         'notes'
       ];
-      
+
       stringFields.forEach(field => {
         const value = values[field as keyof FormSchema];
         // Append if value exists (including empty strings to allow clearing fields)
@@ -258,7 +330,7 @@ export default function EditSalesOrderDialog({ order, onClose, onSuccess }: Edit
         'statusSecondFollowUp',
         'finalStatusThirdFollowUp'
       ];
-      
+
       enumFields.forEach(field => {
         const value = values[field as keyof FormSchema];
         // Only append if value exists AND is not an empty string
@@ -282,13 +354,13 @@ export default function EditSalesOrderDialog({ order, onClose, onSuccess }: Edit
       // Explicitly handle Date fields with .toISOString()
       // ─────────────────────────────────────────────────────────────────────────
       const dateFields = [
-        'siteInspectionDate', 
-        'technicalInspectionDate', 
-        'followUpFirst', 
-        'followUpSecond', 
+        'siteInspectionDate',
+        'technicalInspectionDate',
+        'followUpFirst',
+        'followUpSecond',
         'followUpThird'
       ];
-      
+
       dateFields.forEach(field => {
         const value = values[field as keyof FormSchema];
         if (value && value !== '') {
@@ -318,482 +390,663 @@ export default function EditSalesOrderDialog({ order, onClose, onSuccess }: Edit
 
       // Make API call - Let axios handle Content-Type automatically for FormData
       const response = await api.patch(`/sales/orders/${order._id}`, formData);
-      
+
       // ─────────────────────────────────────────────────────────────────────────
       // DEBUG: Log response details
       // ─────────────────────────────────────────────────────────────────────────
       console.log('🔍 API Response Status:', response.status);
       console.log('🔍 API Response Data:', response.data);
+
+      // ─────────────────────────────────────────────────────────────────────────
+      // Handle Smart Update Responses
+      // ─────────────────────────────────────────────────────────────────────────
+      const meta = response.data?.meta;
       
-      // ─────────────────────────────────────────────────────────────────────────
-      // Handle Maker-Checker 202 Accepted Status
-      // ─────────────────────────────────────────────────────────────────────────
       if (response.status === 202) {
-        console.log('⏳ Edit intercepted by Maker-Checker - Pending approval');
+        // Only modification request created (all changes need approval)
+        console.log('⏳ All changes require approval - Pending admin review');
         console.log('🔔 Setting showApprovalAlert to TRUE');
-        setSaving(false); // Reset saving state
+        setSaving(false);
         setShowApprovalAlert(true);
         return; // CRITICAL: Exit here - DO NOT call onClose()
       }
-      
-      // ─────────────────────────────────────────────────────────────────────────
-      // Standard Success (200/204) - Admin or no Maker-Checker
-      // ─────────────────────────────────────────────────────────────────────────
-      console.log('✅ Order updated successfully (Status:', response.status, ')');
-      toast.success('Order updated successfully!');
-      
+
+      if (response.status === 200) {
+        // Handle different combinations of direct updates and modification requests
+        const directUpdatesApplied = meta?.directUpdatesApplied;
+        const modificationRequestCreated = meta?.modificationRequestCreated;
+
+        if (directUpdatesApplied && modificationRequestCreated) {
+          // Mixed: Some fields updated directly, others need approval
+          console.log('✅ Partial update:', {
+            directFields: meta.directlyUpdatedFields,
+            approvalFields: meta.fieldsAwaitingApproval
+          });
+          toast.success('New fields saved! Changes to existing data submitted for approval.', {
+            duration: 5000,
+          });
+        } else if (modificationRequestCreated) {
+          // Should not reach here (should be 202), but handle just in case
+          console.log('⏳ Changes require approval');
+          setSaving(false);
+          setShowApprovalAlert(true);
+          return;
+        } else if (directUpdatesApplied) {
+          // All updates applied directly (no approval needed)
+          console.log('✅ All updates applied directly');
+          toast.success(response.data?.message || 'Order updated successfully!');
+        } else {
+          // No changes detected
+          console.log('ℹ️ No changes detected');
+          toast('No changes were made.', { icon: 'ℹ️' });
+        }
+      }
+
       // Close dialog and trigger refresh
       onSuccess();
       onClose();
     } catch (err: unknown) {
-      console.error('❌ API Error:', err);
-      const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed to update order';
-      toast.error(message);
+      // Comprehensive error logging for debugging
+      console.error('❌ API Error - Full Error Object:', err);
+      
+      const axiosError = err as {
+        response?: {
+          status?: number;
+          data?: {
+            message?: string;
+            error?: string;
+            details?: any;
+          };
+          statusText?: string;
+        };
+        message?: string;
+      };
+
+      // Log detailed error information
+      if (axiosError.response) {
+        console.error('❌ Error Status:', axiosError.response.status);
+        console.error('❌ Error Status Text:', axiosError.response.statusText);
+        console.error('❌ Error Response Data:', axiosError.response.data);
+      } else {
+        console.error('❌ Error Message:', axiosError.message);
+      }
+
+      // Extract user-friendly error message
+      let errorMessage = 'Failed to update order';
+      let is409Conflict = false;
+      
+      if (axiosError.response?.data) {
+        const data = axiosError.response.data;
+        
+        // Handle 409 Conflict specifically
+        if (axiosError.response.status === 409) {
+          is409Conflict = true;
+          errorMessage = data.message || data.error || 'Conflict: This operation conflicts with the current state of the order';
+        } else if (data.message) {
+          errorMessage = data.message;
+        } else if (data.error) {
+          errorMessage = data.error;
+        } else if (typeof data === 'string') {
+          errorMessage = data;
+        }
+      } else if (axiosError.message) {
+        errorMessage = axiosError.message;
+      }
+
+      console.error('❌ Final Error Message Shown to User:', errorMessage);
+      
+      // Show 409 conflicts as warnings (expected business logic), others as errors
+      if (is409Conflict) {
+        toast(errorMessage, { 
+          duration: 6000,
+          icon: '⚠️',
+        });
+      } else {
+        toast.error(errorMessage);
+      }
     } finally {
       setSaving(false);
     }
   };
 
   // ─── Extract Upstream Data (Read-Only) ──────────────────────────────────────
-  
+
   const customer = order.customer || order.customerId;
   const lead = order.salesLead;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 overflow-y-auto">
-      <div className="w-full max-w-5xl rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] shadow-2xl my-8">
-        
-        {/* ─── Header ─────────────────────────────────────────────────── */}
-        <div className="flex items-center justify-between border-b border-[hsl(var(--border))] px-6 py-4 sticky top-0 bg-[hsl(var(--card))] z-10 rounded-t-2xl">
-          <div>
-            <h2 className="text-xl font-bold">Edit Sales Order</h2>
-            <p className="text-xs text-[hsl(var(--muted-foreground))] mt-0.5">
-              Order ID: {order.salesOrderId || order._id}
-            </p>
-          </div>
-          <button 
-            onClick={onClose}
-            className="p-2 hover:bg-[hsl(var(--muted))] rounded-lg transition-colors"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
+    <>
+      <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
+        <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto overflow-x-hidden p-6 outline-none">
+          <DialogHeader className="mb-4 flex flex-row items-center justify-between space-y-0 border-b border-[hsl(var(--border))] pb-4">
+            <div>
+              <DialogTitle className="text-xl font-bold">
+                {isReadOnly ? 'View Sales Order (Read-Only)' : 'Edit Sales Order'}
+              </DialogTitle>
+              <p className="text-xs text-[hsl(var(--muted-foreground))] mt-0.5">
+                Order ID: {order.salesOrderId || order._id}
+                {isReadOnly && <span className="ml-2 text-amber-600 font-semibold">• Preview Mode</span>}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-2 hover:bg-[hsl(var(--muted))] rounded-lg transition-colors"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </DialogHeader>
 
-        <form onSubmit={form.handleSubmit(onSubmit, onError)}>
-          <div className="px-6 py-6 space-y-8 max-h-[calc(100vh-200px)] overflow-y-auto">
-            
-            {/* ═══════════════════════════════════════════════════════════════
+          <form onSubmit={form.handleSubmit(onSubmit, onError)}>
+            <div className="space-y-8">
+
+              {/* ═══════════════════════════════════════════════════════════════
                 SECTION A: Lead & Customer Context (READ-ONLY)
             ═══════════════════════════════════════════════════════════════ */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 pb-2 border-b border-[hsl(var(--border))]">
-                <div className="h-1 w-1 rounded-full bg-[hsl(var(--muted-foreground))]"></div>
-                <h3 className="text-sm font-bold text-[hsl(var(--muted-foreground))] uppercase tracking-wider">
-                  Section A: Customer & Lead Context (Read-Only)
-                </h3>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4 bg-[hsl(var(--muted))]/20 rounded-xl border border-[hsl(var(--border))]/50">
-                
-                {/* Customer Data */}
-                <div>
-                  <label className={labelCls}>Customer ID</label>
-                  <div className={readOnlyCls}>{customer?.customerId || '-'}</div>
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 pb-2 border-b border-[hsl(var(--border))]">
+                  <div className="h-1 w-1 rounded-full bg-[hsl(var(--muted-foreground))]"></div>
+                  <h3 className="text-sm font-bold text-[hsl(var(--muted-foreground))] uppercase tracking-wider">
+                    Section A: Customer & Lead Context (Read-Only)
+                  </h3>
                 </div>
-                
-                <div>
-                  <label className={labelCls}>Name</label>
-                  <div className={readOnlyCls}>{customer?.name || '-'}</div>
-                </div>
-                
-                <div>
-                  <label className={labelCls}>Phone</label>
-                  <div className={readOnlyCls}>{customer?.phone || '-'}</div>
-                </div>
-                
-                <div>
-                  <label className={labelCls}>Type</label>
-                  <div className={readOnlyCls}>{(customer as any)?.type || '-'}</div>
-                </div>
-                
-                <div>
-                  <label className={labelCls}>Sector</label>
-                  <div className={readOnlyCls}>{customer?.sector || '-'}</div>
-                </div>
-                
-                <div>
-                  <label className={labelCls}>Address</label>
-                  <div className={readOnlyCls}>{customer?.address || '-'}</div>
-                </div>
-                
-                <div>
-                  <label className={labelCls}>Region</label>
-                  <div className={readOnlyCls}>{(customer as any)?.region || '-'}</div>
-                </div>
-                
-                {/* Lead Data */}
-                <div>
-                  <label className={labelCls}>Initial Issue (From Lead)</label>
-                  <div className={readOnlyCls}>{order.salesLead?.issue || order.salesData?.issue || '-'}</div>
-                </div>
-                
-                <div>
-                  <label className={labelCls}>Order (From Lead)</label>
-                  <div className={readOnlyCls}>{lead?.order || '-'}</div>
-                </div>
-                
-                <div>
-                  <label className={labelCls}>Reason (From Lead)</label>
-                  <div className={readOnlyCls}>{(lead as any)?.reason || '-'}</div>
-                </div>
-                
-                <div>
-                  <label className={labelCls}>SalesPerson</label>
-                  <div className={readOnlyCls}>{lead?.salesPerson || '-'}</div>
-                </div>
-                
-                <div>
-                  <label className={labelCls}>Date (Lead Creation)</label>
-                  <div className={readOnlyCls}>{formatDateDisplay(lead?.date)}</div>
-                </div>
-                
-                <div>
-                  <label className={labelCls}>Status (Lead)</label>
-                  <div className={readOnlyCls}>{(lead as any)?.status || '-'}</div>
-                </div>
-                
-                <div className="md:col-span-2 lg:col-span-3">
-                  <label className={labelCls}>Notes (Lead)</label>
-                  <div className={readOnlyCls}>{(lead as any)?.notes || '-'}</div>
-                </div>
-              </div>
-            </div>
 
-            {/* ═══════════════════════════════════════════════════════════════
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4 bg-[hsl(var(--muted))]/20 rounded-xl border border-[hsl(var(--border))]/50">
+
+                  {/* Customer Data */}
+                  <div>
+                    <label className={labelCls}>Customer ID</label>
+                    <div className={readOnlyCls}>{customer?.customerId || '-'}</div>
+                  </div>
+
+                  <div>
+                    <label className={labelCls}>Name</label>
+                    <div className={readOnlyCls}>{customer?.name || '-'}</div>
+                  </div>
+
+                  <div>
+                    <label className={labelCls}>Phone</label>
+                    <div className={readOnlyCls}>{customer?.phone || '-'}</div>
+                  </div>
+
+                  <div>
+                    <label className={labelCls}>Type</label>
+                    <div className={readOnlyCls}>{(customer as any)?.type || '-'}</div>
+                  </div>
+
+                  <div>
+                    <label className={labelCls}>Sector</label>
+                    <div className={readOnlyCls}>{customer?.sector || '-'}</div>
+                  </div>
+
+                  <div>
+                    <label className={labelCls}>Address</label>
+                    <div className={readOnlyCls}>{customer?.address || '-'}</div>
+                  </div>
+
+                  <div>
+                    <label className={labelCls}>Region</label>
+                    <div className={readOnlyCls}>{(customer as any)?.region || '-'}</div>
+                  </div>
+
+                  {/* Lead Data */}
+                  <div>
+                    <label className={labelCls}>Initial Issue (From Lead)</label>
+                    <div className={readOnlyCls}>{order.salesLead?.issue || order.salesData?.issue || '-'}</div>
+                  </div>
+
+                  <div>
+                    <label className={labelCls}>Order (From Lead)</label>
+                    <div className={readOnlyCls}>{lead?.order || '-'}</div>
+                  </div>
+
+                  <div>
+                    <label className={labelCls}>Reason (From Lead)</label>
+                    <div className={readOnlyCls}>{(lead as any)?.reason || '-'}</div>
+                  </div>
+
+                  <div>
+                    <label className={labelCls}>SalesPerson</label>
+                    <div className={readOnlyCls}>{lead?.salesPerson || '-'}</div>
+                  </div>
+
+                  <div>
+                    <label className={labelCls}>Date (Lead Creation)</label>
+                    <div className={readOnlyCls}>{formatDateDisplay(lead?.date)}</div>
+                  </div>
+
+                  <div>
+                    <label className={labelCls}>Status (Lead)</label>
+                    <div className={readOnlyCls}>{(lead as any)?.status || '-'}</div>
+                  </div>
+
+                  <div className="md:col-span-2 lg:col-span-3">
+                    <label className={labelCls}>Notes (Lead)</label>
+                    <div className={readOnlyCls}>{(lead as any)?.notes || '-'}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* ═══════════════════════════════════════════════════════════════
                 SECTION B: Order Details & Follow-Ups (EDITABLE)
             ═══════════════════════════════════════════════════════════════ */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 pb-2 border-b border-[hsl(var(--border))]">
-                <div className="h-1 w-1 rounded-full bg-[hsl(var(--primary))]"></div>
-                <h3 className="text-sm font-bold text-[hsl(var(--primary))] uppercase tracking-wider">
-                  Section B: Order Progression (Editable)
-                </h3>
-              </div>
-
-              {/* Order Details */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                
-                <div>
-                  <label className={labelCls}>Order Issue / Technical Notes</label>
-                  <input
-                    type="text"
-                    placeholder="Describe the operational order issue..."
-                    {...form.register('issue')}
-                    className={iCls}
-                  />
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 pb-2 border-b border-[hsl(var(--border))]">
+                  <div className="h-1 w-1 rounded-full bg-[hsl(var(--primary))]"></div>
+                  <h3 className="text-sm font-bold text-[hsl(var(--primary))] uppercase tracking-wider">
+                    Section B: Order Progression (Editable)
+                  </h3>
                 </div>
 
-                <div>
-                  <label className={labelCls}>Type Of Order</label>
-                  <select
-                    {...form.register('typeOfOrder')}
-                    className={iCls}
-                  >
-                    <option value="">Select order type...</option>
-                    <option value="Maintenance">Maintenance</option>
-                    <option value="General supplies">General supplies</option>
-                    <option value="Supply and installation">Supply and installation</option>
-                  </select>
-                </div>
+                {/* Order Details */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-                <div>
-                  <label className={labelCls}>Sales Platform</label>
-                  <input
-                    type="text"
-                    placeholder="e.g., Website, Phone, WhatsApp"
-                    {...form.register('salesPlatform')}
-                    className={iCls}
-                  />
-                </div>
-
-                <div>
-                  <label className={labelCls}>Site Inspection Date</label>
-                  <input
-                    type="datetime-local"
-                    {...form.register('siteInspectionDate')}
-                    className={iCls}
-                  />
-                </div>
-
-                {/* ─── Task 1: Conditional Technical Inspection ────────────── */}
-                <div className="md:col-span-2">
-                  <label className={labelCls}>Technical Inspection Required</label>
-                  <div className="flex items-center gap-3 mt-2">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        {...form.register('isTechnicalInspectionRequired')}
-                        className="w-4 h-4 rounded border-[hsl(var(--border))] text-[hsl(var(--primary))] focus:ring-2 focus:ring-[hsl(var(--primary))]/20"
-                      />
-                      <span className="text-sm font-medium">Yes, technical inspection is required</span>
-                    </label>
-                  </div>
-                </div>
-
-                {/* Conditional: Show only when Technical Inspection is checked */}
-                {watchTechnicalInspection && (
-                  <>
-                    <div>
-                      <label className={labelCls}>Technical Inspection Date</label>
-                      <input
-                        type="datetime-local"
-                        {...form.register('technicalInspectionDate')}
-                        className={iCls}
-                      />
-                    </div>
-
-                    <div>
-                      <label className={labelCls}>Technical Inspection Details</label>
-                      <textarea
-                        placeholder="Details about the technical inspection..."
-                        {...form.register('technicalInspectionDetails')}
-                        rows={3}
-                        className={iCls}
-                      />
-                    </div>
-                  </>
-                )}
-
-                {/* ─── Task 2: Quotation Document (System Builder OR Manual Upload) ───────────────────────── */}
-                <div className="md:col-span-2 border rounded-xl p-4 bg-[hsl(var(--muted))]/10 space-y-4">
-                  {/* System Quotation Builder Section */}
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-[hsl(var(--border))]">
-                    <div>
-                      <h3 className="text-sm font-semibold text-[hsl(var(--foreground))] flex items-center gap-2">
-                        <FilePlus className="w-4 h-4 text-[hsl(var(--primary))]" />
-                        System Quotation Tool
-                      </h3>
-                      <p className="text-xs text-[hsl(var(--muted-foreground))] mt-1">
-                        Generate a professional PDF quotation directly from inventory
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setShowQuotationBuilder(true)}
-                      className="px-4 py-2 bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] rounded-lg hover:opacity-90 transition-all text-sm font-medium flex items-center gap-2 whitespace-nowrap"
-                    >
-                      {(order as any).quotation?.items?.length > 0 ? (
-                        <>
-                          <Edit className="w-4 h-4" />
-                          Edit System Quotation
-                        </>
-                      ) : (
-                        <>
-                          <FilePlus className="w-4 h-4" />
-                          Create System Quotation
-                        </>
-                      )}
-                    </button>
-                  </div>
-
-                  {/* Manual File Upload Section */}
                   <div>
-                    <h3 className="text-sm font-semibold text-[hsl(var(--foreground))] mb-2 flex items-center gap-2">
-                      <Upload className="w-4 h-4 text-[hsl(var(--muted-foreground))]" />
-                      OR Upload External Document
-                    </h3>
-                    <div className="space-y-2">
-                      {/* Current File Display */}
-                      {form.watch('quotationFileUrl') && !quotationFile && (
-                        <div className="flex items-center gap-2 p-3 bg-[hsl(var(--background))] rounded-lg border border-[hsl(var(--border))]">
-                          <FileText className="h-4 w-4 text-[hsl(var(--primary))]" />
-                          <span className="text-sm flex-1">Current file: {form.watch('quotationFileUrl')?.split('/').pop()}</span>
-                        </div>
-                      )}
-                      
-                      {/* File Upload Input */}
-                      <label className="flex items-center gap-3 p-4 rounded-xl border-2 border-dashed border-[hsl(var(--border))] hover:border-[hsl(var(--primary))] hover:bg-[hsl(var(--background))] cursor-pointer transition-all group">
-                        <Upload className="h-5 w-5 text-[hsl(var(--muted-foreground))] group-hover:text-[hsl(var(--primary))] transition-colors" />
-                        <div className="flex-1">
-                          <p className="text-sm font-medium">
-                            {quotationFile ? quotationFile.name : 'Choose a file or drag here'}
-                          </p>
-                          <p className="text-xs text-[hsl(var(--muted-foreground))] mt-0.5">
-                            PDF, DOC, DOCX (Max 5MB)
-                          </p>
-                        </div>
+                    <label className={labelCls}>Order Issue / Technical Notes</label>
+                    <div className="flex items-center gap-2 mt-1">
+                      <input
+                        type="text"
+                        placeholder="Describe the operational order issue..."
+                        value={form.watch('issue')}
+                        disabled
+                        className={`${iCls} bg-[hsl(var(--muted))]/50`}
+                      />
+                      <FieldEditRequest
+                        label="Order Issue"
+                        fieldKey="issue"
+                        type="text"
+                        currentValue={form.watch('issue')}
+                        apiEndpoint={`/api/sales/orders/${order._id}`}
+                        onSuccess={onSuccess}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className={labelCls}>Type Of Order</label>
+                    <div className="flex items-center gap-2 mt-1">
+                      <select
+                        value={form.watch('typeOfOrder')}
+                        disabled
+                        className={`${iCls} bg-[hsl(var(--muted))]/50`}
+                      >
+                        <option value="">Select order type...</option>
+                        <option value="Maintenance">Maintenance</option>
+                        <option value="General supplies">General supplies</option>
+                        <option value="Supply and installation">Supply and installation</option>
+                      </select>
+                      <FieldEditRequest
+                        label="Type Of Order"
+                        fieldKey="typeOfOrder"
+                        type="enum"
+                        options={[
+                          { value: 'Maintenance', label: 'Maintenance' },
+                          { value: 'General supplies', label: 'General supplies' },
+                          { value: 'Supply and installation', label: 'Supply and installation' }
+                        ]}
+                        currentValue={form.watch('typeOfOrder')}
+                        apiEndpoint={`/api/sales/orders/${order._id}`}
+                        onSuccess={onSuccess}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className={labelCls}>Sales Platform</label>
+                    <div className="flex items-center gap-2 mt-1">
+                      <input
+                        type="text"
+                        placeholder="e.g., Website, Phone, WhatsApp"
+                        value={form.watch('salesPlatform')}
+                        disabled
+                        className={`${iCls} bg-[hsl(var(--muted))]/50`}
+                      />
+                      <FieldEditRequest
+                        label="Sales Platform"
+                        fieldKey="salesPlatform"
+                        currentValue={form.watch('salesPlatform')}
+                        apiEndpoint={`/api/sales/orders/${order._id}`}
+                        onSuccess={onSuccess}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className={labelCls}>Site Inspection Date</label>
+                    <input
+                      type="datetime-local"
+                      {...form.register('siteInspectionDate')}
+                      disabled={isReadOnly}
+                      className={iCls}
+                    />
+                  </div>
+
+                  {/* ─── Task 1: Conditional Technical Inspection ────────────── */}
+                  <div className="md:col-span-2">
+                    <label className={labelCls}>Technical Inspection Required</label>
+                    <div className="flex items-center gap-3 mt-2">
+                      <label className="flex items-center gap-2 cursor-pointer">
                         <input
-                          type="file"
-                          accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                          onChange={handleFileChange}
-                          className="hidden"
+                          type="checkbox"
+                          {...form.register('isTechnicalInspectionRequired')}
+                          disabled={isReadOnly}
+                          className="w-4 h-4 rounded border-[hsl(var(--border))] text-[hsl(var(--primary))] focus:ring-2 focus:ring-[hsl(var(--primary))]/20"
                         />
+                        <span className="text-sm font-medium">Yes, technical inspection is required</span>
                       </label>
                     </div>
                   </div>
-                </div>
-              </div>
 
-              {/* First Follow-Up */}
-              <div className="pt-4">
-                <h4 className="text-sm font-semibold mb-3 text-[hsl(var(--foreground))]">First Follow-Up</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  
-                  <div>
-                    <label className={labelCls}>Follow Up First (Date & Time)</label>
-                    <input
-                      type="datetime-local"
-                      {...form.register('followUpFirst')}
-                      className={iCls}
-                    />
-                  </div>
+                  {/* Conditional: Show only when Technical Inspection is checked */}
+                  {watchTechnicalInspection && (
+                    <>
+                      <div>
+                        <label className={labelCls}>Technical Inspection Date</label>
+                        <input
+                          type="datetime-local"
+                          {...form.register('technicalInspectionDate')}
+                          disabled={isReadOnly}
+                          className={iCls}
+                        />
+                      </div>
 
-                  <div>
-                    <label className={labelCls}>Quotation Status (1st)</label>
-                    <select
-                      {...form.register('quotationStatusFirstFollowUp')}
-                      className={iCls}
-                    >
-                      <option value="">Select Status</option>
-                      {QUOTATION_STATUSES.map(status => (
-                        <option key={status} value={status}>{status}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="md:col-span-2">
-                    <label className={labelCls}>
-                      Reason of Quotation
-                      {isReasonDisabled && <span className="text-xs ml-2 text-[hsl(var(--muted-foreground))]">(Disabled when Accepted)</span>}
-                    </label>
-                    <textarea
-                      placeholder="Reason for quotation status"
-                      {...form.register('reasonOfQuotation')}
-                      disabled={isReasonDisabled}
-                      rows={3}
-                      className={iCls}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Second Follow-Up */}
-              <div className="pt-4">
-                <h4 className="text-sm font-semibold mb-3 text-[hsl(var(--foreground))]">
-                  Second Follow-Up
-                  {isFollowUp2Disabled && <span className="text-xs ml-2 text-[hsl(var(--muted-foreground))]">(Requires 1st Follow-Up)</span>}
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  
-                  <div>
-                    <label className={labelCls}>Follow Up Second (Date & Time)</label>
-                    <input
-                      type="datetime-local"
-                      {...form.register('followUpSecond')}
-                      disabled={isFollowUp2Disabled}
-                      className={iCls}
-                    />
-                  </div>
-
-                  <div>
-                    <label className={labelCls}>Status (2nd Follow Up)</label>
-                    <select
-                      {...form.register('statusSecondFollowUp')}
-                      disabled={isFollowUp2Disabled}
-                      className={iCls}
-                    >
-                      <option value="">Select Status</option>
-                      {QUOTATION_STATUSES.map(status => (
-                        <option key={status} value={status}>{status}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              {/* Third Follow-Up - Task 3: Pipeline Guard */}
-              <div className="pt-4">
-                <h4 className="text-sm font-semibold mb-3 text-[hsl(var(--foreground))]">
-                  Third Follow-Up
-                  {isFollowUp3Disabled && (
-                    <span className="text-xs ml-2 text-[hsl(var(--muted-foreground))]">
-                      (Requires 2nd Follow-Up with Status)
-                    </span>
+                      <div>
+                        <label className={labelCls}>Technical Inspection Details</label>
+                        <textarea
+                          placeholder="Details about the technical inspection..."
+                          {...form.register('technicalInspectionDetails')}
+                          disabled={isReadOnly}
+                          rows={3}
+                          className={iCls}
+                        />
+                      </div>
+                    </>
                   )}
-                </h4>
-                
-                {isFollowUp3Disabled ? (
-                  <div className="p-4 rounded-xl bg-[hsl(var(--muted))]/20 border border-[hsl(var(--border))]">
-                    <p className="text-sm text-[hsl(var(--muted-foreground))]">
-                      ⚠️ Third Follow-Up is locked. Please complete the Second Follow-Up (date and status) to unlock this section.
-                    </p>
+
+                  {/* ─── Task 2: Quotation Document (System Builder OR Manual Upload) ───────────────────────── */}
+                  <div className="md:col-span-2 border rounded-xl p-4 bg-[hsl(var(--muted))]/10 space-y-4">
+                    {/* System Quotation Builder Section */}
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-[hsl(var(--border))]">
+                      <div>
+                        <h3 className="text-sm font-semibold text-[hsl(var(--foreground))] flex items-center gap-2">
+                          <FilePlus className="w-4 h-4 text-[hsl(var(--primary))]" />
+                          System Quotation Tool
+                        </h3>
+                        <p className="text-xs text-[hsl(var(--muted-foreground))] mt-1">
+                          Generate a professional PDF quotation directly from inventory
+                        </p>
+                      </div>
+
+                      {/* CONDITIONAL RENDERING HERE */}
+                      {(order as any).quotation?.items?.length > 0 ? (
+                        // What to show if Quotation EXISTS
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => generateQuotationPDF(order as any, 'view')}
+                            className="px-4 py-2 border border-[hsl(var(--border))] text-blue-600 rounded-lg hover:bg-[hsl(var(--muted))]/50 transition-all text-sm font-medium flex items-center gap-2 whitespace-nowrap"
+                          >
+                            <FileText className="w-4 h-4 mr-2" /> View PDF
+                          </button>
+                          {!isReadOnly && (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => setShowQuotationBuilder(true)}
+                                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all text-sm font-medium flex items-center gap-2 whitespace-nowrap"
+                              >
+                                <Edit className="w-4 h-4 mr-2" /> Edit Quotation
+                              </button>
+                              <button
+                                type="button"
+                                onClick={handleRemoveQuotation}
+                                className="p-2 border border-red-200 text-red-600 rounded-lg hover:bg-red-50 transition-all text-sm font-medium flex items-center justify-center whitespace-nowrap"
+                                title="Remove Quotation"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      ) : (
+                        // What to show if NO Quotation exists
+                        !isReadOnly && (
+                          <button
+                            type="button"
+                            onClick={() => setShowQuotationBuilder(true)}
+                            className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-all text-sm font-medium flex items-center gap-2 whitespace-nowrap"
+                          >
+                            <PlusCircle className="w-4 h-4 mr-2" /> Create Quotation
+                          </button>
+                        )
+                      )}
+                    </div>
+
+                    {/* Manual File Upload Section */}
+                    {/* Only show the manual upload option if they haven't used the system builder */}
+                    {(!(order as any).quotation?.items || (order as any).quotation.items.length === 0) && !isReadOnly && (
+                      <div>
+                        <h3 className="text-sm font-semibold text-[hsl(var(--foreground))] mb-2 flex items-center gap-2">
+                          <Upload className="w-4 h-4 text-[hsl(var(--muted-foreground))]" />
+                          OR Upload External Document
+                        </h3>
+                        <div className="space-y-2">
+                          {/* Current File Display */}
+                          {form.watch('quotationFileUrl') && !quotationFile && (
+                            <div className="flex items-center gap-2 p-3 bg-[hsl(var(--background))] rounded-lg border border-[hsl(var(--border))]">
+                              <FileText className="h-4 w-4 text-[hsl(var(--primary))]" />
+                              <span className="text-sm flex-1">Current file: {form.watch('quotationFileUrl')?.split('/').pop()}</span>
+                              {!isReadOnly && (
+                                <button
+                                  type="button"
+                                  onClick={handleRemoveQuotation}
+                                  className="p-1.5 text-red-500 hover:bg-red-50 rounded-md transition-colors"
+                                  title="Remove Uploaded File"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              )}
+                            </div>
+                          )}
+
+                          {/* File Upload Input */}
+                          <label className="flex items-center gap-3 p-4 rounded-xl border-2 border-dashed border-[hsl(var(--border))] hover:border-[hsl(var(--primary))] hover:bg-[hsl(var(--background))] cursor-pointer transition-all group">
+                            <Upload className="h-5 w-5 text-[hsl(var(--muted-foreground))] group-hover:text-[hsl(var(--primary))] transition-colors" />
+                            <div className="flex-1">
+                              <p className="text-sm font-medium">
+                                {quotationFile ? quotationFile.name : 'Choose a file or drag here'}
+                              </p>
+                              <p className="text-xs text-[hsl(var(--muted-foreground))] mt-0.5">
+                                PDF, DOC, DOCX (Max 5MB)
+                              </p>
+                            </div>
+                            <input
+                              type="file"
+                              accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                              onChange={handleFileChange}
+                              className="hidden"
+                            />
+                          </label>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                ) : (
+                </div>
+
+                {/* First Follow-Up */}
+                <div className="pt-4">
+                  <h4 className="text-sm font-semibold mb-3 text-[hsl(var(--foreground))]">First Follow-Up</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
                     <div>
-                      <label className={labelCls}>Follow Up Third (Date & Time)</label>
+                      <label className={labelCls}>Follow Up First (Date & Time)</label>
                       <input
                         type="datetime-local"
-                        {...form.register('followUpThird')}
+                        {...form.register('followUpFirst')}
+                        disabled={isReadOnly}
                         className={iCls}
                       />
                     </div>
 
                     <div>
-                      <label className={labelCls}>Final Status (3rd)</label>
+                      <label className={labelCls}>Quotation Status (1st)</label>
                       <select
-                        {...form.register('finalStatusThirdFollowUp')}
+                        {...form.register('quotationStatusFirstFollowUp')}
+                        disabled={isReadOnly}
                         className={iCls}
                       >
-                        <option value="">Select Final Status</option>
-                        {FINAL_STATUSES.map(status => (
+                        <option value="">Select Status</option>
+                        {QUOTATION_STATUSES.map(status => (
                           <option key={status} value={status}>{status}</option>
                         ))}
                       </select>
                     </div>
+
+                    <div className="md:col-span-2">
+                      <label className={labelCls}>
+                        Reason of Quotation
+                        {isReasonDisabled && <span className="text-xs ml-2 text-[hsl(var(--muted-foreground))]">(Disabled when Accepted)</span>}
+                      </label>
+                      <textarea
+                        placeholder="Reason for quotation status"
+                        {...form.register('reasonOfQuotation')}
+                        disabled={isReasonDisabled || isReadOnly}
+                        rows={3}
+                        className={iCls}
+                      />
+                    </div>
                   </div>
-                )}
+                </div>
+
+                {/* Second Follow-Up */}
+                <div className="pt-4">
+                  <h4 className="text-sm font-semibold mb-3 text-[hsl(var(--foreground))]">
+                    Second Follow-Up
+                    {disableSecondFollowUp && (
+                      <span className="text-xs ml-2 text-[hsl(var(--muted-foreground))]">
+                        {isFirstPositive ? "(Locked: Previous Status is Positive)" : "(Requires 1st Follow-Up)"}
+                      </span>
+                    )}
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                    <div>
+                      <label className={`${labelCls} ${disableSecondFollowUp ? "text-gray-400" : ""}`}>Follow Up Second (Date & Time)</label>
+                      <input
+                        type="datetime-local"
+                        {...form.register('followUpSecond')}
+                        disabled={disableSecondFollowUp || isReadOnly}
+                        className={`${iCls} ${disableSecondFollowUp ? "bg-gray-100 cursor-not-allowed opacity-70" : ""}`}
+                      />
+                    </div>
+
+                    <div>
+                      <label className={`${labelCls} ${disableSecondFollowUp ? "text-gray-400" : ""}`}>Status (2nd Follow Up)</label>
+                      <select
+                        {...form.register('statusSecondFollowUp')}
+                        disabled={disableSecondFollowUp || isReadOnly}
+                        className={`${iCls} ${disableSecondFollowUp ? "bg-gray-100 cursor-not-allowed opacity-70" : ""}`}
+                      >
+                        <option value="">Select Status</option>
+                        <option value="Scheduled">Scheduled</option>
+                        <option value="Not Required">Not Required</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Third Follow-Up */}
+                <div className="pt-4">
+                  <h4 className="text-sm font-semibold mb-3 text-[hsl(var(--foreground))]">
+                    Third Follow-Up
+                    {disableThirdFollowUp && (
+                      <span className="text-xs ml-2 text-[hsl(var(--muted-foreground))]">
+                        {(isFirstPositive || isSecondPositive) ? "(Locked: Previous Status is Positive)" : "(Requires 2nd Follow-Up with Status)"}
+                      </span>
+                    )}
+                  </h4>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className={`${labelCls} ${disableThirdFollowUp ? "text-gray-400" : ""}`}>Follow Up Third (Date & Time)</label>
+                      <input
+                        type="datetime-local"
+                        {...form.register('followUpThird')}
+                        disabled={disableThirdFollowUp || isReadOnly}
+                        className={`${iCls} ${disableThirdFollowUp ? "bg-gray-100 cursor-not-allowed opacity-70" : ""}`}
+                      />
+                    </div>
+
+                    <div>
+                      <label className={`${labelCls} ${disableThirdFollowUp ? "text-gray-400" : ""}`}>Final Status (3rd)</label>
+                      <select
+                        {...form.register('finalStatusThirdFollowUp')}
+                        disabled={disableThirdFollowUp || isReadOnly}
+                        className={`${iCls} ${disableThirdFollowUp ? "bg-gray-100 cursor-not-allowed opacity-70" : ""}`}
+                      >
+                        <option value="">Select Final Status</option>
+                        <option value="Accepted">Accepted</option>
+                        <option value="Not Potential">Not Potential</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Notes */}
+                <div>
+                  <label className={labelCls}>Notes (Order Notes)</label>
+                  <textarea
+                    placeholder="Additional notes about this order..."
+                    {...form.register('notes')}
+                    disabled={isReadOnly}
+                    rows={4}
+                    className={iCls}
+                  />
+                </div>
               </div>
 
-              {/* Notes */}
-              <div>
-                <label className={labelCls}>Notes (Order Notes)</label>
-                <textarea
-                  placeholder="Additional notes about this order..."
-                  {...form.register('notes')}
-                  rows={4}
-                  className={iCls}
-                />
-              </div>
+              {/* Error Display - Validation errors are handled via toast in onError */}
+              {form.formState.errors && Object.keys(form.formState.errors).length > 0 && (
+                <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-sm">
+                  Please check the form for errors.
+                </div>
+              )}
             </div>
 
-            {/* Error Display - Validation errors are handled via toast in onError */}
-            {form.formState.errors && Object.keys(form.formState.errors).length > 0 && (
-              <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-sm">
-                Please check the form for errors.
-              </div>
-            )}
-          </div>
-
-          {/* ─── Footer Actions ─────────────────────────────────────────────── */}
-          <div className="flex gap-3 px-6 py-4 border-t border-[hsl(var(--border))] bg-[hsl(var(--muted))]/10 rounded-b-2xl sticky bottom-0">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 rounded-xl border border-[hsl(var(--border))] py-3 text-sm font-semibold hover:bg-[hsl(var(--muted))]/50 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="flex-1 rounded-xl bg-[hsl(var(--primary))] py-3 text-sm font-semibold text-[hsl(var(--primary-foreground))] hover:opacity-90 transition-opacity disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              {saving ? 'Saving...' : 'Save Changes'}
-            </button>
-          </div>
-        </form>
-      </div>
+            {/* ─── Footer Actions ─────────────────────────────────────────────── */}
+            <div className="flex gap-3 pt-4 border-t border-[hsl(var(--border))] mt-6">
+              {isReadOnly ? (
+                // Read-Only Mode: Only show close button
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="w-full rounded-xl border border-[hsl(var(--border))] py-3 text-sm font-semibold hover:bg-[hsl(var(--muted))]/50 transition-colors"
+                >
+                  Close Preview
+                </button>
+              ) : (
+                // Edit Mode: Show cancel and save buttons
+                <>
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="flex-1 rounded-xl border border-[hsl(var(--border))] py-3 text-sm font-semibold hover:bg-[hsl(var(--muted))]/50 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={saving}
+                    className="flex-1 rounded-xl bg-[hsl(var(--primary))] py-3 text-sm font-semibold text-[hsl(var(--primary-foreground))] hover:opacity-90 transition-opacity disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {saving ? 'Saving...' : 'Save Changes'}
+                  </button>
+                </>
+              )}
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* ═══════════════════════════════════════════════════════════════════════
           Maker-Checker Approval Alert Dialog
@@ -836,6 +1089,6 @@ export default function EditSalesOrderDialog({ order, onClose, onSuccess }: Edit
           }}
         />
       )}
-    </div>
+    </>
   );
 }

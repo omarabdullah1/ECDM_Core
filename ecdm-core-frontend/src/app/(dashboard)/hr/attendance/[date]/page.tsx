@@ -11,24 +11,24 @@ export default function DailyAttendanceFolder() {
     const params = useParams();
     const router = useRouter();
     const dateStr = params.date as string;
-    
+
     const [rows, setRows] = useState<AttendanceRecord[]>([]);
     const [total, setTotal] = useState(0);
     const [page, setPage] = useState(1);
     const [loading, setLoading] = useState(true);
-    
+
     const limit = 100; // Higher limit for single-day view
     const totalPages = Math.ceil(total / limit);
 
     const fetchDailyAttendance = async () => {
         setLoading(true);
         try {
-            const { data } = await api.get('/hr/attendance', { 
-                params: { 
+            const { data } = await api.get('/hr/attendance', {
+                params: {
                     date: dateStr,
                     page,
                     limit
-                } 
+                }
             });
             setRows(data.data.data);
             setTotal(data.data.pagination.total);
@@ -75,7 +75,7 @@ export default function DailyAttendanceFolder() {
                     >
                         <ArrowLeft className="w-5 h-5" />
                     </button>
-                    
+
                     <div>
                         <div className="flex items-center gap-3 mb-1">
                             <Calendar className="h-7 w-7 text-[hsl(var(--primary))]" />
@@ -89,7 +89,7 @@ export default function DailyAttendanceFolder() {
                         </p>
                     </div>
                 </div>
-                
+
                 {/* Export Button (Optional) */}
                 <button
                     className="flex items-center gap-2 rounded-xl bg-[hsl(var(--secondary))] px-4 py-2.5 text-sm font-medium hover:bg-[hsl(var(--secondary))]/80 transition-colors"
@@ -121,7 +121,7 @@ export default function DailyAttendanceFolder() {
             </div>
 
             {/* Data Table */}
-            <div className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] overflow-hidden">
+            <div className="overflow-x-auto">
                 <DataTable
                     data={rows}
                     columns={columns}
@@ -132,6 +132,13 @@ export default function DailyAttendanceFolder() {
                     onPageChange={setPage}
                     bulkDeleteEndpoint="/hr/attendance/bulk-delete"
                     onBulkDeleteSuccess={fetchDailyAttendance}
+                    defaultVisibility={{
+                        employeeId: false,
+                        department: false,
+                        date: false,
+                        day: false,
+                        notes: false,
+                    }}
                 />
             </div>
         </div>

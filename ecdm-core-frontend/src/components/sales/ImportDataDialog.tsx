@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { X, Upload, AlertCircle, CheckCircle, FileSpreadsheet } from 'lucide-react';
 import api from '@/lib/axios';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 interface AnalyzedLead {
     rowIndex: number;
@@ -56,7 +57,7 @@ export default function ImportDataDialog({ isOpen, onClose, onSuccess }: ImportD
                 'application/vnd.ms-excel',
                 'text/csv',
             ];
-            
+
             if (!validTypes.includes(file.type) && !file.name.match(/\.(xlsx|xls|csv)$/i)) {
                 setError('Please select a valid Excel (.xlsx, .xls) or CSV file');
                 return;
@@ -129,18 +130,18 @@ export default function ImportDataDialog({ isOpen, onClose, onSuccess }: ImportD
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-            <div className="w-full max-w-2xl rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+        <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
+            <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto overflow-x-hidden p-6 outline-none">
                 {/* Header */}
-                <div className="flex items-center justify-between mb-6">
+                <DialogHeader className="flex flex-row items-center justify-between mb-6 space-y-0">
                     <div className="flex items-center gap-3">
                         <FileSpreadsheet className="h-6 w-6 text-[hsl(var(--primary))]" />
-                        <h2 className="text-lg font-bold">Import Sales Data from Excel</h2>
+                        <DialogTitle className="text-lg font-bold">Import Sales Data from Excel</DialogTitle>
                     </div>
-                    <button onClick={handleClose} className="hover:opacity-70">
+                    <button type="button" onClick={handleClose} className="hover:opacity-70">
                         <X className="h-5 w-5" />
                     </button>
-                </div>
+                </DialogHeader>
 
                 {/* Upload State */}
                 {state === 'upload' && (
@@ -324,7 +325,7 @@ export default function ImportDataDialog({ isOpen, onClose, onSuccess }: ImportD
                         </button>
                     </div>
                 )}
-            </div>
-        </div>
+            </DialogContent>
+        </Dialog>
     );
 }

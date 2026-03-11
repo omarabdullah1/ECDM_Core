@@ -4,7 +4,7 @@ import { X, Plus, Trash2, Save, FileText } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '@/lib/axios';
 import { SalesOrder } from './columns';
-import { generateQuotationPDF } from '@/utils/generateQuotationPDF';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 /**
  * Add Quotation Dialog - Dynamic Quotation Builder
@@ -59,7 +59,7 @@ export default function AddQuotationDialog({ order, onClose, onSuccess }: AddQuo
   // ═══════════════════════════════════════════════════════════════════════════
   // STATE MANAGEMENT
   // ═══════════════════════════════════════════════════════════════════════════
-  
+
   const [items, setItems] = useState<QuotationItem[]>([
     { description: '', quantity: 1, unitPrice: 0, total: 0 }
   ]);
@@ -72,7 +72,7 @@ export default function AddQuotationDialog({ order, onClose, onSuccess }: AddQuo
   // ═══════════════════════════════════════════════════════════════════════════
   // FETCH INVENTORY (Products & Spare Parts)
   // ═══════════════════════════════════════════════════════════════════════════
-  
+
   useEffect(() => {
     const fetchInventory = async () => {
       setLoadingInventory(true);
@@ -81,10 +81,10 @@ export default function AddQuotationDialog({ order, onClose, onSuccess }: AddQuo
           api.get('/operations/spare-parts?limit=1000'),
           api.get('/operations/inventory-plus/products?limit=1000')
         ]);
-        
+
         const spareParts = sparePartsRes.data?.data?.data || sparePartsRes.data?.data || [];
         const products = productsRes.data?.data?.data || productsRes.data?.data || [];
-        
+
         const formattedItems: InventoryItem[] = [
           ...spareParts.map((sp: any) => ({
             id: sp._id,
@@ -99,7 +99,7 @@ export default function AddQuotationDialog({ order, onClose, onSuccess }: AddQuo
             type: 'Product' as const
           }))
         ];
-        
+
         setInventoryItems(formattedItems);
         console.log('✅ Loaded inventory:', formattedItems.length, 'items');
       } catch (error) {
@@ -109,21 +109,21 @@ export default function AddQuotationDialog({ order, onClose, onSuccess }: AddQuo
         setLoadingInventory(false);
       }
     };
-    
+
     fetchInventory();
   }, []);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // COMPUTED VALUES
   // ═══════════════════════════════════════════════════════════════════════════
-  
+
   const subTotal = items.reduce((sum, item) => sum + item.total, 0);
   const grandTotal = Math.max(0, subTotal - discount);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // ITEM MANAGEMENT
   // ═══════════════════════════════════════════════════════════════════════════
-  
+
   const handleAddItem = () => {
     setItems([...items, { description: '', quantity: 1, unitPrice: 0, total: 0 }]);
   };
@@ -138,10 +138,10 @@ export default function AddQuotationDialog({ order, onClose, onSuccess }: AddQuo
 
   const handleItemChange = (index: number, field: keyof QuotationItem, value: string | number) => {
     const updatedItems = [...items];
-    
+
     if (field === 'description') {
       updatedItems[index].description = value as string;
-      
+
       // Auto-fill unitPrice when an inventory item is selected
       if (value && value !== '' && value !== '__custom__') {
         const selectedInvItem = inventoryItems.find(inv => inv.name === value);
@@ -155,88 +155,106 @@ export default function AddQuotationDialog({ order, onClose, onSuccess }: AddQuo
     } else if (field === 'quantity' || field === 'unitPrice') {
       const numValue = typeof value === 'string' ? parseFloat(value) || 0 : value;
       updatedItems[index][field] = numValue;
-      
+
       // Recalculate total for this item
       updatedItems[index].total = updatedItems[index].quantity * updatedItems[index].unitPrice;
     }
-    
+
     setItems(updatedItems);
   };
 
   // ═══════════════════════════════════════════════════════════════════════════
   // FORM SUBMISSION
   // ═══════════════════════════════════════════════════════════════════════════
-  
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
+
+  const handleSaveQuotation = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+
     // Validation
     if (items.length === 0) {
       toast.error('Please add at least one item');
       return;
     }
-    
+
     const hasEmptyDescription = items.some(item => !item.description.trim() || item.description === '__custom__');
     if (hasEmptyDescription) {
       toast.error('All items must have a description');
       return;
     }
-    
+
     const hasInvalidQuantity = items.some(item => item.quantity <= 0);
     if (hasInvalidQuantity) {
       toast.error('All items must have a quantity greater than 0');
       return;
     }
-    
+
     const hasInvalidPrice = items.some(item => item.unitPrice < 0);
     if (hasInvalidPrice) {
       toast.error('Unit prices cannot be negative');
       return;
     }
-    
+
     setSaving(true);
-    
+
     try {
-      // Prepare quotation object
-      const quotationData = {
+      // 1. Calculate final totals (ensure your state variables match these names)
+      const calculatedSubTotal = items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
+      const calculatedGrandTotal = calculatedSubTotal - (discount || 0);
+
+      // 2. Construct the exact payload matching the Mongoose schema
+      const payload = {
         quotation: {
           items: items.map(item => ({
-            description: item.description.trim(),
-            quantity: item.quantity,
-            unitPrice: item.unitPrice,
-            total: item.total
+            description: item.description,
+            quantity: Number(item.quantity),
+            unitPrice: Number(item.unitPrice),
+            total: Number(item.quantity) * Number(item.unitPrice)
           })),
-          subTotal,
-          discount,
-          grandTotal,
-          notes: notes.trim(),
+          subTotal: calculatedSubTotal,
+          discount: Number(discount || 0),
+          grandTotal: calculatedGrandTotal,
+          notes: notes || '',
           createdAt: new Date()
         }
       };
-      
-      // Update the sales order with quotation data
-      await api.patch(`/sales/orders/${order._id}`, quotationData);
-      
-      toast.success('Quotation created successfully!');
-      
-      // Refresh the parent data
-      onSuccess();
-      
-      // Close dialog
-      onClose();
-      
-      // Generate PDF preview (with updated order data)
-      setTimeout(() => {
-        const updatedOrder = {
-          ...order,
-          quotation: quotationData.quotation
-        };
-        generateQuotationPDF(updatedOrder, 'view');
-      }, 500);
-      
+
+      console.log("🚀 Sending Payload to Backend:", payload);
+
+      // 3. Send the PATCH request to the backend
+      const response = await api.patch(`/sales/orders/${order._id}`, payload);
+
+      console.log("✅ Backend Response:", response.data);
+
+      if (response.status === 200 || response.status === 202 || response.status === 204) {
+        toast.success('Quotation saved successfully');
+        onClose();
+        onSuccess();
+      }
     } catch (error: any) {
-      console.error('Failed to create quotation:', error);
-      toast.error(error?.response?.data?.message || 'Failed to create quotation');
+      // Comprehensive error logging
+      console.error("❌ Failed to save quotation - Full Error:", error);
+      console.error("❌ Error Response:", error?.response);
+      console.error("❌ Error Data:", error?.response?.data);
+      console.error("❌ Error Message:", error?.message);
+      
+      // Extract error message with fallbacks
+      let errorMessage = 'Failed to save quotation. Please try again.';
+      
+      if (error?.response?.data) {
+        if (typeof error.response.data === 'string') {
+          errorMessage = error.response.data;
+        } else if (error.response.data.message) {
+          errorMessage = error.response.data.message;
+        } else if (error.response.data.error) {
+          errorMessage = error.response.data.error;
+        }
+      } else if (error?.message) {
+        errorMessage = error.message;
+      } else if (error?.toString && error.toString() !== '[object Object]') {
+        errorMessage = error.toString();
+      }
+      
+      toast.error(errorMessage);
     } finally {
       setSaving(false);
     }
@@ -245,21 +263,21 @@ export default function AddQuotationDialog({ order, onClose, onSuccess }: AddQuo
   // ═══════════════════════════════════════════════════════════════════════════
   // RENDER
   // ═══════════════════════════════════════════════════════════════════════════
-  
+
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-[hsl(var(--card))] rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-        
+    <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto overflow-x-hidden p-6 outline-none">
+
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[hsl(var(--border))]">
+        <DialogHeader className="flex flex-row items-center justify-between border-b border-[hsl(var(--border))] pb-4 mb-4 space-y-0">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-[hsl(var(--primary))]/10 rounded-lg">
               <FileText className="w-5 h-5 text-[hsl(var(--primary))]" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-[hsl(var(--foreground))]">
+              <DialogTitle className="text-xl font-bold text-[hsl(var(--foreground))]">
                 Create Quotation
-              </h2>
+              </DialogTitle>
               <p className="text-sm text-[hsl(var(--muted-foreground))]">
                 {order.salesOrderId || `Order #${order._id.slice(-6).toUpperCase()}`}
                 {' | '}
@@ -268,17 +286,18 @@ export default function AddQuotationDialog({ order, onClose, onSuccess }: AddQuo
             </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
             className="p-2 hover:bg-[hsl(var(--accent))] rounded-lg transition-all"
             disabled={saving}
           >
             <X className="w-5 h-5" />
           </button>
-        </div>
+        </DialogHeader>
 
         {/* Form Content */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto px-6 py-6">
-          
+        <form onSubmit={handleSaveQuotation} className="flex flex-col gap-6">
+
           {/* Items Table */}
           <div className="mb-6">
             <div className="flex items-center justify-between mb-4">
@@ -292,7 +311,7 @@ export default function AddQuotationDialog({ order, onClose, onSuccess }: AddQuo
                 Add Item
               </button>
             </div>
-            
+
             <div className="border border-[hsl(var(--border))] rounded-xl overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full">
@@ -324,7 +343,7 @@ export default function AddQuotationDialog({ order, onClose, onSuccess }: AddQuo
                             <option value="">
                               {loadingInventory ? 'Loading inventory...' : 'Select Product / Spare Part'}
                             </option>
-                            
+
                             {/* Products Group */}
                             {inventoryItems.filter(i => i.type === 'Product').length > 0 && (
                               <optgroup label="═══ Products ═══">
@@ -337,7 +356,7 @@ export default function AddQuotationDialog({ order, onClose, onSuccess }: AddQuo
                                   ))}
                               </optgroup>
                             )}
-                            
+
                             {/* Spare Parts Group */}
                             {inventoryItems.filter(i => i.type === 'Spare Part').length > 0 && (
                               <optgroup label="═══ Spare Parts ═══">
@@ -350,13 +369,13 @@ export default function AddQuotationDialog({ order, onClose, onSuccess }: AddQuo
                                   ))}
                               </optgroup>
                             )}
-                            
+
                             {/* Manual Entry Option */}
                             <optgroup label="═══ Custom Entry ═══">
                               <option value="__custom__">➕ Enter Custom Item...</option>
                             </optgroup>
                           </select>
-                          
+
                           {/* Show text input for custom items */}
                           {item.description === '__custom__' && (
                             <input
@@ -415,7 +434,7 @@ export default function AddQuotationDialog({ order, onClose, onSuccess }: AddQuo
 
           {/* Totals & Discount */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            
+
             {/* Notes */}
             <div>
               <label className={labelCls}>Notes (Optional)</label>
@@ -450,14 +469,14 @@ export default function AddQuotationDialog({ order, onClose, onSuccess }: AddQuo
                   <span className="text-[hsl(var(--muted-foreground))]">Subtotal:</span>
                   <span className="font-semibold text-[hsl(var(--foreground))]">${subTotal.toFixed(2)}</span>
                 </div>
-                
+
                 {discount > 0 && (
                   <div className="flex justify-between items-center text-sm">
                     <span className="text-[hsl(var(--muted-foreground))]">Discount:</span>
                     <span className="font-semibold text-red-600">-${discount.toFixed(2)}</span>
                   </div>
                 )}
-                
+
                 <div className="pt-3 border-t border-[hsl(var(--border))]">
                   <div className="flex justify-between items-center">
                     <span className="text-base font-bold text-[hsl(var(--foreground))]">Grand Total:</span>
@@ -471,7 +490,7 @@ export default function AddQuotationDialog({ order, onClose, onSuccess }: AddQuo
         </form>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-[hsl(var(--border))] bg-[hsl(var(--muted))]/20">
+        <div className="flex items-center justify-end gap-3 pt-4 border-t border-[hsl(var(--border))] mt-2">
           <button
             type="button"
             onClick={onClose}
@@ -483,7 +502,7 @@ export default function AddQuotationDialog({ order, onClose, onSuccess }: AddQuo
           </button>
           <button
             type="submit"
-            onClick={handleSubmit}
+            onClick={handleSaveQuotation}
             className={btnPrimary}
             disabled={saving}
           >
@@ -491,8 +510,7 @@ export default function AddQuotationDialog({ order, onClose, onSuccess }: AddQuo
             {saving ? 'Saving...' : 'Save Quotation'}
           </button>
         </div>
-
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

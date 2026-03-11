@@ -75,28 +75,6 @@ export const createUser = async (req: Request, res: Response, next: NextFunction
 // ── GET /api/auth/users/:id ─────────────────────────────────────────
 export const getUser = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-        
-        // Log the user update action
-        await logAction(
-            req.user!.userId,
-            AuditAction.UPDATE,
-            'User',
-            user._id,
-            { updatedFields: Object.keys(req.body) },
-            req,
-        );
-        
-        // Log the user deletion action
-        await logAction(
-            req.user!.userId,
-            AuditAction.DELETE,
-            'User',
-            req.params.id,
-            { deletedUserId: req.params.id },
-            req,
-        );
-        
-        
         const user = await authService.getUserById(req.params.id);
         sendSuccess(res, { user }, 'User retrieved');
     } catch (err) {

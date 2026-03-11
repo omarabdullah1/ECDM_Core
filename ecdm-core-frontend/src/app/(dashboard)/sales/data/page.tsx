@@ -12,19 +12,19 @@ const iCls = 'w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(-
 const OUTCOMES = ['Pending', 'No Answer', 'Interested', 'Converted', 'Rejected'];
 const TYPE_OF_ORDER = ['Maintenance', 'General supplies', 'Supply and installation'];
 const SALES_PLATFORM = ['Online', 'In Side', 'Phone', 'Out side', 'Data'];
-const blank = { 
-  marketingData: '', 
-  salesPerson: '', 
+const blank = {
+  marketingData: '',
+  salesPerson: '',
   customer: '',
   callDate: '',
-  callOutcome: 'Pending', 
+  callOutcome: 'Pending',
   typeOfOrder: '',
   salesPlatform: '',
   issue: '',
   order: '',
   followUp: '',
   followUpDate: '',
-  notes: '' 
+  notes: ''
 };
 
 export default function SalesDataPage() {
@@ -32,6 +32,7 @@ export default function SalesDataPage() {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [fOutcome, setFOutcome] = useState('');
+  const [fTypeOfOrder, setFTypeOfOrder] = useState('');
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(false);
   const [editing, setEditing] = useState<SalesData | null>(null);
@@ -40,7 +41,7 @@ export default function SalesDataPage() {
   const [error, setError] = useState('');
   const [delId, setDelId] = useState<string | null>(null);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
-  const lim = 10; 
+  const lim = 10;
   const tp = Math.ceil(total / lim);
 
   const fetch_ = useCallback(async () => {
@@ -48,25 +49,26 @@ export default function SalesDataPage() {
     try {
       const p: Record<string, string | number> = { page, limit: lim };
       if (fOutcome) p.callOutcome = fOutcome;
+      if (fTypeOfOrder) p.typeOfOrder = fTypeOfOrder;
       const { data } = await api.get('/sales/data', { params: p });
-      setRows(data.data.data); 
+      setRows(data.data.data);
       setTotal(data.data.pagination.total);
-    } catch (err) { 
+    } catch (err) {
       console.error('Failed to fetch sales data:', err);
       toast.error('Failed to load sales data');
     }
     setLoading(false);
-  }, [page, fOutcome]);
-  
+  }, [page, fOutcome, fTypeOfOrder]);
+
   useEffect(() => { fetch_(); }, [fetch_]);
 
-  const openCreate = () => { 
-    setEditing(null); 
-    setForm(blank); 
-    setError(''); 
-    setModal(true); 
+  const openCreate = () => {
+    setEditing(null);
+    setForm(blank);
+    setError('');
+    setModal(true);
   };
-  
+
   const openEdit = (row: SalesData) => {
     setEditing(row);
     setForm({
@@ -96,20 +98,20 @@ export default function SalesDataPage() {
   };
 
   const save = async (ev: React.FormEvent) => {
-    ev.preventDefault(); 
-    setSaving(true); 
+    ev.preventDefault();
+    setSaving(true);
     setError('');
-    
+
     const pl: Record<string, unknown> = {};
     // Exclude immutable reference IDs when editing (they cannot be changed)
     const immutableFields = editing ? ['marketingData', 'salesPerson', 'customer'] : [];
-    
-    for (const [k, v] of Object.entries(form)) { 
+
+    for (const [k, v] of Object.entries(form)) {
       if (v !== '' && !immutableFields.includes(k)) {
         pl[k] = v;
       }
     }
-    
+
     try {
       if (editing) {
         await api.put(`/sales/data/${editing._id}`, pl);
@@ -118,30 +120,30 @@ export default function SalesDataPage() {
         await api.post('/sales/data', pl);
         toast.success('Sales data created successfully');
       }
-      setModal(false); 
+      setModal(false);
       fetch_();
-    } catch (e: unknown) { 
+    } catch (e: unknown) {
       const errorMsg = (e as { response?: { data?: { message?: string } } }).response?.data?.message || 'Failed to save';
       setError(errorMsg);
       toast.error(errorMsg);
     }
     setSaving(false);
   };
-  
-  const del = async () => { 
-    if (!delId) return; 
-    try { 
+
+  const del = async () => {
+    if (!delId) return;
+    try {
       await api.delete(`/sales/data/${delId}`);
       toast.success('Sales data deleted successfully');
-      fetch_(); 
-    } catch (err) { 
+      fetch_();
+    } catch (err) {
       console.error('Failed to delete:', err);
       toast.error('Failed to delete sales data');
-    } 
-    setDelId(null); 
+    }
+    setDelId(null);
   };
-  
-  const u = (f: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => 
+
+  const u = (f: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
     setForm(p => ({ ...p, [f]: e.target.value }));
 
   // Create columns with action handlers
@@ -159,22 +161,22 @@ export default function SalesDataPage() {
           <h1 className="text-2xl font-bold">Sales Data</h1>
         </div>
         <div className="flex items-center gap-3">
-          <button 
-            onClick={() => downloadSalesDataTemplate()} 
+          <button
+            onClick={() => downloadSalesDataTemplate()}
             className="flex items-center gap-2 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-4 py-2 text-sm font-semibold hover:bg-[hsl(var(--muted))] transition-colors"
           >
             <Download className="h-4 w-4" />
             Download Template
           </button>
-          <button 
-            onClick={() => setImportDialogOpen(true)} 
+          <button
+            onClick={() => setImportDialogOpen(true)}
             className="flex items-center gap-2 rounded-xl bg-[hsl(var(--primary))] px-4 py-2 text-sm font-semibold text-[hsl(var(--primary-foreground))] hover:opacity-90 transition-opacity"
           >
             <Upload className="h-4 w-4" />
             Import Excel
           </button>
-          <button 
-            onClick={openCreate} 
+          <button
+            onClick={openCreate}
             className="flex items-center gap-2 rounded-xl bg-[hsl(var(--primary))] px-4 py-2 text-sm font-semibold text-[hsl(var(--primary-foreground))] hover:opacity-90 transition-opacity"
           >
             <Plus className="h-4 w-4" />
@@ -183,18 +185,17 @@ export default function SalesDataPage() {
         </div>
       </div>
 
-      <div className="flex gap-3 flex-wrap">
-        <select 
-          value={fOutcome} 
-          onChange={e => { setFOutcome(e.target.value); setPage(1); }} 
-          className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2 text-sm"
-        >
+      <div className="flex gap-3 flex-wrap items-center">
+        <select value={fOutcome} onChange={e => { setFOutcome(e.target.value); setPage(1); }} className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2 text-sm">
           <option value="">All Outcomes</option>
           {OUTCOMES.map(s => <option key={s} value={s}>{s}</option>)}
         </select>
+        <select value={fTypeOfOrder} onChange={e => { setFTypeOfOrder(e.target.value); setPage(1); }} className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2 text-sm">
+          <option value="">All Order Types</option>
+          {TYPE_OF_ORDER.map(s => <option key={s} value={s}>{s}</option>)}
+        </select>
       </div>
 
-      {/* DataTable with horizontal scrolling support */}
       <div className="overflow-x-auto">
         <DataTable
           data={rows}
@@ -203,269 +204,288 @@ export default function SalesDataPage() {
           emptyMessage="No sales data found."
           page={page}
           totalPages={tp}
+          totalItems={total}
+          itemsPerPage={lim}
           onPageChange={setPage}
           bulkDeleteEndpoint="/sales/data/bulk-delete"
           onBulkDeleteSuccess={fetch_}
+          defaultVisibility={{
+            "customer.address": false,
+            "customer.region": false,
+            "customer.sector": false,
+            callDate: false,
+            issue: false,
+            salesPerson: false,
+            followUp: false,
+            followUpDate: false,
+            salesPlatform: false,
+            notes: false,
+            "customer.customerId": false,
+          }}
         />
-      </div>
+      </div >
 
       {/* Create/Edit Modal */}
-      {modal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="w-full max-w-2xl rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-bold">
-                {editing ? 'Edit Sales Data' : 'Add Sales Data'}
-              </h2>
-              <button onClick={() => setModal(false)}>
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <form onSubmit={save} className="space-y-4">
-              {/* Read-only Context Information */}
-              {editing && (
-                <div className="grid grid-cols-2 gap-4 p-3 rounded-xl bg-[hsl(var(--muted))]/30">
-                  <div>
-                    <label className="text-xs font-medium text-[hsl(var(--muted-foreground))] mb-1 block">Customer Name</label>
-                    <input 
-                      value={editing.customer?.name || editing.customerId?.name || 'Unknown Customer'} 
-                      disabled
-                      className="w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--muted))]/50 px-3 py-2 text-sm text-[hsl(var(--muted-foreground))] cursor-not-allowed" 
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs font-medium text-[hsl(var(--muted-foreground))] mb-1 block">Sales Person Email</label>
-                    <input 
-                      value={editing.salesPerson?.email || 'Unassigned'} 
-                      disabled
-                      className="w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--muted))]/50 px-3 py-2 text-sm text-[hsl(var(--muted-foreground))] cursor-not-allowed" 
-                    />
-                  </div>
-                  {editing.marketingData && (
-                    <div className="col-span-2">
-                      <label className="text-xs font-medium text-[hsl(var(--muted-foreground))] mb-1 block">Marketing Data Source</label>
-                      <input 
-                        value={`${editing.marketingData.name || 'N/A'} - ${editing.marketingData.phone || 'N/A'} (${editing.marketingData.dataSource || 'Unknown'})`} 
+      {
+        modal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+            <div className="w-full max-w-2xl rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-lg font-bold">
+                  {editing ? 'Edit Sales Data' : 'Add Sales Data'}
+                </h2>
+                <button onClick={() => setModal(false)}>
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <form onSubmit={save} className="space-y-4">
+                {/* Read-only Context Information */}
+                {editing && (
+                  <div className="grid grid-cols-2 gap-4 p-3 rounded-xl bg-[hsl(var(--muted))]/30">
+                    <div>
+                      <label className="text-xs font-medium text-[hsl(var(--muted-foreground))] mb-1 block">Customer Name</label>
+                      <input
+                        value={editing.customer?.name || editing.customerId?.name || 'Unknown Customer'}
                         disabled
-                        className="w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--muted))]/50 px-3 py-2 text-sm text-[hsl(var(--muted-foreground))] cursor-not-allowed" 
-                      />
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Editable fields only shown when creating new record */}
-              {!editing && (
-                <>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-sm font-medium mb-1 block">Marketing Data ID</label>
-                      <input 
-                        placeholder="Optional" 
-                        value={form.marketingData} 
-                        onChange={u('marketingData')} 
-                        className={iCls} 
+                        className="w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--muted))]/50 px-3 py-2 text-sm text-[hsl(var(--muted-foreground))] cursor-not-allowed"
                       />
                     </div>
                     <div>
-                      <label className="text-sm font-medium mb-1 block">Sales Person ID</label>
-                      <input 
-                        placeholder="Optional" 
-                        value={form.salesPerson} 
-                        onChange={u('salesPerson')} 
-                        className={iCls} 
+                      <label className="text-xs font-medium text-[hsl(var(--muted-foreground))] mb-1 block">Sales Person Email</label>
+                      <input
+                        value={editing.salesPerson?.email || 'Unassigned'}
+                        disabled
+                        className="w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--muted))]/50 px-3 py-2 text-sm text-[hsl(var(--muted-foreground))] cursor-not-allowed"
                       />
                     </div>
-                  </div>
-
-                  <div>
-                    <label className="text-sm font-medium mb-1 block">Customer ID</label>
-                    <input 
-                      placeholder="Optional" 
-                      value={form.customer} 
-                      onChange={u('customer')} 
-                      className={iCls} 
-                    />
-                  </div>
-                </>
-              )}
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium mb-1 block">Call Date</label>
-                  <input 
-                    type="datetime-local"
-                    value={form.callDate} 
-                    onChange={u('callDate')} 
-                    className={iCls} 
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium mb-1 block">Call Outcome *</label>
-                  <select 
-                    required 
-                    value={form.callOutcome} 
-                    onChange={u('callOutcome')} 
-                    className={iCls}
-                  >
-                    {OUTCOMES.map(s => <option key={s} value={s}>{s}</option>)}
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium mb-1 block">Type Of Order</label>
-                  <select 
-                    value={form.typeOfOrder} 
-                    onChange={u('typeOfOrder')} 
-                    className={iCls}
-                  >
-                    <option value="">Select...</option>
-                    {TYPE_OF_ORDER.map(t => <option key={t} value={t}>{t}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-sm font-medium mb-1 block">Sales Platform</label>
-                  <select 
-                    value={form.salesPlatform} 
-                    onChange={u('salesPlatform')} 
-                    className={iCls}
-                  >
-                    <option value="">Select...</option>
-                    {SALES_PLATFORM.map(p => <option key={p} value={p}>{p}</option>)}
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="text-sm font-medium mb-1 block">Issue</label>
-                <textarea 
-                  placeholder="Describe the issue or problem" 
-                  value={form.issue} 
-                  onChange={u('issue')} 
-                  rows={2} 
-                  className={iCls} 
-                />
-              </div>
-
-              <div>
-                <label className="text-sm font-medium mb-1 block">Order</label>
-                <select
-                  value={form.order} 
-                  onChange={u('order')} 
-                  className={iCls}
-                  disabled={editing?.isOrderLocked}
-                >
-                  <option value="">Select...</option>
-                  <option value="Yes">Yes</option>
-                  <option value="No">No</option>
-                </select>
-                {editing?.isOrderLocked && (
-                  <div className="text-xs text-red-500 mt-1 flex items-center gap-1">
-                    <Lock className="w-3 h-3" />
-                    <span>Locked: Order is in progress and cannot be changed to No</span>
+                    {editing.marketingData && (
+                      <div className="col-span-2">
+                        <label className="text-xs font-medium text-[hsl(var(--muted-foreground))] mb-1 block">Marketing Data Source</label>
+                        <input
+                          value={`${editing.marketingData.name || 'N/A'} - ${editing.marketingData.phone || 'N/A'} (${editing.marketingData.dataSource || 'Unknown'})`}
+                          disabled
+                          className="w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--muted))]/50 px-3 py-2 text-sm text-[hsl(var(--muted-foreground))] cursor-not-allowed"
+                        />
+                      </div>
+                    )}
                   </div>
                 )}
-              </div>
 
-              <div className="grid grid-cols-2 gap-4">
+                {/* Editable fields only shown when creating new record */}
+                {!editing && (
+                  <>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-sm font-medium mb-1 block">Marketing Data ID</label>
+                        <input
+                          placeholder="Optional"
+                          value={form.marketingData}
+                          onChange={u('marketingData')}
+                          className={iCls}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium mb-1 block">Sales Person ID</label>
+                        <input
+                          placeholder="Optional"
+                          value={form.salesPerson}
+                          onChange={u('salesPerson')}
+                          className={iCls}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-medium mb-1 block">Customer ID</label>
+                      <input
+                        placeholder="Optional"
+                        value={form.customer}
+                        onChange={u('customer')}
+                        className={iCls}
+                      />
+                    </div>
+                  </>
+                )}
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium mb-1 block">Call Date</label>
+                    <input
+                      type="datetime-local"
+                      value={form.callDate}
+                      onChange={u('callDate')}
+                      className={iCls}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium mb-1 block">Call Outcome *</label>
+                    <select
+                      required
+                      value={form.callOutcome}
+                      onChange={u('callOutcome')}
+                      className={iCls}
+                    >
+                      {OUTCOMES.map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium mb-1 block">Type Of Order</label>
+                    <select
+                      value={form.typeOfOrder}
+                      onChange={u('typeOfOrder')}
+                      className={iCls}
+                    >
+                      <option value="">Select...</option>
+                      {TYPE_OF_ORDER.map(t => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium mb-1 block">Sales Platform</label>
+                    <select
+                      value={form.salesPlatform}
+                      onChange={u('salesPlatform')}
+                      className={iCls}
+                    >
+                      <option value="">Select...</option>
+                      {SALES_PLATFORM.map(p => <option key={p} value={p}>{p}</option>)}
+                    </select>
+                  </div>
+                </div>
+
                 <div>
-                  <label className="text-sm font-medium mb-1 block">Follow Up</label>
-                  <select
-                    value={form.followUp} 
-                    onChange={u('followUp')} 
+                  <label className="text-sm font-medium mb-1 block">Issue</label>
+                  <textarea
+                    placeholder="Describe the issue or problem"
+                    value={form.issue}
+                    onChange={u('issue')}
+                    rows={2}
                     className={iCls}
-                    disabled={editing?.isFollowUpLocked}
+                  />
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium mb-1 block">Order</label>
+                  <select
+                    value={form.order}
+                    onChange={u('order')}
+                    className={iCls}
+                    disabled={editing?.isOrderLocked}
                   >
                     <option value="">Select...</option>
                     <option value="Yes">Yes</option>
                     <option value="No">No</option>
                   </select>
-                  {editing?.isFollowUpLocked && (
+                  {editing?.isOrderLocked && (
                     <div className="text-xs text-red-500 mt-1 flex items-center gap-1">
                       <Lock className="w-3 h-3" />
-                      <span>Locked: Team has started working on this follow-up</span>
+                      <span>Locked: Order is in progress and cannot be changed to No</span>
                     </div>
                   )}
                 </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium mb-1 block">Follow Up</label>
+                    <select
+                      value={form.followUp}
+                      onChange={u('followUp')}
+                      className={iCls}
+                      disabled={editing?.isFollowUpLocked}
+                    >
+                      <option value="">Select...</option>
+                      <option value="Yes">Yes</option>
+                      <option value="No">No</option>
+                    </select>
+                    {editing?.isFollowUpLocked && (
+                      <div className="text-xs text-red-500 mt-1 flex items-center gap-1">
+                        <Lock className="w-3 h-3" />
+                        <span>Locked: Team has started working on this follow-up</span>
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium mb-1 block">Follow Up Date</label>
+                    <input
+                      type="datetime-local"
+                      value={form.followUpDate}
+                      onChange={u('followUpDate')}
+                      className={iCls}
+                    />
+                  </div>
+                </div>
+
                 <div>
-                  <label className="text-sm font-medium mb-1 block">Follow Up Date</label>
-                  <input 
-                    type="datetime-local"
-                    value={form.followUpDate} 
-                    onChange={u('followUpDate')} 
-                    className={iCls} 
+                  <label className="text-sm font-medium mb-1 block">Notes</label>
+                  <textarea
+                    placeholder="Optional notes"
+                    value={form.notes}
+                    onChange={u('notes')}
+                    rows={3}
+                    className={iCls}
                   />
                 </div>
-              </div>
 
-              <div>
-                <label className="text-sm font-medium mb-1 block">Notes</label>
-                <textarea 
-                  placeholder="Optional notes" 
-                  value={form.notes} 
-                  onChange={u('notes')} 
-                  rows={3} 
-                  className={iCls} 
-                />
-              </div>
+                {error && <p className="text-sm text-destructive">{error}</p>}
 
-              {error && <p className="text-sm text-destructive">{error}</p>}
-              
-              <div className="flex gap-3 pt-2">
-                <button 
-                  type="submit" 
-                  disabled={saving} 
-                  className="flex-1 rounded-xl bg-[hsl(var(--primary))] py-2.5 text-sm font-semibold text-[hsl(var(--primary-foreground))] disabled:opacity-60"
+                <div className="flex gap-3 pt-2">
+                  <button
+                    type="submit"
+                    disabled={saving}
+                    className="flex-1 rounded-xl bg-[hsl(var(--primary))] py-2.5 text-sm font-semibold text-[hsl(var(--primary-foreground))] disabled:opacity-60"
+                  >
+                    {saving ? 'Saving…' : 'Save'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setModal(false)}
+                    className="flex-1 rounded-xl border border-[hsl(var(--border))] py-2.5 text-sm"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )
+      }
+
+      {/* Delete Confirmation Modal */}
+      {
+        delId && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+            <div className="rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6 shadow-2xl max-w-sm w-full">
+              <p className="mb-4 font-semibold">Delete this sales data record?</p>
+              <div className="flex gap-3">
+                <button
+                  onClick={del}
+                  className="flex-1 rounded-xl bg-destructive py-2 text-sm font-semibold text-white"
                 >
-                  {saving ? 'Saving…' : 'Save'}
+                  Delete
                 </button>
-                <button 
-                  type="button" 
-                  onClick={() => setModal(false)} 
-                  className="flex-1 rounded-xl border border-[hsl(var(--border))] py-2.5 text-sm"
+                <button
+                  onClick={() => setDelId(null)}
+                  className="flex-1 rounded-xl border py-2 text-sm"
                 >
                   Cancel
                 </button>
               </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Delete Confirmation Modal */}
-      {delId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6 shadow-2xl max-w-sm w-full">
-            <p className="mb-4 font-semibold">Delete this sales data record?</p>
-            <div className="flex gap-3">
-              <button 
-                onClick={del} 
-                className="flex-1 rounded-xl bg-destructive py-2 text-sm font-semibold text-white"
-              >
-                Delete
-              </button>
-              <button 
-                onClick={() => setDelId(null)} 
-                className="flex-1 rounded-xl border py-2 text-sm"
-              >
-                Cancel
-              </button>
             </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
       {/* Import Data Dialog */}
-      <ImportDataDialog 
-        isOpen={importDialogOpen} 
-        onClose={() => setImportDialogOpen(false)} 
+      <ImportDataDialog
+        isOpen={importDialogOpen}
+        onClose={() => setImportDialogOpen(false)}
         onSuccess={() => {
           setImportDialogOpen(false);
           fetch_();
-        }} 
+        }}
       />
-    </div>
+    </div >
   );
 }

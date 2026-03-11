@@ -8,11 +8,11 @@ import { UserRole } from '../../auth/auth.types';
 const router = Router();
 router.use(authenticate);
 
-router.post('/',           validate(createSalesLeadSchema), ctrl.create);
-router.get('/',            ctrl.getAll);
-router.get('/:id',         ctrl.getById);
-router.put('/:id',         validate(updateSalesLeadSchema), ctrl.update);
-router.patch('/:id',       validate(updateSalesLeadSchema), ctrl.patch);  // Auto-tracks salesPerson
+router.post('/',           authorise(UserRole.SuperAdmin, UserRole.Manager, UserRole.Sales, UserRole.Marketing), validate(createSalesLeadSchema), ctrl.create);
+router.get('/',            authorise(UserRole.SuperAdmin, UserRole.Manager, UserRole.Sales, UserRole.Marketing), ctrl.getAll);
+router.get('/:id',         authorise(UserRole.SuperAdmin, UserRole.Manager, UserRole.Sales, UserRole.Marketing), ctrl.getById);
+router.put('/:id',         authorise(UserRole.SuperAdmin, UserRole.Manager, UserRole.Sales, UserRole.Marketing), validate(updateSalesLeadSchema), ctrl.update);
+router.patch('/:id',       authorise(UserRole.SuperAdmin, UserRole.Manager, UserRole.Sales, UserRole.Marketing), validate(updateSalesLeadSchema), ctrl.patch);  // Auto-tracks salesPerson
 router.delete('/:id',      authorise(UserRole.SuperAdmin, UserRole.Manager), ctrl.remove);
 router.post('/bulk-delete', isAdmin, ctrl.bulkDelete);  // Admin-only bulk delete
 

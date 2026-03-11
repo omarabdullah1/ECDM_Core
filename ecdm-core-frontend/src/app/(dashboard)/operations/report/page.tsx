@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '@/lib/axios';
 import { Star, Plus, Trash2, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { DataTable } from '@/components/ui/DataTable';
 
 interface Report { _id: string; employee?: { firstName: string; lastName: string }; evaluationPeriod: { startDate: string; endDate: string }; punctualityScore: number; completionRate: number; taskQualityScore: number; overallPerformanceScore: number; notes?: string; }
 
@@ -72,40 +73,42 @@ export default function ReportPage() {
         <button onClick={openC} className="flex items-center gap-2 rounded-xl bg-[hsl(var(--primary))] px-4 py-2 text-sm font-semibold text-[hsl(var(--primary-foreground))] hover:opacity-90 transition-opacity"><Plus className="h-4 w-4" />Add Report</button>
       </div>
 
-      <div className="rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] overflow-x-auto">
-        {loading ? <div className="p-8 text-center text-[hsl(var(--muted-foreground))]">Loading…</div> : (
-          <table className="w-full text-sm">
-            <thead className="border-b border-[hsl(var(--border))] bg-[hsl(var(--muted))]/30">
-              <tr>{['Employee','Period','Punctuality','Completion','Quality','Overall Score','Actions'].map(h => <th key={h} className="px-4 py-3 text-left font-semibold">{h}</th>)}</tr>
-            </thead>
-            <tbody>
-              {reports.map(r => (
-                <tr key={r._id} className="border-b border-[hsl(var(--border))]/50 hover:bg-[hsl(var(--muted))]/20">
-                  <td className="px-4 py-3 font-medium">{r.employee ? `${r.employee.firstName} ${r.employee.lastName}` : '—'}</td>
-                  <td className="px-4 py-3 text-[hsl(var(--muted-foreground))]">
-                    <div>{new Date(r.evaluationPeriod.startDate).toLocaleDateString()}</div>
-                    <div className="text-xs">→ {new Date(r.evaluationPeriod.endDate).toLocaleDateString()}</div>
-                  </td>
-                  <td className="px-4 py-3"><ScoreBadge val={r.punctualityScore} /></td>
-                  <td className="px-4 py-3"><ScoreBadge val={r.completionRate} /></td>
-                  <td className="px-4 py-3"><span className="text-sm font-medium">{r.taskQualityScore} / 5</span></td>
-                  <td className="px-4 py-4 min-w-[160px]"><ScoreBar val={r.overallPerformanceScore} /></td>
-                  <td className="px-4 py-3"><button onClick={() => setDelId(r._id)} className="p-1 hover:text-destructive"><Trash2 className="h-4 w-4" /></button></td>
-                </tr>
-              ))}
-              {!reports.length && <tr><td colSpan={7} className="px-4 py-8 text-center text-[hsl(var(--muted-foreground))]">No reports found.</td></tr>}
-            </tbody>
-          </table>
-        )}
+      <div className="overflow-x-auto">
+        <DataTable
+          data={reports}
+          columns={[
+            { key: "employee.firstName", header: "Employee", render: (row: any) => <span className="font-medium">{row.employee ? `${row.employee.firstName} ${row.employee.lastName}` : '—'}</span> },
+            {
+              key: "evaluationPeriod", header: "Period", render: (row: any) => (
+                <span className="text-[hsl(var(--muted-foreground))]">
+                  <div>{new Date(row.evaluationPeriod.startDate).toLocaleDateString()}</div>
+                  <div className="text-xs">→ {new Date(row.evaluationPeriod.endDate).toLocaleDateString()}</div>
+                </span>
+              )
+            },
+            { key: "punctualityScore", header: "Punctuality", render: (row: any) => <span><ScoreBadge val={row.punctualityScore} /></span> },
+            { key: "completionRate", header: "Completion", render: (row: any) => <span><ScoreBadge val={row.completionRate} /></span> },
+            { key: "taskQualityScore", header: "Quality", render: (row: any) => <span className="text-sm font-medium">{row.taskQualityScore} / 5</span> },
+            { key: "overallPerformanceScore", header: "Overall Score", render: (row: any) => <span className="min-w-[160px] block"><ScoreBar val={row.overallPerformanceScore} /></span> },
+            { key: "notes", header: "Notes", render: (row: any) => <span className="max-w-[200px] truncate block" title={row.notes}>{row.notes || '—'}</span> },
+          ]}
+          loading={loading}
+          emptyMessage="No reports found."
+          page={page}
+          totalPages={tp}
+          totalItems={total}
+          itemsPerPage={lim}
+          onPageChange={setPage}
+          renderActions={(row: Report) => (
+            <button onClick={() => setDelId(row._id)} className="p-1 hover:text-destructive"><Trash2 className="h-4 w-4" /></button>
+          )}
+          defaultVisibility={{
+            notes: false,
+          }}
+        />
       </div>
 
-      {tp > 1 && (
-        <div className="flex items-center justify-center gap-2">
-          <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="p-2 rounded-lg hover:bg-[hsl(var(--muted))] disabled:opacity-40"><ChevronLeft className="h-4 w-4" /></button>
-          <span className="text-sm">{page} / {tp}</span>
-          <button onClick={() => setPage(p => Math.min(tp, p + 1))} disabled={page === tp} className="p-2 rounded-lg hover:bg-[hsl(var(--muted))] disabled:opacity-40"><ChevronRight className="h-4 w-4" /></button>
-        </div>
-      )}
+
 
       {modal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">

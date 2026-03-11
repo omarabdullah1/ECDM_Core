@@ -4,6 +4,7 @@ import { X, UserPlus, AlertCircle } from 'lucide-react';
 import { z } from 'zod';
 import api from '@/lib/axios';
 import toast from 'react-hot-toast';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 // ── Validation Schema ───────────────────────────────────────────────
 const formSchema = z.object({
@@ -13,7 +14,8 @@ const formSchema = z.object({
     password: z.string().min(8, 'Password must be at least 8 characters'),
     role: z.string().min(1, 'Role is required'),
     phone: z.string().optional(),
-    department: z.string().optional(),
+    targetBudget: z.number().optional(),
+    targetSales: z.number().optional(),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -29,6 +31,8 @@ const ROLES = [
     { value: 'MaintenanceEngineer', label: 'Maintenance Engineer' },
     { value: 'Technician', label: 'Technician' },
     { value: 'CustomerService', label: 'Customer Service' },
+    { value: 'Marketing', label: 'Marketing' },
+    { value: 'R&D', label: 'R&D' },
 ] as const;
 
 interface AddUserDialogProps {
@@ -47,7 +51,8 @@ export default function AddUserDialog({ isOpen, onClose, onSuccess }: AddUserDia
         password: '',
         role: '',
         phone: '',
-        department: '',
+        targetBudget: 0,
+        targetSales: 0,
     });
     const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
     const [saving, setSaving] = useState(false);
@@ -102,7 +107,8 @@ export default function AddUserDialog({ isOpen, onClose, onSuccess }: AddUserDia
             password: '',
             role: '',
             phone: '',
-            department: '',
+            targetBudget: 0,
+            targetSales: 0,
         });
         setErrors({});
         setApiError('');
@@ -112,18 +118,18 @@ export default function AddUserDialog({ isOpen, onClose, onSuccess }: AddUserDia
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-            <div className="w-full max-w-lg rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+        <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
+            <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto overflow-x-hidden p-6 outline-none">
                 {/* Header */}
-                <div className="flex items-center justify-between mb-6">
+                <DialogHeader className="flex flex-row items-center justify-between mb-6 space-y-0">
                     <div className="flex items-center gap-3">
                         <UserPlus className="h-6 w-6 text-[hsl(var(--primary))]" />
-                        <h2 className="text-lg font-bold">Add New Employee</h2>
+                        <DialogTitle className="text-lg font-bold">Add New Employee</DialogTitle>
                     </div>
                     <button onClick={handleClose} className="hover:opacity-70" type="button">
                         <X className="h-5 w-5" />
                     </button>
-                </div>
+                </DialogHeader>
 
                 {/* Form */}
                 <form onSubmit={handleSubmit} className="space-y-4">
@@ -237,21 +243,6 @@ export default function AddUserDialog({ isOpen, onClose, onSuccess }: AddUserDia
                         />
                     </div>
 
-                    {/* Department (Optional) */}
-                    <div>
-                        <label className="block text-sm font-medium mb-1.5">
-                            Department <span className="text-[hsl(var(--muted-foreground))]">(Optional)</span>
-                        </label>
-                        <input
-                            type="text"
-                            name="department"
-                            value={form.department}
-                            onChange={handleChange}
-                            placeholder="Engineering"
-                            className={inputClass}
-                        />
-                    </div>
-
                     {/* API Error */}
                     {apiError && (
                         <div className="flex items-start gap-2 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 rounded-xl p-3">
@@ -278,7 +269,7 @@ export default function AddUserDialog({ isOpen, onClose, onSuccess }: AddUserDia
                         </button>
                     </div>
                 </form>
-            </div>
-        </div>
+            </DialogContent>
+        </Dialog>
     );
 }

@@ -8,7 +8,6 @@ export const registerSchema = z.object({
     password: z.string().min(8, 'Password must be at least 8 characters'),
     role: z.nativeEnum(UserRole).optional(),
     phone: z.string().optional(),
-    department: z.string().optional(),
 });
 
 export const loginSchema = z.object({
@@ -24,8 +23,9 @@ export const createUserSchema = z.object({
     password: z.string().min(8, 'Password must be at least 8 characters'),
     role: z.nativeEnum(UserRole),
     phone: z.string().optional(),
-    department: z.string().optional(),
     isActive: z.boolean().optional().default(true),
+    targetBudget: z.number().optional().default(0),
+    targetSales: z.number().optional().default(0),
 });
 
 // Schema for updating user
@@ -36,8 +36,9 @@ export const updateUserSchema = z.object({
     password: z.string().min(8, 'Password must be at least 8 characters').optional(),
     role: z.nativeEnum(UserRole).optional(),
     phone: z.string().optional(),
-    department: z.string().optional(),
     isActive: z.boolean().optional(),
+    targetBudget: z.number().optional(),
+    targetSales: z.number().optional(),
 });
 
 export type RegisterInput = z.infer<typeof registerSchema>;

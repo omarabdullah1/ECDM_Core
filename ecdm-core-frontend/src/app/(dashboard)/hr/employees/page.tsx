@@ -2,12 +2,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '@/lib/axios';
 import Link from 'next/link';
-import { 
-    Users, Search, Eye, Shield, CheckCircle, XCircle, 
-    Phone, Mail, Building 
+import {
+    Users, Search, Eye, Shield, CheckCircle, XCircle,
+    Phone, Mail
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { DataTable } from '@/components/ui/DataTable';
+import { Pagination } from '@/components/shared/Pagination';
 
 // ─── Types ──────────────────────────────────────────────────────────────────────
 interface Employee {
@@ -19,7 +20,6 @@ interface Employee {
     role: string;
     isActive: boolean;
     phone?: string;
-    department?: string;
     employeeId?: string;
     avatarUrl?: string;
     createdAt: string;
@@ -35,6 +35,8 @@ const ROLES = [
     { value: 'MaintenanceEngineer', label: 'Maintenance Engineer' },
     { value: 'Technician', label: 'Technician' },
     { value: 'CustomerService', label: 'Customer Service' },
+    { value: 'Marketing', label: 'Marketing' },
+    { value: 'R&D', label: 'R&D' },
 ] as const;
 
 const ROLE_STYLES: Record<string, string> = {
@@ -43,6 +45,7 @@ const ROLE_STYLES: Record<string, string> = {
     Sales: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 border border-green-200 dark:border-green-800',
     Operations: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 border border-orange-200 dark:border-orange-800',
     HR: 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-400 border border-pink-200 dark:border-pink-800',
+    'R&D': 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800',
 };
 
 const RoleBadge = ({ role }: { role: string }) => {
@@ -56,11 +59,10 @@ const RoleBadge = ({ role }: { role: string }) => {
 };
 
 const StatusBadge = ({ isActive }: { isActive: boolean }) => (
-    <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${
-        isActive 
-            ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 border border-green-200 dark:border-green-800'
-            : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 border border-red-200 dark:border-red-800'
-    }`}>
+    <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${isActive
+        ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 border border-green-200 dark:border-green-800'
+        : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 border border-red-200 dark:border-red-800'
+        }`}>
         {isActive ? <CheckCircle className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
         {isActive ? 'Active' : 'Inactive'}
     </span>
@@ -70,38 +72,70 @@ const inputClass = 'w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl
 
 export default function EmployeesPage() {
     const [rows, setRows] = useState<Employee[]>([]);
-    const [total, setTotal] = useState(0);
-    const [page, setPage] = useState(1);
     const [loading, setLoading] = useState(true);
-    
+
     // Filters
     const [search, setSearch] = useState('');
     const [filterRole, setFilterRole] = useState('');
-    const [filterDepartment, setFilterDepartment] = useState('');
-    
-    const limit = 20;
-    const totalPages = Math.ceil(total / limit);
+    const [filterStatus, setFilterStatus] = useState('');
+
+    // Client-Side Pagination
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 10;
 
     const fetchEmployees = useCallback(async () => {
         setLoading(true);
         try {
-            const params: Record<string, string | number> = { page, limit };
-            if (search) params.search = search;
-            if (filterRole) params.role = filterRole;
-            if (filterDepartment) params.department = filterDepartment;
-            
-            const { data } = await api.get('/hr/employees', { params });
+            // Fetch all employees at once with high limit
+            const { data } = await api.get('/hr/employees', { params: { limit: 1000 } });
             setRows(data.data.data);
-            setTotal(data.data.pagination.total);
         } catch {
             toast.error('Failed to load employees');
         }
         setLoading(false);
-    }, [page, search, filterRole, filterDepartment]);
+    }, []);
 
     useEffect(() => {
         fetchEmployees();
     }, [fetchEmployees]);
+
+    // Apply client-side filtering
+    const filteredEmployees = rows.filter((emp) => {
+        // Search filter
+        if (search) {
+            const searchLower = search.toLowerCase();
+            const matchesSearch = 
+                emp.fullName?.toLowerCase().includes(searchLower) ||
+                emp.email?.toLowerCase().includes(searchLower) ||
+                emp.employeeId?.toLowerCase().includes(searchLower) ||
+                emp.firstName?.toLowerCase().includes(searchLower) ||
+                emp.lastName?.toLowerCase().includes(searchLower);
+            if (!matchesSearch) return false;
+        }
+
+        // Role filter
+        if (filterRole && emp.role !== filterRole) return false;
+
+        // Status filter
+        if (filterStatus !== '') {
+            const isActiveFilter = filterStatus === 'true';
+            if (emp.isActive !== isActiveFilter) return false;
+        }
+
+        return true;
+    });
+
+    // Calculate pagination
+    const totalPages = Math.ceil((filteredEmployees?.length || 0) / itemsPerPage) || 1;
+    const currentItems = filteredEmployees.slice(
+        (currentPage - 1) * itemsPerPage,
+        currentPage * itemsPerPage
+    );
+
+    // Reset to page 1 when filters change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [search, filterRole, filterStatus]);
 
     // Column definitions
     const columns = [
@@ -149,16 +183,6 @@ export default function EmployeesPage() {
             ),
         },
         {
-            key: 'department',
-            header: 'Department',
-            render: (row: Employee) => (
-                <span className="flex items-center gap-1">
-                    <Building className="h-4 w-4 text-[hsl(var(--muted-foreground))]" />
-                    {row.department || '—'}
-                </span>
-            ),
-        },
-        {
             key: 'role',
             header: 'Role',
             render: (row: Employee) => <RoleBadge role={row.role} />,
@@ -189,7 +213,8 @@ export default function EmployeesPage() {
                 <div>
                     <h1 className="text-2xl font-bold">Employees</h1>
                     <p className="text-sm text-[hsl(var(--muted-foreground))]">
-                        {total} employees found
+                        {filteredEmployees.length} employee{filteredEmployees.length !== 1 ? 's' : ''} found
+                        {(search || filterRole || filterStatus) && ` (filtered from ${rows.length} total)`}
                     </p>
                 </div>
             </div>
@@ -202,14 +227,14 @@ export default function EmployeesPage() {
                         type="text"
                         placeholder="Search by name, email, ID..."
                         value={search}
-                        onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                        onChange={(e) => setSearch(e.target.value)}
                         className={`${inputClass} pl-9`}
                     />
                 </div>
-                
+
                 <select
                     value={filterRole}
-                    onChange={(e) => { setFilterRole(e.target.value); setPage(1); }}
+                    onChange={(e) => setFilterRole(e.target.value)}
                     className={inputClass + ' w-auto min-w-[150px]'}
                 >
                     <option value="">All Roles</option>
@@ -217,22 +242,23 @@ export default function EmployeesPage() {
                         <option key={r.value} value={r.value}>{r.label}</option>
                     ))}
                 </select>
-                
-                <input
-                    type="text"
-                    placeholder="Department"
-                    value={filterDepartment}
-                    onChange={(e) => { setFilterDepartment(e.target.value); setPage(1); }}
+
+                <select
+                    value={filterStatus}
+                    onChange={(e) => setFilterStatus(e.target.value)}
                     className={inputClass + ' w-auto min-w-[150px]'}
-                />
-                
-                {(search || filterRole || filterDepartment) && (
+                >
+                    <option value="">All Statuses</option>
+                    <option value="true">Active</option>
+                    <option value="false">Inactive / Resigned</option>
+                </select>
+
+                {(search || filterRole || filterStatus) && (
                     <button
                         onClick={() => {
                             setSearch('');
                             setFilterRole('');
-                            setFilterDepartment('');
-                            setPage(1);
+                            setFilterStatus('');
                         }}
                         className="text-sm text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] underline"
                     >
@@ -243,15 +269,27 @@ export default function EmployeesPage() {
 
             {/* Data Table */}
             <DataTable
-                data={rows}
+                data={currentItems}
                 columns={columns}
                 loading={loading}
                 emptyMessage="No employees found."
-                page={page}
-                totalPages={totalPages}
-                onPageChange={setPage}
                 renderActions={renderActions}
                 selectionDisabled
+                defaultVisibility={{
+                    address: false,
+                    nationalId: false,
+                    hireDate: false,
+                    emergencyContact: false,
+                    notes: false,
+                }}
+            />
+
+            {/* --- DYNAMIC TABLE FOOTER & PAGINATION --- */}
+            <Pagination
+              currentPage={currentPage}
+              totalItems={filteredEmployees?.length || 0}
+              itemsPerPage={itemsPerPage}
+              onPageChange={setCurrentPage}
             />
         </div>
     );

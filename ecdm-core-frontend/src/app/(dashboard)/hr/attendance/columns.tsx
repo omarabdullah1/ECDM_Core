@@ -122,9 +122,9 @@ export const columns = [
         key: 'notes',
         header: 'Notes',
         render: (row: AttendanceRecord) => (
-            <span className="max-w-[200px] truncate block" title={row.notes}>
+            <div className="max-w-[120px] truncate text-gray-500" title={row.notes}>
                 {row.notes || '—'}
-            </span>
+            </div>
         ),
     },
 ];

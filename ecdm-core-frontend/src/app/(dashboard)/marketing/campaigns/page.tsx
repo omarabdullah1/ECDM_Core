@@ -1,8 +1,10 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useForm } from 'react-hook-form';
 import api from '@/lib/axios';
-import { TrendingUp, Plus, X, Upload } from 'lucide-react';
+import { TrendingUp, Plus, X, Upload, RefreshCw, Sheet, Database, Save, Loader2, Check } from 'lucide-react';
 import { DataTable } from '@/components/ui/DataTable';
+import { Pagination } from '@/components/shared/Pagination';
 import { getColumns, type Campaign } from './columns';
 import toast from 'react-hot-toast';
 
@@ -12,6 +14,20 @@ const NEXT_STEPS = ['Analyse', 'Pause', 'Stop', 'Continue', ''];
 const iCls = 'w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-4 py-3 text-sm placeholder:text-[hsl(var(--muted-foreground))] focus:border-[hsl(var(--primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/20 transition-all';
 const labelCls = 'text-xs font-semibold text-[hsl(var(--muted-foreground))] uppercase tracking-wide mb-1.5 block';
 
+interface SheetSyncForm {
+    spreadsheetId: string;
+    sheetRange: string;
+    serviceAccountJson: string;
+}
+
+interface SavedConnection {
+    _id: string;
+    connectionName: string;
+    spreadsheetId: string;
+    sheetRange: string;
+    lastUsedAt?: string;
+}
+
 export default function CampaignResultsPage() {
     const [rows, setRows] = useState<Campaign[]>([]);
     const [total, setTotal] = useState(0);
@@ -19,17 +35,58 @@ export default function CampaignResultsPage() {
     const [showModal, setShowModal] = useState(false);
     const [editing, setEditing] = useState<Campaign | null>(null);
     const [delId, setDelId] = useState<string | null>(null);
-    
+
+    const [fStatus, setFStatus] = useState('');
+
+    // Pagination state
+    const [currentPage, setCurrentPage] = useState(1);
+    const rowsPerPage = 10; // Set limit per page
+
+    // Google Sheets Sync Dialog state
+    const [syncModal, setSyncModal] = useState(false);
+    const [syncing, setSyncing] = useState(false);
+    const [syncStep, setSyncStep] = useState<'config' | 'done'>('config');
+    const [syncResult, setSyncResult] = useState<{ synced: number; created: number; updated: number; errors: string[] } | null>(null);
+    const { register: regSync, handleSubmit: handleSync, formState: { errors: syncErrors }, reset: resetSync, setValue: setSyncValue, getValues: getSyncValues } = useForm<SheetSyncForm>();
+
+    // Saved Connections state
+    const [savedConnections, setSavedConnections] = useState<SavedConnection[]>([]);
+    const [selectedConnectionId, setSelectedConnectionId] = useState<string>('new');
+    const [saveNewConnection, setSaveNewConnection] = useState(false);
+    const [newConnectionName, setNewConnectionName] = useState('');
+
+    const filteredRows = useMemo(() => {
+        return rows.filter(r => {
+            if (fStatus && r.status !== fStatus) return false;
+            return true;
+        });
+    }, [rows, fStatus]);
+
+    // Reset to page 1 when filter changes
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [fStatus]);
+
+    // Calculate pagination
+    const totalPages = Math.ceil(filteredRows.length / rowsPerPage);
+    const indexOfLastRow = currentPage * rowsPerPage;
+    const indexOfFirstRow = indexOfLastRow - rowsPerPage;
+    const currentRows = filteredRows.slice(indexOfFirstRow, indexOfLastRow);
+
     // Form state
     const [formData, setFormData] = useState({
         campaignName: '',
         status: '',
         impressions: '0',
         conversions: '0',
+        salesRevenue: '0',
         salesRevenuePercent: '0',
         region1: '',
         region2: '',
         region3: '',
+        adSpend: '0',
+        cpa: '0',
+        roas: '0',
         nextSteps: '',
         notes: '',
     });
@@ -51,7 +108,35 @@ export default function CampaignResultsPage() {
 
     useEffect(() => {
         fetchData();
+        fetchSavedConnections();
     }, [fetchData]);
+
+    const fetchSavedConnections = async () => {
+        try {
+            const { data } = await api.get('/marketing/saved-sheets');
+            setSavedConnections(data.data || []);
+        } catch (e) {
+            console.error('Failed to load saved connections:', e);
+        }
+    };
+
+    const handleConnectionSelect = async (connectionId: string) => {
+        setSelectedConnectionId(connectionId);
+        if (connectionId === 'new') {
+            resetSync();
+            return;
+        }
+
+        try {
+            const { data } = await api.get(`/marketing/saved-sheets/${connectionId}`);
+            const conn = data.data;
+            setSyncValue('spreadsheetId', conn.spreadsheetId);
+            setSyncValue('sheetRange', conn.sheetRange);
+            setSyncValue('serviceAccountJson', conn.serviceAccountJson);
+        } catch (e) {
+            console.error('Failed to load connection:', e);
+        }
+    };
 
     const openAdd = () => {
         setFormData({
@@ -59,10 +144,14 @@ export default function CampaignResultsPage() {
             status: '',
             impressions: '0',
             conversions: '0',
+            salesRevenue: '0',
             salesRevenuePercent: '0',
             region1: '',
             region2: '',
             region3: '',
+            adSpend: '0',
+            cpa: '0',
+            roas: '0',
             nextSteps: '',
             notes: '',
         });
@@ -77,10 +166,14 @@ export default function CampaignResultsPage() {
             status: campaign.status || '',
             impressions: String(campaign.impressions || 0),
             conversions: String(campaign.conversions || 0),
+            salesRevenue: String(campaign.salesRevenue || 0),
             salesRevenuePercent: String(campaign.salesRevenuePercent || 0),
             region1: campaign.region1 || '',
             region2: campaign.region2 || '',
             region3: campaign.region3 || '',
+            adSpend: String(campaign.adSpend || 0),
+            cpa: String(campaign.cpa || 0),
+            roas: String(campaign.roas || 0),
             nextSteps: campaign.nextSteps || '',
             notes: campaign.notes || '',
         });
@@ -102,6 +195,62 @@ export default function CampaignResultsPage() {
         setDelId(null);
     };
 
+    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const content = event.target?.result as string;
+            setSyncValue('serviceAccountJson', content);
+        };
+        reader.readAsText(file);
+    };
+
+    const onSyncSubmit = async (data: SheetSyncForm) => {
+        setSyncing(true);
+        try {
+            // Optionally save the new connection
+            if (selectedConnectionId === 'new' && saveNewConnection && newConnectionName) {
+                await api.post('/marketing/saved-sheets', {
+                    connectionName: newConnectionName,
+                    spreadsheetId: data.spreadsheetId,
+                    sheetRange: data.sheetRange,
+                    serviceAccountJson: data.serviceAccountJson,
+                });
+                fetchSavedConnections();
+            }
+
+            const response = await api.post('/marketing/campaigns/sync', data);
+            const result = response.data.data;
+            
+            setSyncResult(result);
+            setSyncStep('done');
+            fetchData(); // Refresh table
+            
+            toast.success(`Successfully synced ${result.synced} campaigns`);
+        } catch (e: unknown) {
+            const err = e as { response?: { data?: { message?: string } } };
+            toast.error(err.response?.data?.message || 'Sync failed');
+        }
+        setSyncing(false);
+    };
+
+    const openSyncModal = () => {
+        resetSync();
+        setSyncResult(null);
+        setSyncStep('config');
+        setSelectedConnectionId('new');
+        setSaveNewConnection(false);
+        setNewConnectionName('');
+        setSyncModal(true);
+    };
+
+    const closeSyncModal = () => {
+        setSyncModal(false);
+        setSyncStep('config');
+    };
+
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const selectedFile = e.target.files?.[0] || null;
         setFile(selectedFile);
@@ -109,7 +258,7 @@ export default function CampaignResultsPage() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        
+
         if (!formData.campaignName.trim()) {
             toast.error('Campaign name is required');
             return;
@@ -118,7 +267,7 @@ export default function CampaignResultsPage() {
         setSaving(true);
         try {
             const submitData = new FormData();
-            
+
             // Append all form fields
             Object.keys(formData).forEach(key => {
                 const value = formData[key as keyof typeof formData];
@@ -126,7 +275,7 @@ export default function CampaignResultsPage() {
                     submitData.append(key, value);
                 }
             });
-            
+
             // Append file if selected
             if (file) {
                 submitData.append('file', file);
@@ -139,7 +288,7 @@ export default function CampaignResultsPage() {
                 await api.post('/marketing/campaigns', submitData);
                 toast.success('Campaign created successfully!');
             }
-            
+
             setShowModal(false);
             fetchData();
         } catch (err: any) {
@@ -164,24 +313,55 @@ export default function CampaignResultsPage() {
                     <TrendingUp className="h-7 w-7 text-[hsl(var(--primary))]" />
                     <h1 className="text-2xl font-bold">Campaign Results</h1>
                 </div>
-                <button
-                    onClick={openAdd}
-                    className="flex items-center gap-2 rounded-xl bg-[hsl(var(--primary))] px-4 py-2 text-sm font-semibold text-[hsl(var(--primary-foreground))] hover:opacity-90 transition-opacity"
-                >
-                    <Plus className="h-4 w-4" />
-                    Add Campaign
-                </button>
+                <div className="flex items-center gap-2">
+                    <button
+                        type="button"
+                        onClick={openSyncModal}
+                        className="flex items-center gap-2 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-4 py-2 text-sm font-medium hover:bg-[hsl(var(--muted))] transition-colors"
+                    >
+                        <Sheet className="h-4 w-4 text-green-600" />
+                        Sync Sheet
+                    </button>
+                    <button
+                        type="button"
+                        onClick={openAdd}
+                        className="flex items-center gap-2 rounded-xl bg-[hsl(var(--primary))] px-4 py-2 text-sm font-semibold text-[hsl(var(--primary-foreground))] hover:opacity-90 transition-opacity"
+                    >
+                        <Plus className="h-4 w-4" />
+                        Add Campaign
+                    </button>
+                </div>
+            </div>
+
+            <div className="flex gap-3 flex-wrap items-center">
+                <select value={fStatus} onChange={e => setFStatus(e.target.value)} className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2 text-sm">
+                    <option value="">All Statuses</option>
+                    {CAMPAIGN_STATUSES.filter(s => s !== '').map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
             </div>
 
             {/* Data Table */}
-            <div className="overflow-x-auto rounded-xl border border-[hsl(var(--border))]">
+            <div className="overflow-x-auto">
                 <DataTable
-                    data={rows}
+                    data={currentRows}
                     columns={columns}
                     loading={loading}
                     emptyMessage="No campaigns found."
+                    defaultVisibility={{
+                        notes: false,
+                    }}
                 />
             </div>
+
+            {/* Custom Pagination Controls */}
+            {!loading && filteredRows.length > 0 && (
+                <Pagination
+                    currentPage={currentPage}
+                    totalItems={filteredRows.length}
+                    itemsPerPage={rowsPerPage}
+                    onPageChange={setCurrentPage}
+                />
+            )}
 
             {/* Add/Edit Dialog */}
             {showModal && (
@@ -200,7 +380,7 @@ export default function CampaignResultsPage() {
                                 <input
                                     type="text"
                                     value={formData.campaignName}
-                                    onChange={(e) => setFormData({...formData, campaignName: e.target.value})}
+                                    onChange={(e) => setFormData({ ...formData, campaignName: e.target.value })}
                                     className={iCls}
                                     placeholder="e.g., Google, Facebook, Instagram, LinkedIn"
                                     required
@@ -212,7 +392,7 @@ export default function CampaignResultsPage() {
                                     <label className={labelCls}>Status</label>
                                     <select
                                         value={formData.status}
-                                        onChange={(e) => setFormData({...formData, status: e.target.value})}
+                                        onChange={(e) => setFormData({ ...formData, status: e.target.value })}
                                         className={iCls}
                                     >
                                         {CAMPAIGN_STATUSES.map(status => (
@@ -225,7 +405,7 @@ export default function CampaignResultsPage() {
                                     <label className={labelCls}>Next Steps</label>
                                     <select
                                         value={formData.nextSteps}
-                                        onChange={(e) => setFormData({...formData, nextSteps: e.target.value})}
+                                        onChange={(e) => setFormData({ ...formData, nextSteps: e.target.value })}
                                         className={iCls}
                                     >
                                         {NEXT_STEPS.map(step => (
@@ -241,7 +421,7 @@ export default function CampaignResultsPage() {
                                     <input
                                         type="number"
                                         value={formData.impressions}
-                                        onChange={(e) => setFormData({...formData, impressions: e.target.value})}
+                                        onChange={(e) => setFormData({ ...formData, impressions: e.target.value })}
                                         className={iCls}
                                         min="0"
                                     />
@@ -252,18 +432,56 @@ export default function CampaignResultsPage() {
                                     <input
                                         type="number"
                                         value={formData.conversions}
-                                        onChange={(e) => setFormData({...formData, conversions: e.target.value})}
+                                        onChange={(e) => setFormData({ ...formData, conversions: e.target.value })}
                                         className={iCls}
                                         min="0"
                                     />
                                 </div>
 
                                 <div>
-                                    <label className={labelCls}>% Sales Revenue</label>
+                                    <label className={labelCls}>Sales Revenue (EGP)</label>
                                     <input
                                         type="number"
-                                        value={formData.salesRevenuePercent}
-                                        onChange={(e) => setFormData({...formData, salesRevenuePercent: e.target.value})}
+                                        value={formData.salesRevenue}
+                                        onChange={(e) => setFormData({ ...formData, salesRevenue: e.target.value })}
+                                        className={iCls}
+                                        min="0"
+                                        step="0.01"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-3 gap-4">
+                                <div>
+                                    <label className={labelCls}>Ad Spend (EGP)</label>
+                                    <input
+                                        type="number"
+                                        value={formData.adSpend}
+                                        onChange={(e) => setFormData({ ...formData, adSpend: e.target.value })}
+                                        className={iCls}
+                                        min="0"
+                                        step="0.01"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className={labelCls}>CPA (Cost Per Acquisition)</label>
+                                    <input
+                                        type="number"
+                                        value={formData.cpa}
+                                        onChange={(e) => setFormData({ ...formData, cpa: e.target.value })}
+                                        className={iCls}
+                                        min="0"
+                                        step="0.01"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className={labelCls}>ROAS (Return on Ad Spend)</label>
+                                    <input
+                                        type="number"
+                                        value={formData.roas}
+                                        onChange={(e) => setFormData({ ...formData, roas: e.target.value })}
                                         className={iCls}
                                         min="0"
                                         step="0.01"
@@ -277,7 +495,7 @@ export default function CampaignResultsPage() {
                                     <input
                                         type="text"
                                         value={formData.region1}
-                                        onChange={(e) => setFormData({...formData, region1: e.target.value})}
+                                        onChange={(e) => setFormData({ ...formData, region1: e.target.value })}
                                         className={iCls}
                                         placeholder="Primary region"
                                     />
@@ -288,7 +506,7 @@ export default function CampaignResultsPage() {
                                     <input
                                         type="text"
                                         value={formData.region2}
-                                        onChange={(e) => setFormData({...formData, region2: e.target.value})}
+                                        onChange={(e) => setFormData({ ...formData, region2: e.target.value })}
                                         className={iCls}
                                         placeholder="Secondary region"
                                     />
@@ -299,7 +517,7 @@ export default function CampaignResultsPage() {
                                     <input
                                         type="text"
                                         value={formData.region3}
-                                        onChange={(e) => setFormData({...formData, region3: e.target.value})}
+                                        onChange={(e) => setFormData({ ...formData, region3: e.target.value })}
                                         className={iCls}
                                         placeholder="Tertiary region"
                                     />
@@ -335,7 +553,7 @@ export default function CampaignResultsPage() {
                                 <label className={labelCls}>Notes</label>
                                 <textarea
                                     value={formData.notes}
-                                    onChange={(e) => setFormData({...formData, notes: e.target.value})}
+                                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                                     className={iCls}
                                     placeholder="Additional notes"
                                     rows={3}
@@ -360,6 +578,187 @@ export default function CampaignResultsPage() {
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Google Sheets Sync Modal */}
+            {syncModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+                    <div className="w-full max-w-2xl max-h-[85vh] overflow-y-auto rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6 shadow-2xl">
+                        <div className="flex items-center justify-between mb-6">
+                            <div className="flex items-center gap-3">
+                                <Sheet className="h-6 w-6 text-green-600" />
+                                <h2 className="text-lg font-bold">
+                                    {syncStep === 'config' && 'Connect Google Sheet'}
+                                    {syncStep === 'done' && 'Sync Complete'}
+                                </h2>
+                            </div>
+                            <button onClick={closeSyncModal}><X className="h-5 w-5" /></button>
+                        </div>
+
+                        {/* Step 1: Configuration */}
+                        {syncStep === 'config' && (
+                            <form onSubmit={handleSync(onSyncSubmit)} className="space-y-4">
+                                {/* Saved Connections Dropdown */}
+                                <div>
+                                    <label className="block text-sm font-medium mb-1.5 flex items-center gap-2">
+                                        <Database className="h-4 w-4" />
+                                        Select Connection
+                                    </label>
+                                    <select
+                                        value={selectedConnectionId}
+                                        onChange={e => handleConnectionSelect(e.target.value)}
+                                        className={iCls}
+                                    >
+                                        <option value="new">+ Connect New Sheet</option>
+                                        {savedConnections.map(conn => (
+                                            <option key={conn._id} value={conn._id}>
+                                                {conn.connectionName} ({conn.sheetRange})
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                {/* Show details if saved connection selected */}
+                                {selectedConnectionId !== 'new' && (
+                                    <div className="rounded-xl bg-green-500/10 border border-green-500/20 p-4">
+                                        <p className="text-sm text-green-600 font-medium flex items-center gap-2">
+                                            <Check className="h-4 w-4" />
+                                            Connection loaded - Ready to sync
+                                        </p>
+                                    </div>
+                                )}
+
+                                {/* Show form fields only for new connections */}
+                                {selectedConnectionId === 'new' && (
+                                    <>
+                                        <div>
+                                            <label className="block text-sm font-medium mb-1.5">Spreadsheet ID</label>
+                                            <input
+                                                {...regSync('spreadsheetId', { required: selectedConnectionId === 'new' ? 'Spreadsheet ID is required' : false })}
+                                                placeholder="e.g., 1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms"
+                                                className={iCls}
+                                            />
+                                            {syncErrors.spreadsheetId && <p className="text-sm text-destructive mt-1">{syncErrors.spreadsheetId.message}</p>}
+                                            <p className="text-xs text-[hsl(var(--muted-foreground))] mt-1">Found in the Google Sheet URL after /d/</p>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-medium mb-1.5">Sheet Name / Range</label>
+                                            <input
+                                                {...regSync('sheetRange', { required: selectedConnectionId === 'new' ? 'Sheet range is required' : false })}
+                                                placeholder="e.g., Campaign Results!A:J"
+                                                defaultValue="Campaign Results!A:J"
+                                                className={iCls}
+                                            />
+                                            {syncErrors.sheetRange && <p className="text-sm text-destructive mt-1">{syncErrors.sheetRange.message}</p>}
+                                            <p className="text-xs text-[hsl(var(--muted-foreground))] mt-1">Expected columns: Campaign, Status, Impressions, Conversions, Sales Revenue, Region 1, Region 2, Region 3, Next steps, Notes</p>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-medium mb-1.5">Service Account JSON Key</label>
+                                            <div className="flex gap-2 mb-2">
+                                                <label className="flex items-center gap-2 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--muted))]/30 px-4 py-2 text-sm cursor-pointer hover:bg-[hsl(var(--muted))] transition-colors">
+                                                    <Upload className="h-4 w-4" />
+                                                    Upload JSON
+                                                    <input type="file" accept=".json" onChange={handleFileUpload} className="hidden" />
+                                                </label>
+                                            </div>
+                                            <textarea
+                                                {...regSync('serviceAccountJson', { required: selectedConnectionId === 'new' ? 'Service account JSON is required' : false })}
+                                                placeholder='Paste your service account JSON here or upload the file above...'
+                                                rows={6}
+                                                className={`${iCls} font-mono text-xs`}
+                                            />
+                                            {syncErrors.serviceAccountJson && <p className="text-sm text-destructive mt-1">{syncErrors.serviceAccountJson.message}</p>}
+                                        </div>
+
+                                        {/* Save connection option */}
+                                        <div className="flex items-center gap-3 p-3 rounded-xl bg-[hsl(var(--muted))]/30 border border-[hsl(var(--border))]">
+                                            <input
+                                                type="checkbox"
+                                                id="saveConnection"
+                                                checked={saveNewConnection}
+                                                onChange={e => setSaveNewConnection(e.target.checked)}
+                                                className="h-4 w-4 rounded cursor-pointer"
+                                            />
+                                            <label htmlFor="saveConnection" className="text-sm cursor-pointer flex items-center gap-2">
+                                                <Save className="h-4 w-4" />
+                                                Save this connection for future use
+                                            </label>
+                                        </div>
+
+                                        {saveNewConnection && (
+                                            <div>
+                                                <label className="block text-sm font-medium mb-1.5">Connection Name</label>
+                                                <input
+                                                    value={newConnectionName}
+                                                    onChange={e => setNewConnectionName(e.target.value)}
+                                                    placeholder="e.g., Q1 Campaigns 2026"
+                                                    className={iCls}
+                                                    required={saveNewConnection}
+                                                />
+                                            </div>
+                                        )}
+                                    </>
+                                )}
+
+                                <div className="flex gap-3 pt-2">
+                                    <button type="submit" disabled={syncing} className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-green-600 py-2.5 text-sm font-semibold text-white disabled:opacity-60 hover:bg-green-700 transition-colors">
+                                        {syncing ? (
+                                            <><Loader2 className="h-4 w-4 animate-spin" />Syncing…</>
+                                        ) : (
+                                            <><Sheet className="h-4 w-4" />Sync Sheet</>
+                                        )}
+                                    </button>
+                                    <button type="button" onClick={closeSyncModal} className="flex-1 rounded-xl border border-[hsl(var(--border))] py-2.5 text-sm">Cancel</button>
+                                </div>
+                            </form>
+                        )}
+
+                        {/* Step 2: Done */}
+                        {syncStep === 'done' && syncResult && (
+                            <div className="space-y-4">
+                                <div className={`rounded-xl p-6 text-center ${syncResult.errors.length > 0 ? 'bg-amber-500/10' : 'bg-green-500/10'}`}>
+                                    <Check className={`h-12 w-12 mx-auto mb-3 ${syncResult.errors.length > 0 ? 'text-amber-600' : 'text-green-600'}`} />
+                                    <p className="text-lg font-bold mb-4">Sync Completed</p>
+                                    <div className="grid grid-cols-3 gap-3 max-w-md mx-auto">
+                                        <div>
+                                            <p className="text-2xl font-bold text-green-600">{syncResult.created}</p>
+                                            <p className="text-xs text-[hsl(var(--muted-foreground))]">Created</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-2xl font-bold text-blue-600">{syncResult.updated}</p>
+                                            <p className="text-xs text-[hsl(var(--muted-foreground))]">Updated</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-2xl font-bold text-[hsl(var(--muted-foreground))]">{syncResult.synced}</p>
+                                            <p className="text-xs text-[hsl(var(--muted-foreground))]">Total</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {syncResult.errors.length > 0 && (
+                                    <div className="rounded-xl bg-red-500/10 border border-red-500/20 p-4">
+                                        <p className="text-sm font-medium text-red-600 mb-2">Errors ({syncResult.errors.length})</p>
+                                        <div className="space-y-1">
+                                            {syncResult.errors.map((error, i) => (
+                                                <p key={i} className="text-xs text-red-600">{error}</p>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                <button
+                                    type="button"
+                                    onClick={closeSyncModal}
+                                    className="w-full rounded-xl bg-[hsl(var(--primary))] py-2.5 text-sm font-semibold text-[hsl(var(--primary-foreground))] hover:opacity-90 transition-opacity"
+                                >
+                                    Close
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
             )}

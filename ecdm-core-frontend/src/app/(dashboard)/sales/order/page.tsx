@@ -6,10 +6,12 @@ import { DataTable } from '@/components/ui/DataTable';
 import { createSalesOrderColumns, createActionsRenderer, type SalesOrder } from './columns';
 import EditSalesOrderDialog from './EditSalesOrderDialog';
 import AddQuotationDialog from './AddQuotationDialog';
+import { SalesPerformanceWidget } from '@/components/sales/SalesPerformanceWidget';
 
 const iCls = 'w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-4 py-3 text-sm placeholder:text-[hsl(var(--muted-foreground))] focus:border-[hsl(var(--primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/20 transition-all';
 const Q_STATUSES = ['Draft', 'Sent', 'Approved', 'Rejected', 'Revised'];
 const F_STATUSES = ['Pending', 'Won', 'Lost', 'Cancelled'];
+const TYPE_OF_ORDER = ['Maintenance', 'General supplies', 'Supply and installation'];
 const blank = { salesLead: '', quotationStatus: 'Draft', finalStatus: '', totalAmount: '', notes: '' };
 
 export default function SalesOrderPage() {
@@ -17,6 +19,8 @@ export default function SalesOrderPage() {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [fStatus, setFStatus] = useState('');
+  const [fFinalStatus, setFFinalStatus] = useState('');
+  const [fTypeOfOrder, setFTypeOfOrder] = useState('');
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(false);
   const [editing, setEditing] = useState<SalesOrder | null>(null);
@@ -30,21 +34,23 @@ export default function SalesOrderPage() {
   const fetch_ = useCallback(async () => {
     setLoading(true);
     try {
-      const p: Record<string, string | number> = { page, limit: lim };
+      const p: Record<string, string | number> = { page, limit: lim, excludeNotPotential: 'true' };
       if (fStatus) p.quotationStatus = fStatus;
+      if (fFinalStatus) p.finalStatus = fFinalStatus;
+      if (fTypeOfOrder) p.typeOfOrder = fTypeOfOrder;
       const { data } = await api.get('/sales/orders', { params: p });
       setRows(data.data.data); setTotal(data.data.pagination.total);
     } catch { }
     setLoading(false);
-  }, [page, fStatus]);
+  }, [page, fStatus, fFinalStatus, fTypeOfOrder]);
   useEffect(() => { fetch_(); }, [fetch_]);
 
   const openC = () => { setEditing(null); setForm(blank); setError(''); setModal(true); };
-  const openE = (r: SalesOrder) => { 
+  const openE = (r: SalesOrder) => {
     // For edit, we now use the dedicated EditSalesOrderDialog
-    setEditing(r); 
+    setEditing(r);
   };
-  
+
   const save = async (ev: React.FormEvent) => {
     ev.preventDefault(); setSaving(true); setError('');
     const pl: Record<string, unknown> = {};
@@ -78,15 +84,26 @@ export default function SalesOrderPage() {
         <button onClick={openC} className="flex items-center gap-2 rounded-xl bg-[hsl(var(--primary))] px-4 py-2 text-sm font-semibold text-[hsl(var(--primary-foreground))] hover:opacity-90 transition-opacity"><Plus className="h-4 w-4" />Add</button>
       </div>
 
-      <div className="flex gap-3 flex-wrap">
+      {/* Sales Performance Widget */}
+      <SalesPerformanceWidget />
+
+      <div className="flex gap-3 flex-wrap items-center">
         <select value={fStatus} onChange={e => { setFStatus(e.target.value); setPage(1); }} className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2 text-sm">
-          <option value="">All Statuses</option>
+          <option value="">All Quotation Statuses</option>
           {Q_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+        </select>
+        <select value={fFinalStatus} onChange={e => { setFFinalStatus(e.target.value); setPage(1); }} className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2 text-sm">
+          <option value="">All Final Statuses</option>
+          {F_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+        </select>
+        <select value={fTypeOfOrder} onChange={e => { setFTypeOfOrder(e.target.value); setPage(1); }} className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2 text-sm">
+          <option value="">All Order Types</option>
+          {TYPE_OF_ORDER.map(s => <option key={s} value={s}>{s}</option>)}
         </select>
       </div>
 
       {/* DataTable with Horizontal Scrolling (23 Columns) & RBAC-Protected Bulk Delete */}
-      <div className="overflow-x-auto rounded-xl border border-[hsl(var(--border))]">
+      <div className="overflow-x-auto">
         <DataTable
           data={rows}
           columns={columns}
@@ -94,10 +111,35 @@ export default function SalesOrderPage() {
           emptyMessage="No orders found."
           page={page}
           totalPages={tp}
+          totalItems={total}
+          itemsPerPage={lim}
           onPageChange={setPage}
           bulkDeleteEndpoint="/sales/orders/bulk-delete"
           onBulkDeleteSuccess={fetch_}
           renderActions={renderActions}
+          defaultVisibility={{
+            "customer.address": false,
+            "customer.sector": false,
+            initialIssue: false,
+            orderIssue: false,
+            createdAt: false,
+            salesPlatform: false,
+            siteInspectionDate: false,
+            isTechnicalInspectionRequired: false,
+            // ✅ CRITICAL FIX: Make quotation columns VISIBLE by default so users can see uploaded files
+            quotationFileUrl: true,  // Shows uploaded quotation files
+            quotationActions: true,  // Shows dynamic quotation PDF builder
+            followUpFirst: false,
+            quotationStatusFirstFollowUp: false,
+            reasonOfQuotation: false,
+            followUpSecond: false,
+            statusSecondFollowUp: false,
+            followUpThird: false,
+            finalStatusThirdFollowUp: false,
+            salesPersonId: false,
+            notes: false,
+            finalStatus: false,
+          }}
         />
       </div>
 

@@ -18,7 +18,6 @@ const contentTrackerSchema = new Schema<IContentTrackerDocument>(
     { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } },
 );
 
-contentTrackerSchema.index({ contentId: 1 });
 contentTrackerSchema.index({ type: 1 });
 contentTrackerSchema.index({ status: 1 });
 contentTrackerSchema.index({ postDate: 1 });

@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -7,6 +7,7 @@ import { X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '@/lib/axios';
 import { CustomerOrder } from './columns';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 /**
  * Edit Customer Order Dialog - Operational Fields Only
@@ -120,6 +121,8 @@ const formatDateDisplay = (isoDate: string | null | undefined): string => {
 
 export default function EditCustomerOrderDialog({ order, onClose, onSuccess }: EditCustomerOrderDialogProps) {
   const [saving, setSaving] = useState(false);
+  const [engineers, setEngineers] = useState<any[]>([]);
+  const [loadingEngineers, setLoadingEngineers] = useState(false);
 
   // Initialize react-hook-form with Zod validation
   const form = useForm<FormSchema>({
@@ -136,6 +139,32 @@ export default function EditCustomerOrderDialog({ order, onClose, onSuccess }: E
       notes: order.notes || '',
     },
   });
+
+  // ─── Fetch Engineers ────────────────────────────────────────────────────────
+  useEffect(() => {
+    const fetchEngineers = async () => {
+      setLoadingEngineers(true);
+      try {
+        const { data } = await api.get('/hr/employees', {
+          params: { limit: 1000, isActive: true }
+        });
+        // Filter for engineers (MaintenanceEngineer role or department contains 'Engineering')
+        const engineerList = data.data.data.filter((employee: any) => 
+          employee.role === 'MaintenanceEngineer' || 
+          employee.role === 'Technician' ||
+          employee.department?.toLowerCase().includes('engineer')
+        );
+        setEngineers(engineerList);
+      } catch (error) {
+        console.error('Failed to fetch engineers:', error);
+        toast.error('Failed to load engineers');
+      } finally {
+        setLoadingEngineers(false);
+      }
+    };
+
+    fetchEngineers();
+  }, []);
 
   // ─── Error Handler (Catches Validation Errors) ─────────────────────────────
   const onError = (errors: any) => {
@@ -224,26 +253,27 @@ export default function EditCustomerOrderDialog({ order, onClose, onSuccess }: E
   const issue = order.issue || '-';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 overflow-y-auto">
-      <div className="w-full max-w-4xl rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] shadow-2xl my-8">
+    <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto overflow-x-hidden p-6 outline-none">
         {/* ─── Header ─────────────────────────────────────────────────── */}
-        <div className="flex items-center justify-between border-b border-[hsl(var(--border))] px-6 py-4 sticky top-0 bg-[hsl(var(--card))] z-10 rounded-t-2xl">
+        <DialogHeader className="flex flex-row items-center justify-between border-b border-[hsl(var(--border))] pb-4 mb-4 space-y-0">
           <div>
-            <h2 className="text-xl font-bold">Edit Customer Order</h2>
+            <DialogTitle className="text-xl font-bold">Edit Customer Order</DialogTitle>
             <p className="text-xs text-[hsl(var(--muted-foreground))] mt-0.5">
               Order ID: {order._id}
             </p>
           </div>
           <button
+            type="button"
             onClick={onClose}
             className="p-2 hover:bg-[hsl(var(--muted))] rounded-lg transition-colors"
           >
             <X className="h-5 w-5" />
           </button>
-        </div>
+        </DialogHeader>
 
         <form onSubmit={form.handleSubmit(onSubmit, onError)}>
-          <div className="px-6 py-6 space-y-8 max-h-[calc(100vh-200px)] overflow-y-auto">
+          <div className="space-y-8">
             {/* ═══════════════════════════════════════════════════════════════
                 SECTION A: Context (READ-ONLY)
             ═══════════════════════════════════════════════════════════════ */}
@@ -293,12 +323,18 @@ export default function EditCustomerOrderDialog({ order, onClose, onSuccess }: E
                 {/* Engineer Name */}
                 <div>
                   <label className={labelCls}>Engineer Name</label>
-                  <input
-                    type="text"
-                    placeholder="Enter engineer name..."
-                    {...form.register('engineerName')}
+                  <select 
+                    {...form.register('engineerName')} 
                     className={iCls}
-                  />
+                    disabled={loadingEngineers}
+                  >
+                    <option value="">{loadingEngineers ? 'Loading engineers...' : 'Select an Engineer...'}</option>
+                    {engineers.map((engineer) => (
+                      <option key={engineer._id} value={`${engineer.firstName} ${engineer.lastName}`}>
+                        {engineer.firstName} {engineer.lastName} {engineer.department ? `(${engineer.department})` : ''}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 {/* Actual Visit Date */}
@@ -410,7 +446,7 @@ export default function EditCustomerOrderDialog({ order, onClose, onSuccess }: E
           </div>
 
           {/* ─── Footer Actions ─────────────────────────────────────────────── */}
-          <div className="flex gap-3 px-6 py-4 border-t border-[hsl(var(--border))] bg-[hsl(var(--muted))]/10 rounded-b-2xl sticky bottom-0">
+          <div className="flex gap-3 pt-4 border-t border-[hsl(var(--border))] mt-6">
             <button
               type="button"
               onClick={onClose}
@@ -427,7 +463,7 @@ export default function EditCustomerOrderDialog({ order, onClose, onSuccess }: E
             </button>
           </div>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

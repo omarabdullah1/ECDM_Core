@@ -48,7 +48,6 @@ marketingLeadSchema.index({ status:     1 });
 marketingLeadSchema.index({ source:     1 });
 marketingLeadSchema.index({ assignedTo: 1 });
 marketingLeadSchema.index({ campaign:   1 });
-marketingLeadSchema.index({ customerId: 1 });
 
 const MarketingLead: Model<IMarketingLeadDocument> =
     mongoose.model<IMarketingLeadDocument>('MarketingLead', marketingLeadSchema);

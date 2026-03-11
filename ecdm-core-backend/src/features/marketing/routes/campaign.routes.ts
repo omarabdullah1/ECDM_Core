@@ -11,6 +11,7 @@ import { uploadMarketingFile, handleMarketingFileUpload } from '../../../middlew
  * 
  * Routes:
  * - POST   /                    Create new campaign (multipart/form-data)
+ * - POST   /sync                Sync campaigns from Google Sheets
  * - GET    /                    Get all campaigns
  * - GET    /:id                 Get campaign by ID
  * - PUT    /:id                 Update campaign (multipart/form-data)
@@ -33,6 +34,15 @@ router.post(
     handleMarketingFileUpload,
     ctrl.create
 );
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SYNC FROM GOOGLE SHEETS (POST /sync)
+// ─────────────────────────────────────────────────────────────────────────────
+router.post('/sync', (req, res, next) => {
+    console.log('🎯 ROUTE HIT: POST /api/marketing/campaigns/sync');
+    console.log('Request received at route level');
+    next();
+}, ctrl.syncFromSheet);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // READ (GET)

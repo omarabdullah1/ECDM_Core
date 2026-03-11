@@ -38,30 +38,30 @@ interface AuditLog {
 
 const ActionBadge = ({ action }: { action: string }) => {
     const config: Record<string, { bg: string; icon: typeof PlusCircle }> = {
-        CREATE: { 
+        CREATE: {
             bg: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 border border-green-200 dark:border-green-800',
             icon: PlusCircle
         },
-        UPDATE: { 
+        UPDATE: {
             bg: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border border-blue-200 dark:border-blue-800',
             icon: Edit
         },
-        DELETE: { 
+        DELETE: {
             bg: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 border border-red-200 dark:border-red-800',
             icon: Trash2
         },
-        LOGIN: { 
+        LOGIN: {
             bg: 'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400 border border-gray-200 dark:border-gray-800',
             icon: LogIn
         },
-        OTHER: { 
+        OTHER: {
             bg: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 border border-purple-200 dark:border-purple-800',
             icon: Activity
         },
     };
 
     const { bg, icon: Icon } = config[action] || config.OTHER;
-    
+
     return (
         <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${bg}`}>
             <Icon className="h-3 w-3" />
@@ -86,15 +86,15 @@ const ModuleBadge = ({ moduleName }: { moduleName: string }) => {
 // Statistics Card Component
 // ─────────────────────────────────────────────────────────────────────────────
 
-const StatCard = ({ 
-    label, 
-    value, 
-    icon: Icon, 
-    color 
-}: { 
-    label: string; 
-    value: number; 
-    icon: typeof Activity; 
+const StatCard = ({
+    label,
+    value,
+    icon: Icon,
+    color
+}: {
+    label: string;
+    value: number;
+    icon: typeof Activity;
     color: string;
 }) => (
     <div className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-5">
@@ -128,7 +128,7 @@ export default function AuditLogsPage() {
 
     // Check admin access
     const isAdmin = currentUser?.role === 'SuperAdmin' || currentUser?.role === 'Manager';
-    
+
     useEffect(() => {
         if (!isAdmin) {
             router.replace('/dashboard');
@@ -138,9 +138,9 @@ export default function AuditLogsPage() {
     // State
     const [total, setTotal] = useState(0);
     const [page, setPage] = useState(1);
-    const limit = 20;
+    const limit = 10;
     const totalPages = Math.ceil(total / limit);
-    
+
     // Fetch audit logs
     const fetchLogs = useCallback(async () => {
         setLoading(true);
@@ -148,7 +148,7 @@ export default function AuditLogsPage() {
             const params: Record<string, string | number> = { page, limit };
             if (actionFilter && actionFilter !== 'All') params.action = actionFilter;
             if (moduleFilter && moduleFilter !== 'All') params.moduleName = moduleFilter;
-            
+
             const { data } = await api.get('/admin/audit-logs', { params });
             setLogs(data.data.data || []);
             setTotal(data.data.pagination?.total || 0);
@@ -207,7 +207,7 @@ export default function AuditLogsPage() {
         deletes: logs.filter((l) => l.action === 'DELETE').length,
         logins: logs.filter((l) => l.action === 'LOGIN').length,
     };
-    
+
     // Format date
     const formatDate = (dateStr: string) => {
         return new Date(dateStr).toLocaleString('en-GB', {
@@ -219,7 +219,7 @@ export default function AuditLogsPage() {
             second: '2-digit',
         });
     };
-    
+
     // Table columns
     const tableColumns = [
         {
@@ -281,7 +281,7 @@ export default function AuditLogsPage() {
             ),
         },
     ];
-    
+
     if (!isAdmin) return null;
 
     return (
@@ -331,7 +331,7 @@ export default function AuditLogsPage() {
                     <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                     <select
                         value={actionFilter}
-                        onChange={(e) => setActionFilter(e.target.value)}
+                        onChange={(e) => { setActionFilter(e.target.value); setPage(1); }}
                         className="w-full pl-10 pr-10 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none"
                     >
                         {uniqueActions.map((action) => (
@@ -347,7 +347,7 @@ export default function AuditLogsPage() {
                     <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                     <select
                         value={moduleFilter}
-                        onChange={(e) => setModuleFilter(e.target.value)}
+                        onChange={(e) => { setModuleFilter(e.target.value); setPage(1); }}
                         className="w-full pl-10 pr-10 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none"
                     >
                         {uniqueModules.map((module) => (
@@ -360,7 +360,7 @@ export default function AuditLogsPage() {
             </div>
 
             {/* Data Table */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div className="overflow-x-auto">
                 {loading ? (
                     <div className="flex items-center justify-center py-20">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -378,17 +378,24 @@ export default function AuditLogsPage() {
                         </p>
                     </div>
                 ) : (
-                    <DataTable columns={tableColumns} data={filteredLogs} page={page} totalPages={totalPages} onPageChange={setPage} selectionDisabled={true} />
+                    <DataTable
+                        columns={tableColumns}
+                        data={filteredLogs}
+                        page={page}
+                        totalPages={totalPages}
+                        totalItems={total}
+                        itemsPerPage={limit}
+                        onPageChange={setPage}
+                        selectionDisabled={true}
+                        defaultVisibility={{
+                            recordId: false,
+                            ipAddress: false,
+                        }}
+                    />
                 )}
             </div>
 
             {/* Results Summary */}
-            {!loading && filteredLogs.length > 0 && (
-                <div className="text-sm text-gray-500 dark:text-gray-400 text-center">
-                    Showing {filteredLogs.length} of {logs.length} audit log
-                    {logs.length !== 1 ? 's' : ''}
-                </div>
-            )}
         </div>
     );
 }

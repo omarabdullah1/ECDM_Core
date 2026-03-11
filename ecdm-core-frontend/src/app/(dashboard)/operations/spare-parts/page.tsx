@@ -29,7 +29,7 @@ export default function SparePartsPage() {
     const [showAddModal, setShowAddModal] = useState(false);
     const [editing, setEditing] = useState<SparePart | null>(null);
     const [delId, setDelId] = useState<string | null>(null);
-    
+
     const limit = 10;
     const totalPages = Math.ceil(total / limit);
 
@@ -40,7 +40,7 @@ export default function SparePartsPage() {
             const params: Record<string, string | number> = { page, limit };
             if (search) params.search = search;
             if (categoryFilter) params.category = categoryFilter;
-            
+
             const { data } = await api.get('/operations/spare-parts', { params });
             setRows(data.data.data);
             setTotal(data.data.pagination.total);
@@ -70,9 +70,9 @@ export default function SparePartsPage() {
 
     // ─── Handlers ─────────────────────────────────────────────────────────────
     const openAdd = () => setShowAddModal(true);
-    
+
     const openEdit = (sparePart: SparePart) => setEditing(sparePart);
-    
+
     const handleDelete = async () => {
         if (!delId) return;
         try {
@@ -144,7 +144,7 @@ export default function SparePartsPage() {
             </div>
 
             {/* ─── Data Table ──────────────────────────────────────────────────── */}
-            <div className="overflow-x-auto rounded-xl border border-[hsl(var(--border))]">
+            <div className="overflow-x-auto">
                 <DataTable
                     data={rows}
                     columns={columns}
@@ -152,10 +152,18 @@ export default function SparePartsPage() {
                     emptyMessage="No spare parts found."
                     page={page}
                     totalPages={totalPages}
+                    totalItems={total}
+                    itemsPerPage={limit}
                     onPageChange={setPage}
                     bulkDeleteEndpoint="/operations/spare-parts/bulk-delete"
                     onBulkDeleteSuccess={fetchData}
                     renderActions={renderActions}
+                    defaultVisibility={{
+                        description: false,
+                        supplierInfo: false,
+                        lastRestocked: false,
+                        notes: false,
+                    }}
                 />
             </div>
 

@@ -62,6 +62,7 @@ export default function SalesLeadsPageV2() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [statusFilter, setStatusFilter] = useState('');
+  const [total, setTotal] = useState(0);
   const LIMIT = 10;
 
   // Fetch leads from API
@@ -74,6 +75,7 @@ export default function SalesLeadsPageV2() {
       const { data } = await api.get('/sales/leads', { params });
       setLeads(data.data.data);
       setTotalPages(data.data.pagination.pages);
+      setTotal(data.data.pagination.total);
     } catch (error) {
       toast.error('Failed to fetch sales leads');
     }
@@ -237,6 +239,8 @@ export default function SalesLeadsPageV2() {
         emptyMessage="No sales leads found."
         page={page}
         totalPages={totalPages}
+        totalItems={total}
+        itemsPerPage={LIMIT}
         onPageChange={setPage}
         // ─── Option 1: Use API endpoint directly ─────────────────────────────────
         bulkDeleteEndpoint="/sales/leads/bulk-delete"

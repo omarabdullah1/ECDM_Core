@@ -3,22 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import api from '@/lib/axios';
 import { ClipboardList, Plus, X, TrendingUp, Phone, CheckCircle } from 'lucide-react';
 import { DataTable } from '@/components/ui/DataTable';
-import { createColumns } from './columns';
-
-interface Customer { name: string; phone?: string; address?: string; region?: string; }
-interface FollowUp { 
-  _id: string; 
-  status: 'Pending' | 'Contacted' | 'Scheduled' | 'Completed' | 'Canceled';
-  solvedIssue: boolean; 
-  followUpDate: string; 
-  customer?: Customer;
-  csr?: { firstName: string; lastName: string };
-  workOrder?: { typeOfOrder: string; issue?: string };
-  leadId?: { customerId?: Customer };
-  salesDataId?: { customer?: Customer };
-  notes?: string;
-  createdAt: string;
-}
+import { createColumns, type FollowUp } from './columns';
 
 const iCls = 'w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-4 py-3 text-sm placeholder:text-[hsl(var(--muted-foreground))] focus:border-[hsl(var(--primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/20 transition-all';
 const blank = { workOrder: '', customer: '', csr: '', followUpDate: '', status: 'Pending', notes: '' };
@@ -28,6 +13,7 @@ export default function FollowUpPage() {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState('');
+  const [fSolved, setFSolved] = useState('');
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(false);
   const [editing, setEditing] = useState<FollowUp | null>(null);
@@ -42,13 +28,14 @@ export default function FollowUpPage() {
     try {
       const p: Record<string, string | number> = { page, limit: lim };
       if (statusFilter !== '') p.status = statusFilter;
+      if (fSolved !== '') p.solvedIssue = fSolved;
       const { data } = await api.get('/customer/follow-up', { params: p });
-      setRows(data.data.data); 
+      setRows(data.data.data);
       setTotal(data.data.pagination.total);
     } catch { }
     setLoading(false);
-  }, [page, statusFilter]);
-  
+  }, [page, statusFilter, fSolved]);
+
   useEffect(() => { fetch_(); }, [fetch_]);
 
   // Calculate insight stats
@@ -57,23 +44,23 @@ export default function FollowUpPage() {
   const completedCount = rows.filter(d => d.status === 'Completed').length;
 
   const openC = () => { setEditing(null); setForm(blank); setError(''); setModal(true); };
-  const openE = (r: FollowUp) => { 
-    setEditing(r); 
-    setForm({ 
-      workOrder: '', 
-      customer: '', 
-      csr: '', 
-      followUpDate: r.followUpDate?.slice(0, 10) || '', 
-      status: r.status || 'Pending', 
-      notes: r.notes || '' 
-    }); 
-    setError(''); 
-    setModal(true); 
+  const openE = (r: FollowUp) => {
+    setEditing(r);
+    setForm({
+      workOrder: '',
+      customer: '',
+      csr: '',
+      followUpDate: r.followUpDate?.slice(0, 10) || '',
+      status: r.status || 'Pending',
+      notes: r.notes || ''
+    });
+    setError('');
+    setModal(true);
   };
-  
+
   const save = async (ev: React.FormEvent) => {
-    ev.preventDefault(); 
-    setSaving(true); 
+    ev.preventDefault();
+    setSaving(true);
     setError('');
     const pl: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(form)) {
@@ -82,23 +69,23 @@ export default function FollowUpPage() {
     try {
       if (editing) await api.put(`/customer/follow-up/${editing._id}`, pl);
       else await api.post('/customer/follow-up', pl);
-      setModal(false); 
+      setModal(false);
       fetch_();
-    } catch (e: unknown) { 
-      setError((e as { response?: { data?: { message?: string } } }).response?.data?.message || 'Failed'); 
+    } catch (e: unknown) {
+      setError((e as { response?: { data?: { message?: string } } }).response?.data?.message || 'Failed');
     }
     setSaving(false);
   };
-  
-  const del = async () => { 
-    if (!delId) return; 
-    try { 
-      await api.delete(`/customer/follow-up/${delId}`); 
-      fetch_(); 
-    } catch { } 
-    setDelId(null); 
+
+  const del = async () => {
+    if (!delId) return;
+    try {
+      await api.delete(`/customer/follow-up/${delId}`);
+      fetch_();
+    } catch { }
+    setDelId(null);
   };
-  
+
   const u = (f: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setForm(p => ({ ...p, [f]: e.target.value }));
 
   // Quick action: Update status
@@ -122,8 +109,8 @@ export default function FollowUpPage() {
           <ClipboardList className="h-7 w-7 text-[hsl(var(--primary))]" />
           <h1 className="text-2xl font-bold">Follow Ups</h1>
         </div>
-        <button 
-          onClick={openC} 
+        <button
+          onClick={openC}
           className="flex items-center gap-2 rounded-xl bg-[hsl(var(--primary))] px-4 py-2 text-sm font-semibold text-[hsl(var(--primary-foreground))] hover:opacity-90 transition-opacity"
         >
           <Plus className="h-4 w-4" />
@@ -172,9 +159,9 @@ export default function FollowUpPage() {
 
       {/* Status Filter */}
       <div className="flex gap-3 flex-wrap">
-        <select 
-          value={statusFilter} 
-          onChange={e => { setStatusFilter(e.target.value); setPage(1); }} 
+        <select
+          value={statusFilter}
+          onChange={e => { setStatusFilter(e.target.value); setPage(1); }}
           className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/20"
         >
           <option value="">All Statuses</option>
@@ -184,16 +171,42 @@ export default function FollowUpPage() {
           <option value="Completed">Completed</option>
           <option value="Canceled">Canceled</option>
         </select>
+
+        <select
+          value={fSolved}
+          onChange={e => { setFSolved(e.target.value); setPage(1); }}
+          className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/20"
+        >
+          <option value="">All Solved Issues (Yes/No)</option>
+          <option value="Yes">Yes</option>
+          <option value="No">No</option>
+        </select>
       </div>
 
       {/* DataTable */}
-      <DataTable 
-        columns={columns} 
-        data={rows} 
+      <DataTable
+        columns={columns as any}
+        data={rows as any}
         loading={loading}
         page={page}
         totalPages={Math.ceil(total / lim)}
+        totalItems={total}
+        itemsPerPage={lim}
         onPageChange={setPage}
+        defaultVisibility={{
+          issue: false,
+          visitSite: false,
+          engineerName: false,
+          visitDate: false,
+          startDate: false,
+          endDate: false,
+          deviceReturnedDate: false,
+          punctuality: false,
+          lateDifference: false,
+          reasonForDelay: false,
+          userEmail: false,
+          notes: false,
+        }}
       />
 
       {/* Edit/Create Modal */}

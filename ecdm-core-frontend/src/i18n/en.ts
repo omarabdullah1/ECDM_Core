@@ -15,8 +15,11 @@ export interface Translations {
     customer: string; customersList: string; customerOrders: string; customerFollowUp: string; customerFeedback: string;
     operations: string; workOrder: string; inventoryPlus: string; reportOperation: string;
     hr: string; hrEmployees: string; hrAttendance: string;
+    rnd: string; personalBoard: string; rndProjects: string; myPerformance: string;
     administration: string; userManagement: string; modificationRequests: string; auditLogs: string;
+    salesInsights: string; marketingInsights: string;
     erpPlatform: string;
+    nonPotential: string;
   };
   header: { search: string; signOut: string; };
   common: {
@@ -222,6 +225,7 @@ const en: Translations = {
     salesData: 'Sales Data',
     salesFollowUps: 'Sales Follow-ups',
     salesOrders: 'Sales Orders',
+    nonPotential: 'Non-Potential',
     customer: 'Customer',
     customersList: 'Customers List',
     customerOrders: 'Customer Orders',
@@ -234,10 +238,16 @@ const en: Translations = {
     hr: 'HR',
     hrEmployees: 'Employees',
     hrAttendance: 'Attendance',
+    rnd: 'R&D Workspace',
+    personalBoard: 'Personal Board',
+    rndProjects: 'Projects',
+    myPerformance: 'My Performance',
     administration: 'Administration',
     userManagement: 'User Management',
     modificationRequests: 'Modification Requests',
     auditLogs: 'Audit Logs',
+    salesInsights: 'Sales Insights',
+    marketingInsights: 'Marketing Insights',
     erpPlatform: 'ERP & CRM Platform',
   },
   header: {

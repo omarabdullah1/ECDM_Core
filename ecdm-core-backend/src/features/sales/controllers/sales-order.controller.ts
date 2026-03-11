@@ -26,7 +26,15 @@ export const create = async (req: Request, res: Response, next: NextFunction) =>
         next(e);
     }
 };
-export const getAll  = async (req: Request, res: Response, next: NextFunction) => { try { sendSuccess(res, await svc.getAll(req.query)); } catch (e) { next(e); } };
+export const getAll  = async (req: Request, res: Response, next: NextFunction) => { 
+    try { 
+        const userId = req.user?.userId;
+        const userRole = req.user?.role;
+        sendSuccess(res, await svc.getAll(req.query, userId, userRole)); 
+    } catch (e) { 
+        next(e); 
+    } 
+};
 export const getById = async (req: Request, res: Response, next: NextFunction) => { try { sendSuccess(res, { order: await svc.getById(String(req.params.id)) }); } catch (e) { next(e); } };
 
 /**
@@ -47,6 +55,7 @@ export const update = async (req: Request, res: Response, next: NextFunction): P
         console.log('📝 SALES ORDER UPDATE REQUEST');
         console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         console.log('Order ID:', req.params.id);
+        console.log('User ID:', req.user?.userId);
         console.log('User Role:', req.user?.role);
         console.log('Content-Type:', req.headers['content-type']);
         console.log('Has File Upload:', !!req.file);
@@ -63,8 +72,7 @@ export const update = async (req: Request, res: Response, next: NextFunction): P
         console.log('📦 Request Body:', JSON.stringify(req.body, null, 2));
         
         // ═══════════════════════════════════════════════════════════════════
-        // MAKER-CHECKER INTERCEPTOR
-        // Non-admin users submit changes for approval instead of direct update
+        // FETCH TARGET RECORD
         // ═══════════════════════════════════════════════════════════════════
         const targetRecord = await SalesOrder.findById(req.params.id);
         
@@ -72,6 +80,49 @@ export const update = async (req: Request, res: Response, next: NextFunction): P
             sendSuccess(res, null, 'Sales order not found', 404);
             return;
         }
+        
+        // ═══════════════════════════════════════════════════════════════════
+        // OWNERSHIP VALIDATION
+        // Only the assigned salesperson or admins can edit this order
+        // EXCEPTION: Quotation-only updates are allowed for all authenticated users
+        // ═══════════════════════════════════════════════════════════════════
+        const userId = req.user?.userId;
+        const userRole = req.user?.role;
+        const ownerId = targetRecord.salesPerson?.toString();
+        
+        const isOwner = ownerId && userId && ownerId === userId.toString();
+        const isAdmin = userRole === 'SuperAdmin' || userRole === 'Manager' || userRole === 'Admin';
+        
+        // Check if this is a quotation-only update
+        const requestFields = Object.keys(req.body);
+        const isQuotationOnly = requestFields.length === 1 && requestFields[0] === 'quotation';
+        
+        console.log('🔒 Ownership Check:', {
+            userId,
+            ownerId,
+            isOwner,
+            isAdmin,
+            isQuotationOnly,
+            requestFields
+        });
+        
+        // Allow quotation-only updates from any authenticated user (collaborative work)
+        if (!isQuotationOnly && !isOwner && !isAdmin) {
+            console.log('❌ Access Denied: User is not the owner and not an admin');
+            sendSuccess(res, null, 'Forbidden: You can only edit your own orders', 403);
+            return;
+        }
+        
+        if (isQuotationOnly) {
+            console.log('✅ Quotation-only update - allowing collaborative access');
+        } else {
+            console.log('✅ Ownership validated - User can proceed');
+        }
+        
+        // ═══════════════════════════════════════════════════════════════════
+        // MAKER-CHECKER INTERCEPTOR
+        // Non-admin users submit changes for approval instead of direct update
+        // ═══════════════════════════════════════════════════════════════════
         
         const intercepted = await interceptUpdate(
             req,

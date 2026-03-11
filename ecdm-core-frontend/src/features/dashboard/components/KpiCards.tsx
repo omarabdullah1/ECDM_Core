@@ -25,16 +25,6 @@ export default function KpiCards({ kpis }: Props) {
             isStock: false,
         },
         {
-            label: d.revenueCurrent,
-            value: `EGP ${fmt(kpis.revenueThisMonth)}`,
-            trend: `${Number(kpis.revenueTrendPct) >= 0 ? '+' : ''}${kpis.revenueTrendPct}% ${d.vsLastMonth}`,
-            trendUp: Number(kpis.revenueTrendPct) >= 0,
-            icon: DollarSign,
-            accentClass: 'text-emerald-400',
-            bgClass: 'bg-emerald-500/10',
-            isStock: false,
-        },
-        {
             label: d.activeWorkOrders,
             value: fmt(kpis.activeWorkOrders),
             trend: d.inProgress,
@@ -57,7 +47,7 @@ export default function KpiCards({ kpis }: Props) {
     ];
 
     return (
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-3 gap-4 h-full">
             {cards.map((kpi) => {
                 const Icon = kpi.icon;
                 const Trend = kpi.trendUp ? TrendingUp : TrendingDown;
@@ -66,14 +56,16 @@ export default function KpiCards({ kpis }: Props) {
                     : kpi.trendUp ? 'text-emerald-400' : 'text-red-400';
                 return (
                     <div key={kpi.label}
-                        className="rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6 flex flex-col gap-4 hover:border-[hsl(var(--primary))]/30 transition-colors">
-                        <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium text-[hsl(var(--muted-foreground))]">{kpi.label}</span>
-                            <div className={`rounded-xl p-2.5 ${kpi.bgClass}`}>
-                                <Icon size={20} className={kpi.accentClass} />
+                        className="rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6 flex flex-col gap-4 hover:border-[hsl(var(--primary))]/30 transition-colors h-full justify-between">
+                        <div>
+                            <div className="flex items-center justify-between">
+                                <span className="text-sm font-medium text-[hsl(var(--muted-foreground))]">{kpi.label}</span>
+                                <div className={`rounded-xl p-2.5 ${kpi.bgClass}`}>
+                                    <Icon size={20} className={kpi.accentClass} />
+                                </div>
                             </div>
+                            <p className="text-3xl font-bold tracking-tight mt-4">{kpi.value}</p>
                         </div>
-                        <p className="text-3xl font-bold tracking-tight">{kpi.value}</p>
                         <div className={`flex items-center gap-1.5 text-xs font-medium ${trendColor}`}>
                             <Trend size={13} />
                             <span>{kpi.trend}</span>
