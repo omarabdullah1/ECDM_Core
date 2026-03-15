@@ -1,20 +1,5 @@
 'use client';
 
-import Link from 'next/link';
-import Image from 'next/image';
-import { usePathname, useRouter } from 'next/navigation';
-import { cn } from '@/lib/utils';
-import {
-    LayoutDashboard, Users, ChevronDown, ChevronLeft, ChevronRight,
-    Package, TrendingUp, ShoppingCart,
-    Megaphone, Wrench, Star, Headphones, MessageSquare, ClipboardList,
-    FileText, UserCog, FileEdit, Activity, Calendar, UserCheck, Archive,
-    LogOut, User, Settings, Kanban, FolderKanban, TrendingUpDown, Briefcase, FileSpreadsheet,
-    BarChart3,
-} from 'lucide-react';
-import React, { useState } from 'react';
-import { useT } from '@/i18n/useT';
-import { useAuthStore } from '@/features/auth/useAuth';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -22,6 +7,43 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { useAuthStore } from '@/features/auth/useAuth';
+import { useT } from '@/i18n/useT';
+import { cn } from '@/lib/utils';
+import {
+    Activity,
+    Archive,
+    BarChart3,
+    Briefcase,
+    Calendar,
+    ChevronDown, ChevronLeft, ChevronRight,
+    ClipboardList,
+    FileEdit,
+    FileSpreadsheet,
+    FileText,
+    FolderKanban,
+    Headphones,
+    Kanban,
+    LayoutDashboard,
+    LogOut,
+    Megaphone,
+    MessageSquare,
+    Package,
+    Settings,
+    ShoppingCart,
+    Star,
+    TrendingUp,
+    TrendingUpDown,
+    User,
+    UserCheck,
+    UserCog,
+    Users,
+    Wrench,
+} from 'lucide-react';
+import Image from 'next/image';
+import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
+import React, { useState } from 'react';
 
 const iconMap: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
     LayoutDashboard, Users,
@@ -314,6 +336,18 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
                                 )}>
                                 <BarChart3 size={15} className="shrink-0" />
                                 {!isCollapsed && <span className="truncate">Marketing Report</span>}
+                            </Link>
+                            <Link href="/reports/operation-members"
+                                title={isCollapsed ? "Operation Members" : undefined}
+                                className={cn(
+                                    'flex items-center rounded-lg py-1.5 text-[13px] font-medium transition-all',
+                                    isCollapsed ? 'justify-center px-0' : 'gap-2 px-2',
+                                    pathname === '/reports/operation-members'
+                                        ? 'bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))]'
+                                        : 'text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--secondary))] hover:text-[hsl(var(--foreground))]',
+                                )}>
+                                <Users size={15} className="shrink-0" />
+                                {!isCollapsed && <span className="truncate">Operation Members</span>}
                             </Link>
                         </div>
                     </div>

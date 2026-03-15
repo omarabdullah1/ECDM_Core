@@ -1,10 +1,53 @@
-import CustomerOrder from '../models/customer-order.model';
-import { CreateCustomerOrderInput, UpdateCustomerOrderInput } from '../validation/customer-order.validation';
-import { ICustomerOrderDocument } from '../types/customer-order.types';
 import { AppError } from '../../../utils/apiError';
+import CustomerOrder from '../models/customer-order.model';
+import Feedback from '../models/feedback.model';
+import FollowUp from '../models/follow-up.model';
+import { ICustomerOrderDocument } from '../types/customer-order.types';
+import { FollowUpStatus } from '../types/follow-up.types';
+import { CreateCustomerOrderInput, UpdateCustomerOrderInput } from '../validation/customer-order.validation';
 
-export const create = async (data: CreateCustomerOrderInput): Promise<ICustomerOrderDocument> =>
-    CustomerOrder.create(data);
+export const create = async (data: CreateCustomerOrderInput): Promise<ICustomerOrderDocument> => {
+    // 1. Create the Customer Order
+    const newCustomerOrder = await CustomerOrder.create(data);
+    console.log('✅ Customer Order created:', newCustomerOrder._id);
+
+    // 2. AUTOMATION: Create linked Follow-up Record
+    try {
+        const followUpDate = new Date();
+        followUpDate.setDate(followUpDate.getDate() + 3); // Default: follow up after 3 days
+
+        const newFollowUp = await FollowUp.create({
+            customerOrderId: newCustomerOrder._id,
+            customer: newCustomerOrder.customerId,
+            status: FollowUpStatus.Pending,
+            followUpDate,
+            notes: 'Auto-generated from new customer order.',
+        });
+        console.log('✅ Follow-up record auto-created:', newFollowUp._id);
+    } catch (error) {
+        console.error('⚠️ Failed to auto-create Follow-up:', error);
+        // Don't fail the entire operation if Follow-up creation fails
+    }
+
+    // 3. AUTOMATION: Create linked Feedback Record
+    try {
+        const newFeedback = await Feedback.create({
+            customerId: newCustomerOrder.customerId,
+            customerOrderId: newCustomerOrder._id,
+            solvedIssue: '',
+            ratingOperation: '',
+            followUp: '',
+            ratingCustomerService: '',
+            notes: '',
+        });
+        console.log('✅ Feedback record auto-created:', newFeedback._id);
+    } catch (error) {
+        console.error('⚠️ Failed to auto-create Feedback:', error);
+        // Don't fail the entire operation if Feedback creation fails
+    }
+
+    return newCustomerOrder;
+};
 
 export const getAll = async (query: Record<string, unknown>) => {
     const { page = 1, limit = 10, customerId, deal, salesOrderId } = query;

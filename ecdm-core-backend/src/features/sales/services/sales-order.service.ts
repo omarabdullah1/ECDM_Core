@@ -1,10 +1,12 @@
-import mongoose from 'mongoose';
-import SalesOrder from '../models/sales-order.model';
-import { CreateSalesOrderInput, UpdateSalesOrderInput } from '../validation/sales-order.validation';
-import { ISalesOrderDocument } from '../types/sales-order.types';
 import { AppError } from '../../../utils/apiError';
 import CustomerOrder from '../../customer/models/customer-order.model';
+import Feedback from '../../customer/models/feedback.model';
+import FollowUp from '../../customer/models/follow-up.model';
+import { FollowUpStatus } from '../../customer/types/follow-up.types';
 import WorkOrder from '../../operations/models/work-order.model';
+import SalesOrder from '../models/sales-order.model';
+import { ISalesOrderDocument } from '../types/sales-order.types';
+import { CreateSalesOrderInput, UpdateSalesOrderInput } from '../validation/sales-order.validation';
 
 export const create = async (data: CreateSalesOrderInput): Promise<ISalesOrderDocument> =>
     SalesOrder.create(data);
@@ -224,6 +226,40 @@ export const update = async (id: string, data: UpdateSalesOrderInput): Promise<I
 
             targetCustomerOrderId = newCustomerOrder._id; // Securely capture ID
             console.log('✅ Customer Order created, captured ID:', targetCustomerOrderId);
+
+            // ═════════════════════════════════════════════════════════════════════════
+            // AUTOMATION: Auto-create Follow-up and Feedback records for new Customer Order
+            // ═════════════════════════════════════════════════════════════════════════
+            try {
+                const followUpDate = new Date();
+                followUpDate.setDate(followUpDate.getDate() + 3); // Default: follow up after 3 days
+
+                const newFollowUp = await FollowUp.create({
+                    customerOrderId: newCustomerOrder._id,
+                    customer: newCustomerOrder.customerId,
+                    status: FollowUpStatus.Pending,
+                    followUpDate,
+                    notes: 'Auto-generated from Sales Order conversion.',
+                });
+                console.log('✅ Follow-up record auto-created:', newFollowUp._id);
+            } catch (error) {
+                console.error('⚠️ Failed to auto-create Follow-up:', error);
+            }
+
+            try {
+                const newFeedback = await Feedback.create({
+                    customerId: newCustomerOrder.customerId,
+                    customerOrderId: newCustomerOrder._id,
+                    solvedIssue: '',
+                    ratingOperation: '',
+                    followUp: '',
+                    ratingCustomerService: '',
+                    notes: '',
+                });
+                console.log('✅ Feedback record auto-created:', newFeedback._id);
+            } catch (error) {
+                console.error('⚠️ Failed to auto-create Feedback:', error);
+            }
         }
 
         // STEP 4: CASCADE TO WORK ORDER (using the securely captured ID)
