@@ -13,7 +13,8 @@ export interface Translations {
     contentTracker: string; campaignResults: string;
     sales: string; salesLeads: string; salesData: string; salesFollowUps: string; salesOrders: string;
     customer: string; customersList: string; customerOrders: string; customerFollowUp: string; customerFeedback: string;
-    operations: string; workOrder: string; inventoryPlus: string; reportOperation: string;
+    finance: string; orderFinance: string;
+    operations: string; workOrder: string; priceList: string; reportOperation: string;
     hr: string; hrEmployees: string; hrAttendance: string;
     rnd: string; personalBoard: string; rndProjects: string; myPerformance: string;
     administration: string; userManagement: string; modificationRequests: string; auditLogs: string;
@@ -226,14 +227,16 @@ const en: Translations = {
     salesFollowUps: 'Sales Follow-ups',
     salesOrders: 'Sales Orders',
     nonPotential: 'Non-Potential',
-    customer: 'Customer',
+    customer: 'Customer Services',
     customersList: 'Customers List',
     customerOrders: 'Customer Orders',
     customerFollowUp: 'Follow-Up',
     customerFeedback: 'Feedback',
+    finance: 'Finance',
+    orderFinance: 'Order Finance',
     operations: 'Operations',
     workOrder: 'Work Orders',
-    inventoryPlus: 'Inventory+',
+    priceList: 'Price List',
     reportOperation: 'Performance Reports',
     hr: 'HR',
     hrEmployees: 'Employees',

@@ -1,17 +1,17 @@
 import mongoose from 'mongoose';
 
 /**
- * SparePart TypeScript Types
+ * PriceList TypeScript Types
  */
 
-export interface ISparePart {
+export interface IPriceList {
     _id: string;
     sparePartsId: string;
     itemName: string;
     specification: string;
     dataSheetUrl: string;
     dataSheetFileName: string;
-    category: string;
+    category: 'Maintenance' | 'General supply' | 'Supply and installation';
     unitPrice: number;
     notes: string;
     updatedBy: mongoose.Types.ObjectId | string;
@@ -19,7 +19,7 @@ export interface ISparePart {
     updatedAt: Date;
 }
 
-export interface SparePartCreatePayload {
+export interface PriceListCreatePayload {
     itemName: string;
     specification?: string;
     dataSheetUrl?: string;
@@ -29,7 +29,7 @@ export interface SparePartCreatePayload {
     notes?: string;
 }
 
-export interface SparePartUpdatePayload {
+export interface PriceListUpdatePayload {
     itemName?: string;
     specification?: string;
     dataSheetUrl?: string;
@@ -40,7 +40,7 @@ export interface SparePartUpdatePayload {
     updatedBy?: mongoose.Types.ObjectId | string;
 }
 
-export interface SparePartQueryParams {
+export interface PriceListQueryParams {
     page?: number;
     limit?: number;
     search?: string;

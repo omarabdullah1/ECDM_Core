@@ -1,7 +1,7 @@
-import express, { Application } from 'express';
 import cors from 'cors';
-import helmet from 'helmet';
+import express, { Application } from 'express';
 import rateLimit from 'express-rate-limit';
+import helmet from 'helmet';
 import path from 'path';
 import { errorHandler } from './middlewares/errorHandler.middleware';
 
@@ -9,47 +9,47 @@ import { errorHandler } from './middlewares/errorHandler.middleware';
 import authRoutes from './features/auth/auth.routes';
 
 // ── Shared domain ───────────────────────────────────────────────────
-import sharedCustomerRoutes  from './features/shared/routes/customer.routes';
-import sharedEmployeeRoutes  from './features/shared/routes/employee.routes';
+import sharedCustomerRoutes from './features/shared/routes/customer.routes';
+import sharedEmployeeRoutes from './features/shared/routes/employee.routes';
 
 // ── Marketing domain ────────────────────────────────────────────────
-import marketingLeadsRoutes  from './features/marketing/routes/marketing-leads.routes';
-import syncRoutes            from './features/marketing/routes/sync.routes';
-import savedSheetsRoutes     from './features/marketing/routes/saved-sheets.routes';
-import contentTrackerRoutes  from './features/marketing/routes/content-tracker.routes';
-import campaignRoutes        from './features/marketing/routes/campaign.routes';
+import campaignRoutes from './features/marketing/routes/campaign.routes';
+import contentTrackerRoutes from './features/marketing/routes/content-tracker.routes';
+import marketingLeadsRoutes from './features/marketing/routes/marketing-leads.routes';
+import savedSheetsRoutes from './features/marketing/routes/saved-sheets.routes';
+import syncRoutes from './features/marketing/routes/sync.routes';
 
 // ── Sales domain ────────────────────────────────────────────────────
-import salesLeadsRoutes      from './features/sales/routes/sales-leads.routes';
-import salesDataRoutes       from './features/sales/routes/sales-data.routes';
-import salesOrderRoutes      from './features/sales/routes/sales-order.routes';
-import salesFollowUpRoutes   from './features/sales/routes/sales-followup.routes';
-import salesTargetRoutes     from './features/sales/routes/sales-target.routes';
+import salesDataRoutes from './features/sales/routes/sales-data.routes';
+import salesFollowUpRoutes from './features/sales/routes/sales-followup.routes';
+import salesLeadsRoutes from './features/sales/routes/sales-leads.routes';
+import salesOrderRoutes from './features/sales/routes/sales-order.routes';
+import salesTargetRoutes from './features/sales/routes/sales-target.routes';
 
 // ── Customer domain ─────────────────────────────────────────────────
-import customerOrderRoutes   from './features/customer/routes/customer-order.routes';
-import followUpRoutes        from './features/customer/routes/follow-up.routes';
-import feedbackRoutes        from './features/customer/routes/feedback.routes';
+import customerOrderRoutes from './features/customer/routes/customer-order.routes';
+import feedbackRoutes from './features/customer/routes/feedback.routes';
+import followUpRoutes from './features/customer/routes/follow-up.routes';
 
 // ── Operations domain ───────────────────────────────────────────────
-import workOrderRoutes       from './features/operations/routes/work-order.routes';
-import inventoryPlusRoutes   from './features/operations/routes/inventory-plus.routes';
-import reportRoutes          from './features/operations/routes/report.routes';
-import sparePartRoutes       from './features/operations/routes/spare-part.routes';
+import inventoryPlusRoutes from './features/operations/routes/inventory-plus.routes';
+import priceListRoutes from './features/operations/routes/price-list.routes';
+import reportRoutes from './features/operations/routes/report.routes';
+import workOrderRoutes from './features/operations/routes/work-order.routes';
 
 // ── Dashboard ───────────────────────────────────────────────────────
-import dashboardRoutes       from './features/dashboard/dashboard.routes';
+import dashboardRoutes from './features/dashboard/dashboard.routes';
 
 // ── HR domain ───────────────────────────────────────────────────────
-import hrAttendanceRoutes    from './features/hr/routes/attendance.routes';
-import hrEmployeeRoutes      from './features/hr/routes/employee.routes';
+import hrAttendanceRoutes from './features/hr/routes/attendance.routes';
+import hrEmployeeRoutes from './features/hr/routes/employee.routes';
 
 // ── R&D domain ──────────────────────────────────────────────────────
-import rndRoutes             from './features/rnd/routes/rnd.routes';
+import rndRoutes from './features/rnd/routes/rnd.routes';
 
 // ── Admin / Maker-Checker Workflow ─────────────────────────────────
-import modificationRequestRoutes from './features/shared/routes/modification-request.routes';
 import auditLogRoutes from './features/shared/routes/audit-log.routes';
+import modificationRequestRoutes from './features/shared/routes/modification-request.routes';
 
 const app: Application = express();
 
@@ -146,7 +146,7 @@ app.use('/api/customer/feedback',   feedbackRoutes);
 app.use('/api/operations/work-order',      workOrderRoutes);
 app.use('/api/operations/inventory-plus',  inventoryPlusRoutes);
 app.use('/api/operations/report',          reportRoutes);
-app.use('/api/operations/spare-parts',     sparePartRoutes);
+app.use('/api/operations/price-list',      priceListRoutes);
 
 // Dashboard
 app.use('/api/dashboard', dashboardRoutes);

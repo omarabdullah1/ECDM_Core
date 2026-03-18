@@ -19,7 +19,7 @@ export enum ModuleName {
     CustomerFollowUp = 'CustomerFollowUp',
     Feedback = 'Feedback',
     InventoryPlus = 'InventoryPlus',
-    SparePart = 'SparePart',
+    PriceList = 'PriceList',
     Customer = 'Customer',
     Employee = 'Employee',
 }

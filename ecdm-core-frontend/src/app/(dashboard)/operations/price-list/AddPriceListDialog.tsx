@@ -1,59 +1,37 @@
 'use client';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import api from '@/lib/axios';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { FileText, Upload, X } from 'lucide-react';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { X, Upload, FileText } from 'lucide-react';
 import toast from 'react-hot-toast';
-import api from '@/lib/axios';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { z } from 'zod';
+import { PRICE_LIST_CATEGORIES } from './columns';
 
-/**
- * Add Spare Part Dialog
- * 
- * Features:
- * - FormData submission for file upload (PDF Data Sheet)
- * - Zod validation
- * - Drag & drop file upload zone
- */
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Props Interface
-// ─────────────────────────────────────────────────────────────────────────────
-
-interface AddSparePartDialogProps {
+interface AddPriceListDialogProps {
     onClose: () => void;
     onSuccess: () => void;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Zod Schema
-// ─────────────────────────────────────────────────────────────────────────────
-
 const formSchema = z.object({
-    itemName: z.string().min(1, 'Item name is required').max(200, 'Item name cannot exceed 200 characters'),
-    specification: z.string().max(2000, 'Specification cannot exceed 2000 characters').optional(),
-    category: z.string().max(100, 'Category cannot exceed 100 characters').optional(),
-    unitPrice: z.string().optional(), // Converted to number in submit handler
-    notes: z.string().max(2000, 'Notes cannot exceed 2000 characters').optional(),
+    itemName: z.string().min(1, 'Item name is required').max(200),
+    specification: z.string().max(2000).optional(),
+    category: z.string().optional(),
+    unitPrice: z.string().optional(),
+    notes: z.string().max(2000).optional(),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    dataSheet: z.any().optional(), // File handled separately
+    dataSheet: z.any().optional(),
 });
 
 type FormSchema = z.infer<typeof formSchema>;
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Styles
-// ─────────────────────────────────────────────────────────────────────────────
+const iCls =
+    'w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-4 py-3 text-sm placeholder:text-[hsl(var(--muted-foreground))] focus:border-[hsl(var(--primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/20 transition-all disabled:opacity-60 disabled:cursor-not-allowed';
+const labelCls =
+    'text-xs font-semibold text-[hsl(var(--muted-foreground))] uppercase tracking-wide mb-1.5 block';
 
-const iCls = 'w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-4 py-3 text-sm placeholder:text-[hsl(var(--muted-foreground))] focus:border-[hsl(var(--primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/20 transition-all disabled:opacity-60 disabled:cursor-not-allowed';
-const labelCls = 'text-xs font-semibold text-[hsl(var(--muted-foreground))] uppercase tracking-wide mb-1.5 block';
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Component
-// ─────────────────────────────────────────────────────────────────────────────
-
-export default function AddSparePartDialog({ onClose, onSuccess }: AddSparePartDialogProps) {
+export default function AddPriceListDialog({ onClose, onSuccess }: AddPriceListDialogProps) {
     const [dataSheetFile, setDataSheetFile] = useState<File | null>(null);
     const [saving, setSaving] = useState(false);
 
@@ -68,7 +46,6 @@ export default function AddSparePartDialog({ onClose, onSuccess }: AddSparePartD
         },
     });
 
-    // ─── File Handler ─────────────────────────────────────────────────────────
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0] || null;
         if (file && file.type !== 'application/pdf') {
@@ -78,62 +55,30 @@ export default function AddSparePartDialog({ onClose, onSuccess }: AddSparePartD
         setDataSheetFile(file);
     };
 
-    // ─── Error Handler ────────────────────────────────────────────────────────
     const onError = (errors: Record<string, unknown>) => {
         console.error('❌ Form Validation Errors:', errors);
         toast.error('Please fill in all required fields correctly.');
     };
 
-    // ─── Submit Handler (FormData for file upload) ────────────────────────────
     const onSubmit = async (values: FormSchema) => {
-        console.log('✅ Form validation passed. Submitting:', values);
         setSaving(true);
-
         try {
             const formData = new FormData();
-
-            // ─── Append text fields ───────────────────────────────────────────────
             formData.append('itemName', values.itemName);
+            if (values.specification) formData.append('specification', values.specification);
+            if (values.category) formData.append('category', values.category);
+            if (values.unitPrice !== undefined) formData.append('unitPrice', String(values.unitPrice));
+            if (values.notes) formData.append('notes', values.notes);
+            if (dataSheetFile) formData.append('dataSheet', dataSheetFile);
 
-            if (values.specification) {
-                formData.append('specification', values.specification);
-            }
-
-            if (values.category) {
-                formData.append('category', values.category);
-            }
-
-            if (values.unitPrice !== undefined) {
-                formData.append('unitPrice', String(values.unitPrice));
-            }
-
-            if (values.notes) {
-                formData.append('notes', values.notes);
-            }
-
-            // ─── Handle File Upload ───────────────────────────────────────────────
-            if (dataSheetFile) {
-                formData.append('dataSheet', dataSheetFile);
-                console.log('📎 Attaching file:', dataSheetFile.name);
-            }
-
-            // Log FormData entries for debugging
-            console.log('📦 FormData Payload:');
-            for (const [key, value] of formData.entries()) {
-                console.log(`  ${key}:`, value instanceof File ? `[File: ${value.name}]` : value);
-            }
-
-            // API call - Let axios handle Content-Type automatically for FormData
-            await api.post('/operations/spare-parts', formData);
-
-            console.log('✅ Spare part created successfully');
-            toast.success('Spare part created successfully!');
-
+            await api.post('/operations/price-list', formData);
+            toast.success('Price list item created successfully!');
             onSuccess();
             onClose();
         } catch (err: unknown) {
-            console.error('❌ API Error:', err);
-            const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed to create spare part';
+            const message =
+                (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+                'Failed to create item';
             toast.error(message);
         } finally {
             setSaving(false);
@@ -144,12 +89,11 @@ export default function AddSparePartDialog({ onClose, onSuccess }: AddSparePartD
         <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
             <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto overflow-x-hidden p-6 outline-none">
 
-                {/* ─── Header ─────────────────────────────────────────────────── */}
                 <DialogHeader className="flex flex-row items-center justify-between border-b border-[hsl(var(--border))] pb-4 mb-4 space-y-0">
                     <div>
-                        <DialogTitle className="text-xl font-bold">Add Spare Part</DialogTitle>
+                        <DialogTitle className="text-xl font-bold">Add Price List Item</DialogTitle>
                         <p className="text-xs text-[hsl(var(--muted-foreground))] mt-0.5">
-                            Create a new spare part inventory item
+                            Create a new item in the price list
                         </p>
                     </div>
                     <button
@@ -162,9 +106,9 @@ export default function AddSparePartDialog({ onClose, onSuccess }: AddSparePartD
                 </DialogHeader>
 
                 <form onSubmit={form.handleSubmit(onSubmit, onError)}>
-                    <div className="space-y-6">
+                    <div className="space-y-5">
 
-                        {/* ─── Item Name (Required) ──────────────────────────────── */}
+                        {/* Item Name */}
                         <div>
                             <label className={labelCls}>Item Name *</label>
                             <input
@@ -180,7 +124,7 @@ export default function AddSparePartDialog({ onClose, onSuccess }: AddSparePartD
                             )}
                         </div>
 
-                        {/* ─── Specification ─────────────────────────────────────── */}
+                        {/* Specification */}
                         <div>
                             <label className={labelCls}>Specification</label>
                             <textarea
@@ -191,18 +135,23 @@ export default function AddSparePartDialog({ onClose, onSuccess }: AddSparePartD
                             />
                         </div>
 
-                        {/* ─── Category ──────────────────────────────────────────── */}
+                        {/* Category — Enum dropdown */}
                         <div>
                             <label className={labelCls}>Category</label>
-                            <input
-                                type="text"
+                            <select
                                 {...form.register('category')}
-                                placeholder="e.g., Electrical, Mechanical, Plumbing"
                                 className={iCls}
-                            />
+                            >
+                                <option value="">— Select category —</option>
+                                {PRICE_LIST_CATEGORIES.map((cat) => (
+                                    <option key={cat} value={cat}>
+                                        {cat}
+                                    </option>
+                                ))}
+                            </select>
                         </div>
 
-                        {/* ─── Unit Price ────────────────────────────────────────── */}
+                        {/* Unit Price */}
                         <div>
                             <label className={labelCls}>Unit Price ($)</label>
                             <input
@@ -215,7 +164,7 @@ export default function AddSparePartDialog({ onClose, onSuccess }: AddSparePartD
                             />
                         </div>
 
-                        {/* ─── Notes ─────────────────────────────────────────────── */}
+                        {/* Notes */}
                         <div>
                             <label className={labelCls}>Notes</label>
                             <textarea
@@ -226,7 +175,7 @@ export default function AddSparePartDialog({ onClose, onSuccess }: AddSparePartD
                             />
                         </div>
 
-                        {/* ─── Data Sheet Upload ─────────────────────────────────── */}
+                        {/* Data Sheet Upload */}
                         <div>
                             <label className={labelCls}>Data Sheet (PDF)</label>
                             <div className="border-2 border-dashed border-[hsl(var(--border))] rounded-xl p-6 text-center hover:border-[hsl(var(--primary))] transition-colors">
@@ -234,7 +183,7 @@ export default function AddSparePartDialog({ onClose, onSuccess }: AddSparePartD
                                     <div className="flex items-center justify-center gap-3">
                                         <FileText className="w-8 h-8 text-[hsl(var(--primary))]" />
                                         <div className="text-left">
-                                            <p className="font-medium">{dataSheetFile.name}</p>
+                                            <p className="font-medium text-sm">{dataSheetFile.name}</p>
                                             <p className="text-xs text-[hsl(var(--muted-foreground))]">
                                                 {(dataSheetFile.size / 1024).toFixed(2)} KB
                                             </p>
@@ -248,7 +197,7 @@ export default function AddSparePartDialog({ onClose, onSuccess }: AddSparePartD
                                         </button>
                                     </div>
                                 ) : (
-                                    <label className="cursor-pointer">
+                                    <label className="cursor-pointer block">
                                         <Upload className="w-10 h-10 mx-auto text-[hsl(var(--muted-foreground))] mb-2" />
                                         <p className="text-sm text-[hsl(var(--muted-foreground))]">
                                             Click to upload or drag and drop
@@ -268,7 +217,7 @@ export default function AddSparePartDialog({ onClose, onSuccess }: AddSparePartD
                         </div>
                     </div>
 
-                    {/* ─── Footer ─────────────────────────────────────────────────── */}
+                    {/* Footer */}
                     <div className="flex items-center justify-end gap-3 border-t border-[hsl(var(--border))] pt-4 mt-6">
                         <button
                             type="button"
@@ -282,7 +231,7 @@ export default function AddSparePartDialog({ onClose, onSuccess }: AddSparePartD
                             disabled={saving}
                             className="px-6 py-2 rounded-xl bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            {saving ? 'Creating...' : 'Create Spare Part'}
+                            {saving ? 'Creating...' : 'Create Item'}
                         </button>
                     </div>
                 </form>

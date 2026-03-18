@@ -1,12 +1,22 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '@/features/auth/useAuth';
 import api from '@/lib/axios';
-import { 
-  PieChart, Pie, Cell, BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Legend 
+import { DollarSign, Loader2, Star, Target, TrendingUp, UserCheck, Users, Wrench } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import {
+    Bar,
+    BarChart,
+    CartesianGrid,
+    Cell,
+    Legend,
+    Line,
+    LineChart,
+    Pie,
+    PieChart,
+    Tooltip as RechartsTooltip, ResponsiveContainer,
+    XAxis, YAxis
 } from 'recharts';
-import { Users, Wrench, AlertTriangle, TrendingUp, DollarSign, Target, UserCheck, Star, Loader2 } from 'lucide-react';
 
 const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#64748b'];
 
@@ -46,59 +56,28 @@ export default function MainDashboard() {
         // UNIVERSAL EXTRACTOR - Handles all possible API response nesting patterns
         const universalExtract = (rawData: any): any[] => {
           if (!rawData) return [];
-          // Direct array
           if (Array.isArray(rawData)) return rawData;
-          
-          // Handle nested structures: { success: true, data: { campaigns: [], users: [], etc } }
-          if (rawData.data?.campaigns && Array.isArray(rawData.data.campaigns)) return rawData.data.campaigns;
-          if (rawData.data?.users && Array.isArray(rawData.data.users)) return rawData.data.users;
-          if (rawData.data?.orders && Array.isArray(rawData.data.orders)) return rawData.data.orders;
-          if (rawData.data?.leads && Array.isArray(rawData.data.leads)) return rawData.data.leads;
-          if (rawData.data?.workOrders && Array.isArray(rawData.data.workOrders)) return rawData.data.workOrders;
-          
-          // Handle { success: true, data: { data: [] } }
-          if (rawData.data?.data && Array.isArray(rawData.data.data)) return rawData.data.data;
-          
-          // Handle { data: [] }
           if (rawData.data && Array.isArray(rawData.data)) return rawData.data;
-          
-          // Handle top-level keys
-          if (rawData.campaigns && Array.isArray(rawData.campaigns)) return rawData.campaigns;
-          if (rawData.users && Array.isArray(rawData.users)) return rawData.users;
-          if (rawData.orders && Array.isArray(rawData.orders)) return rawData.orders;
-          if (rawData.leads && Array.isArray(rawData.leads)) return rawData.leads;
-          if (rawData.workOrders && Array.isArray(rawData.workOrders)) return rawData.workOrders;
-          
-          // Fallback: search for any key that holds an array
-          const potentialArray = Object.values(rawData).find(val => Array.isArray(val));
-          return (potentialArray as any[]) || [];
+          if (rawData.data?.data && Array.isArray(rawData.data.data)) return rawData.data.data;
+          const possibleArray = Object.values(rawData).find(val => Array.isArray(val));
+          return (possibleArray as any[]) || [];
         };
 
         // 1. Fetch EVERYTHING from all modules (using axios with configured baseURL)
-        const [usersRes, ordersRes, leadsRes, campaignsRes, workOrdersRes] = await Promise.all([
-          api.get('/auth/users?limit=1000')
-            .then(r => { console.log('✅ Users API Success:', r.status); return r.data; })
-            .catch(err => { console.error('❌ Users API Failed:', err.response?.status, err.message); return { data: [] }; }),
-          api.get('/sales/orders?limit=1000')
-            .then(r => { console.log('✅ Orders API Success:', r.status); return r.data; })
-            .catch(err => { console.error('❌ Orders API Failed:', err.response?.status, err.message); return { data: [] }; }),
-          api.get('/sales/leads?limit=1000')
-            .then(r => { console.log('✅ Leads API Success:', r.status); return r.data; })
-            .catch(err => { console.error('❌ Leads API Failed:', err.response?.status, err.message); return { data: [] }; }),
-          api.get('/marketing/campaigns?limit=1000')
-            .then(r => { console.log('✅ Campaigns API Success:', r.status); return r.data; })
-            .catch(err => { console.error('❌ Campaigns API Failed:', err.response?.status, err.message); return { data: [] }; }),
-          api.get('/operations/work-order?limit=1000')
-            .then(r => { console.log('✅ Work Orders API Success:', r.status); return r.data; })
-            .catch(err => { console.error('❌ Work Orders API Failed:', err.response?.status, err.message); return { data: [] }; })
+        const [usersRes, campaignsRes, ordersRes, leadsRes, woRes] = await Promise.all([
+          api.get('/users?limit=1000').catch(() => ({ data: [] })),
+          api.get('/marketing/campaigns?limit=1000').catch(() => ({ data: [] })),
+          api.get('/customer/orders?limit=1000').catch(() => ({ data: [] })),
+          api.get('/sales/leads?limit=1000').catch(() => ({ data: [] })),
+          api.get('/operations/work-orders?limit=1000').catch(() => ({ data: [] }))
         ]);
 
         // 2. Extract using universal extractor
         const users = universalExtract(usersRes);
+        const campaigns = universalExtract(campaignsRes);
         const orders = universalExtract(ordersRes);
         const leads = universalExtract(leadsRes);
-        const campaigns = universalExtract(campaignsRes);
-        const workOrders = universalExtract(workOrdersRes);
+        const workOrders = universalExtract(woRes);
 
         // 🔥 FORCE DEBUG LOGS - Pipeline Diagnostic
         console.log("🟡 RAW CAMPAIGNS RES FULL STRUCTURE:", JSON.stringify(campaignsRes, null, 2));

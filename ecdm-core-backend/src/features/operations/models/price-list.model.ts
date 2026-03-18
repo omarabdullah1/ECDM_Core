@@ -1,24 +1,25 @@
-import mongoose, { Schema, Model, Document } from 'mongoose';
+import mongoose, { Document, Model, Schema } from 'mongoose';
 import { getNextSequence } from '../../shared/models/counter.model';
 
 /**
- * SparePart Model - Operations/Inventory Module
- * 
- * Schema for managing spare parts inventory with PDF data sheet uploads.
- * Uses auto-generated sequential IDs (SP-1001, SP-1002, etc.)
+ * PriceList Model — Operations Module
+ *
+ * Manages the company price list for spare parts, general supplies,
+ * and supply-and-installation services.
+ * Uses auto-generated sequential IDs (PL-1001, PL-1002, …)
  */
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TypeScript Interface
 // ─────────────────────────────────────────────────────────────────────────────
 
-export interface ISparePartDocument extends Document {
-    sparePartsId: string;           // Custom ID like 'SP-001'
+export interface IPriceListDocument extends Document {
+    sparePartsId: string;
     itemName: string;
     specification: string;
-    dataSheetUrl: string;           // URL/Path to the uploaded PDF
-    dataSheetFileName: string;      // Original file name
-    category: string;
+    dataSheetUrl: string;
+    dataSheetFileName: string;
+    category: 'Maintenance' | 'General supply' | 'Supply and installation';
     unitPrice: number;
     notes: string;
     updatedBy: mongoose.Types.ObjectId;
@@ -30,10 +31,8 @@ export interface ISparePartDocument extends Document {
 // Mongoose Schema
 // ─────────────────────────────────────────────────────────────────────────────
 
-const sparePartSchema = new Schema<ISparePartDocument>(
+const priceListSchema = new Schema<IPriceListDocument>(
     {
-        // Human-readable unique ID (e.g., "SP-1001", "SP-1002")
-        // Auto-generated on creation via pre-save hook
         sparePartsId: {
             type: String,
             unique: true,
@@ -54,7 +53,6 @@ const sparePartSchema = new Schema<ISparePartDocument>(
             maxlength: [2000, 'Specification cannot exceed 2000 characters'],
         },
 
-        // PDF Data Sheet Upload (handled by multer middleware)
         dataSheetUrl: {
             type: String,
             default: '',
@@ -69,9 +67,11 @@ const sparePartSchema = new Schema<ISparePartDocument>(
 
         category: {
             type: String,
+            enum: {
+                values: ['Maintenance', 'General supply', 'Supply and installation'],
+                message: 'Category must be Maintenance, General supply, or Supply and installation',
+            },
             default: '',
-            trim: true,
-            maxlength: [100, 'Category cannot exceed 100 characters'],
         },
 
         unitPrice: {
@@ -99,13 +99,13 @@ const sparePartSchema = new Schema<ISparePartDocument>(
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Pre-save Hook: Auto-generate sparePartsId (SP-1001, SP-1002, etc.)
+// Pre-save Hook: Auto-generate sparePartsId (PL-1001, PL-1002, …)
 // ─────────────────────────────────────────────────────────────────────────────
 
-sparePartSchema.pre('save', async function (next) {
+priceListSchema.pre('save', async function (next) {
     if (!this.sparePartsId) {
-        const seq = await getNextSequence('spare-part');
-        this.sparePartsId = `SP-${seq}`;
+        const seq = await getNextSequence('price-list');
+        this.sparePartsId = `PL-${seq}`;
     }
     next();
 });
@@ -114,11 +114,14 @@ sparePartSchema.pre('save', async function (next) {
 // Text Index for Search
 // ─────────────────────────────────────────────────────────────────────────────
 
-sparePartSchema.index({ itemName: 'text', specification: 'text', category: 'text' });
+priceListSchema.index({ itemName: 'text', specification: 'text', category: 'text' });
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Export Model
 // ─────────────────────────────────────────────────────────────────────────────
 
-const SparePart: Model<ISparePartDocument> = mongoose.model<ISparePartDocument>('SparePart', sparePartSchema);
-export default SparePart;
+const PriceList: Model<IPriceListDocument> = mongoose.model<IPriceListDocument>(
+    'PriceList',
+    priceListSchema
+);
+export default PriceList;

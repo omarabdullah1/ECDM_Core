@@ -18,6 +18,7 @@ import {
     Calendar,
     ChevronDown, ChevronLeft, ChevronRight,
     ClipboardList,
+    DollarSign,
     FileEdit,
     FileSpreadsheet,
     FileText,
@@ -50,7 +51,7 @@ const iconMap: Record<string, React.ComponentType<{ size?: number; className?: s
     Package, TrendingUp, ShoppingCart,
     Megaphone, Wrench, Star, Headphones, MessageSquare, ClipboardList,
     FileText, UserCog, FileEdit, Activity, Calendar, UserCheck, Archive,
-    Kanban, FolderKanban, TrendingUpDown, Briefcase,
+    Kanban, FolderKanban, TrendingUpDown, Briefcase, DollarSign,
 };
 
 interface NavChild { labelKey: string; href: string; icon: string; }
@@ -84,9 +85,14 @@ const NAV: NavItem[] = [
         ]
     },
     {
+        labelKey: 'finance', icon: 'DollarSign', children: [
+            { labelKey: 'orderFinance', href: '/finance/orders', icon: 'DollarSign' },
+        ]
+    },
+    {
         labelKey: 'operations', icon: 'Wrench', children: [
             { labelKey: 'workOrder', href: '/operations/work-order', icon: 'Wrench' },
-            { labelKey: 'inventoryPlus', href: '/operations/inventory-plus', icon: 'Package' },
+            { labelKey: 'priceList', href: '/operations/price-list', icon: 'FileText' },
             { labelKey: 'reportOperation', href: '/operations/report', icon: 'Star' },
         ]
     },
@@ -123,7 +129,7 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
     const t = useT();
     const nav = t.nav;
     const { user, logout } = useAuthStore();
-    const [openGroups, setOpenGroups] = useState<string[]>(['marketing', 'sales', 'customer', 'operations', 'hr', 'administration', 'rnd']);
+    const [openGroups, setOpenGroups] = useState<string[]>(['marketing', 'sales', 'customer', 'finance', 'operations', 'hr', 'administration', 'rnd']);
 
     const label = (key: string) => (nav as Record<string, string>)[key] ?? key;
 
