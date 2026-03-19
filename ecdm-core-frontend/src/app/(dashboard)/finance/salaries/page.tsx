@@ -11,6 +11,7 @@ import {
   RefreshCw,
   Search,
   ShieldAlert,
+  Trash2,
   UserPlus,
   X,
 } from 'lucide-react';
@@ -22,6 +23,7 @@ const iClsRo = 'w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var
 const labelCls = 'block text-sm font-medium text-[hsl(var(--foreground))] mb-1';
 
 interface SalaryRow {
+  _id: string;
   employeeId: string;
   employeeName: string;
   department: string;
@@ -119,6 +121,7 @@ export default function SalariesPage() {
       const rawSalaries = universalExtract(salariesRes.data || salariesRes);
 
       const rows: SalaryRow[] = rawSalaries.map((item: any) => ({
+        _id: String(item._id || ''),
         employeeId: String(item.employeeId || '-'),
         employeeName: String(item.employeeName || 'Unknown'),
         department: String(item.department || '-'),
@@ -158,6 +161,19 @@ export default function SalariesPage() {
 
   const handleSync = () => {
     fetchSalariesData(true);
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this salary record? This action cannot be undone.')) return;
+    
+    try {
+      await api.delete(`/finance/salaries/${id}`);
+      toast.success('Salary record deleted successfully');
+      fetchSalariesData(true);
+    } catch (error: any) {
+      console.error('Failed to delete salary:', error);
+      toast.error(error.response?.data?.message || 'Failed to delete salary record');
+    }
   };
 
   const filteredData = salariesData.filter((row) => {
@@ -296,12 +312,13 @@ export default function SalariesPage() {
                     <th className="border-b px-3 py-2 text-left font-medium">AbsenceDeduction</th>
                     <th className="border-b px-3 py-2 text-left font-medium">OtherDeductions</th>
                     <th className="border-b px-3 py-2 text-left font-medium">Notes</th>
+                    <th className="border-b px-3 py-2 text-left font-medium">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {currentRows.length === 0 ? (
                     <tr>
-                      <td colSpan={13} className="border-b px-3 py-8 text-center text-muted-foreground">
+                      <td colSpan={14} className="border-b px-3 py-8 text-center text-muted-foreground">
                         {searchTerm ? 'No salaries match your search' : 'No salary data found'}
                       </td>
                     </tr>
@@ -325,6 +342,15 @@ export default function SalariesPage() {
                         <td className="border-b px-3 py-2">{row.absenceDeduction}</td>
                         <td className="border-b px-3 py-2">{row.otherDeductions}</td>
                         <td className="border-b px-3 py-2 text-muted-foreground">{row.notes}</td>
+                        <td className="border-b px-3 py-2">
+                          <button
+                            onClick={() => handleDelete(row._id)}
+                            className="text-red-500 hover:text-red-700 transition-colors"
+                            title="Delete"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </td>
                       </tr>
                     ))
                   )}
@@ -465,7 +491,7 @@ export default function SalariesPage() {
                       min="0"
                       value={formData.overtime === '' ? '' : String(formData.overtime)}
                       onChange={(e) => setFormData({ ...formData, overtime: e.target.value === '' ? '' : parseFloat(e.target.value) || 0 })}
-                      className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                      className={iCls}
                       placeholder="0.00"
                     />
                   </div>
@@ -477,7 +503,7 @@ export default function SalariesPage() {
                       min="0"
                       value={formData.bonuses === '' ? '' : String(formData.bonuses)}
                       onChange={(e) => setFormData({ ...formData, bonuses: e.target.value === '' ? '' : parseFloat(e.target.value) || 0 })}
-                      className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                      className={iCls}
                       placeholder="0.00"
                     />
                   </div>
@@ -490,7 +516,7 @@ export default function SalariesPage() {
                       type="text"
                       value={formData.percentage}
                       onChange={(e) => setFormData({ ...formData, percentage: e.target.value })}
-                      className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                      className={iCls}
                       placeholder="e.g. 5%"
                     />
                   </div>
@@ -502,7 +528,7 @@ export default function SalariesPage() {
                       min="0"
                       value={formData.tax === '' ? '' : String(formData.tax)}
                       onChange={(e) => setFormData({ ...formData, tax: e.target.value === '' ? '' : parseFloat(e.target.value) || 0 })}
-                      className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                      className={iCls}
                       placeholder="0.00"
                     />
                   </div>
@@ -517,7 +543,7 @@ export default function SalariesPage() {
                       min="0"
                       value={formData.insurance === '' ? '' : String(formData.insurance)}
                       onChange={(e) => setFormData({ ...formData, insurance: e.target.value === '' ? '' : parseFloat(e.target.value) || 0 })}
-                      className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                      className={iCls}
                       placeholder="0.00"
                     />
                   </div>
@@ -529,7 +555,7 @@ export default function SalariesPage() {
                       min="0"
                       value={formData.absenceDeduction === '' ? '' : String(formData.absenceDeduction)}
                       onChange={(e) => setFormData({ ...formData, absenceDeduction: e.target.value === '' ? '' : parseFloat(e.target.value) || 0 })}
-                      className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                      className={iCls}
                       placeholder="0.00"
                     />
                   </div>
@@ -543,7 +569,7 @@ export default function SalariesPage() {
                     min="0"
                     value={formData.otherDeductions === '' ? '' : String(formData.otherDeductions)}
                     onChange={(e) => setFormData({ ...formData, otherDeductions: e.target.value === '' ? '' : parseFloat(e.target.value) || 0 })}
-                    className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                    className={iCls}
                     placeholder="0.00"
                   />
                 </div>
@@ -553,7 +579,7 @@ export default function SalariesPage() {
                   <textarea
                     value={formData.notes}
                     onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                    className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all resize-none"
+                    className={`${iCls} resize-none`}
                     placeholder="Any additional notes..."
                     rows={3}
                   />
