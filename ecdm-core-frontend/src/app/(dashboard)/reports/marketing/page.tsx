@@ -27,6 +27,11 @@ const parseMoney = (val: any): number => {
   return isNaN(parsed) ? 0 : parsed;
 };
 
+const formatMoney = (val: any) => {
+  const num = Number(val);
+  return isNaN(num) ? 'EGP 0.00' : `EGP ${num.toFixed(2)}`;
+};
+
 // ── Types ───────────────────────────────────────────────────────────
 interface ReportRow {
   campaignId: string;
@@ -376,12 +381,12 @@ export default function MarketingReport() {
                   </td>
                   <td className="px-6 py-4 text-slate-600 dark:text-slate-300">
                     {row.budgetAllocated > 0
-                      ? `EGP ${row.budgetAllocated.toLocaleString()}`
+                      ? formatMoney(row.budgetAllocated)
                       : '-'}
                   </td>
                   <td className="px-6 py-4 text-slate-600 dark:text-slate-300">
                     {row.budgetUsed > 0
-                      ? `EGP ${row.budgetUsed.toLocaleString()}`
+                      ? formatMoney(row.budgetUsed)
                       : '-'}
                   </td>
                   <td className="px-6 py-4 text-slate-600 dark:text-slate-300">
@@ -396,8 +401,8 @@ export default function MarketingReport() {
                   </td>
                   <td className="px-6 py-4 font-bold text-blue-600 dark:text-blue-400">
                     {row.revenue > 0
-                      ? `EGP ${row.revenue.toLocaleString()}`
-                      : '0'}
+                      ? formatMoney(row.revenue)
+                      : 'EGP 0.00'}
                   </td>
                   <td className="px-6 py-4">{getRoasBadge(row.roas)}</td>
                   <td className="px-6 py-4 max-w-[200px] truncate text-slate-500 dark:text-slate-400" title={row.notes}>

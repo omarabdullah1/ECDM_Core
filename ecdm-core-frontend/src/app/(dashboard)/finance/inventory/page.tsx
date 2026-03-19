@@ -318,10 +318,10 @@ export default function InventoryFinancePage() {
         )}
       </div>
 
-      {/* Add Inventory Modal */}
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" aria-hidden={!addModalOpen ? 'true' : 'false'}>
-        <div className="relative w-full max-w-md max-h-[90vh]">
-          <div className="relative bg-card rounded-lg shadow">
+      {addModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="relative w-full max-w-md max-h-[90vh]">
+            <div className="relative bg-card rounded-lg shadow">
             {/* Close Button */}
             <button
               onClick={() => setAddModalOpen(false)}
@@ -510,7 +510,8 @@ export default function InventoryFinancePage() {
             </div>
           </div>
         </div>
-      </div>
+        </div>
+      )}
     </div>
   );
 }

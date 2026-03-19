@@ -108,8 +108,10 @@ export default function FeedbackPage() {
         api.get('/customer/orders?limit=1000').catch(() => ({ data: { data: [] } }))
       ])
         .then(([custRes, coRes]) => {
-          setCustomers(custRes.data?.data || []);
-          setCustomerOrders(coRes.data?.data?.data || coRes.data?.data || []);
+          const custData = custRes.data?.data || custRes.data;
+          const coData = coRes.data?.data?.data || coRes.data?.data || coRes.data;
+          setCustomers(Array.isArray(custData) ? custData : []);
+          setCustomerOrders(Array.isArray(coData) ? coData : []);
         })
         .catch(() => {
           setCustomers([]);

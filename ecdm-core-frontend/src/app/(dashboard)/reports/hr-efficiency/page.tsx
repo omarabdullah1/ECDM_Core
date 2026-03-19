@@ -64,7 +64,7 @@ export default function HREfficiencyReport() {
           satisfactionRate: String(user.satisfactionRate || '90%'),
           hrEfficiency: String(user.hrEfficiency || 'High'),
           no: String(index + 1),
-          employee: String(user.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : user.name || 'Unknown'),
+          employee: user.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : (user.name || user.email || 'Unknown Employee'),
           strengths: String(user.strengths || '-'),
           weaknesses: String(user.weaknesses || '-'),
           actionPlan: String(user.actionPlan || '-'),

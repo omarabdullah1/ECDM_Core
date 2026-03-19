@@ -71,6 +71,11 @@ const getDepartmentBadgeClass = (dept: string) => {
   }
 };
 
+const formatMoney = (val: any) => {
+  const num = Number(val);
+  return isNaN(num) ? 'EGP 0.00' : `EGP ${num.toFixed(2)}`;
+};
+
 export default function SalariesPage() {
   const { user } = useAuthStore();
   const router = useRouter();
@@ -125,15 +130,15 @@ export default function SalariesPage() {
         employeeId: String(item.employeeId || '-'),
         employeeName: String(item.employeeName || 'Unknown'),
         department: String(item.department || '-'),
-        basicSalary: item.basicSalary ? `EGP ${Number(item.basicSalary).toFixed(2)}` : 'EGP 0.00',
-        allowances: item.allowances ? `EGP ${Number(item.allowances).toFixed(2)}` : '-',
-        overtime: item.overtime ? `EGP ${Number(item.overtime).toFixed(2)}` : '-',
-        bonuses: item.bonuses ? `EGP ${Number(item.bonuses).toFixed(2)}` : '-',
+        basicSalary: formatMoney(item.basicSalary),
+        allowances: formatMoney(item.allowances),
+        overtime: formatMoney(item.overtime),
+        bonuses: formatMoney(item.bonuses),
         percentage: String(item.percentage || '0%'),
-        tax: item.tax ? `EGP ${Number(item.tax).toFixed(2)}` : '-',
-        insurance: item.insurance ? `EGP ${Number(item.insurance).toFixed(2)}` : '-',
-        absenceDeduction: item.absenceDeduction ? `EGP ${Number(item.absenceDeduction).toFixed(2)}` : '-',
-        otherDeductions: item.otherDeductions ? `EGP ${Number(item.otherDeductions).toFixed(2)}` : '-',
+        tax: formatMoney(item.tax),
+        insurance: formatMoney(item.insurance),
+        absenceDeduction: formatMoney(item.absenceDeduction),
+        otherDeductions: formatMoney(item.otherDeductions),
         notes: String(item.notes || '-')
       }));
 

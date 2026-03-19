@@ -44,6 +44,11 @@ const universalExtract = (rawData: any): any[] => {
 const iCls = 'w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-4 py-3 text-sm placeholder:text-[hsl(var(--muted-foreground))] focus:border-[hsl(var(--primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/20 transition-all';
 const labelCls = 'block text-sm font-medium text-[hsl(var(--foreground))] mb-1';
 
+const formatMoney = (val: any) => {
+  const num = Number(val);
+  return isNaN(num) ? 'EGP 0.00' : `EGP ${num.toFixed(2)}`;
+};
+
 export default function ExpensesPage() {
   const { user } = useAuthStore();
   const router = useRouter();
@@ -101,7 +106,7 @@ export default function ExpensesPage() {
         expenseType: String(item.expenseType || '-'),
         invoices: 'File', // Represents the Document icon
         description: String(item.description || '-'),
-        amount: item.amount ? `EGP ${Number(item.amount).toFixed(2)}` : 'EGP 0.00',
+        amount: formatMoney(item.amount),
         paymentMethod: String(item.paymentMethod || '-'),
         paidBy: String(item.paidBy || '-'),
         notes: String(item.notes || '-')

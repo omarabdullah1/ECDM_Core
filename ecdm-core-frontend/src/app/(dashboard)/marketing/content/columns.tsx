@@ -84,7 +84,7 @@ export const getColumns = ({ onEdit, onDelete }: ColumnProps) => [
     },
     {
         key: 'contentTitle',
-        header: 'Content',
+        header: 'Content Title',
         render: (row: ContentTracker) => (
             <span className="font-medium">{row.contentTitle}</span>
         ),

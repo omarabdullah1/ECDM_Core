@@ -25,6 +25,11 @@ export default function SalesReport() {
     return [];
   };
 
+  const formatMoney = (val: any) => {
+    const num = Number(val);
+    return isNaN(num) ? 'EGP 0.00' : `EGP ${num.toFixed(2)}`;
+  };
+
   useEffect(() => {
     // Basic auth check
     if (!user) return;
@@ -206,10 +211,10 @@ export default function SalesReport() {
                   <td className="px-6 py-4 font-bold text-slate-900 dark:text-white">{row.name}</td>
                   <td className="px-6 py-4 text-slate-600 dark:text-slate-300">{row.jobDesc}</td>
                   <td className="px-6 py-4 text-slate-600 dark:text-slate-300">
-                    {row.targetSales > 0 ? `EGP ${row.targetSales.toLocaleString()}` : '-'}
+                    {row.targetSales > 0 ? formatMoney(row.targetSales) : '-'}
                   </td>
                   <td className="px-6 py-4 font-bold text-blue-600 dark:text-blue-400">
-                    {row.actualSales > 0 ? `EGP ${row.actualSales.toLocaleString()}` : '0'}
+                    {row.actualSales > 0 ? formatMoney(row.actualSales) : 'EGP 0.00'}
                   </td>
                   <td className="px-6 py-4 font-bold text-slate-900 dark:text-white">{row.performanceScore}%</td>
                   <td className="px-6 py-4 text-slate-600 dark:text-slate-300">{row.newClients}</td>

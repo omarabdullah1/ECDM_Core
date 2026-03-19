@@ -97,7 +97,7 @@ export default function EmployeeEvaluationReport() {
 
         return {
           id: String(index + 1),
-          employeeName: String(user.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : user.name || 'Unknown'),
+          employeeName: user.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : (user.name || user.email || 'Unknown Employee'),
           role: String(user.role || '-'),
           jobDescription: String(user.jobDescription || '-'),
           sector: String(user.sector || user.department || 'Operations'),
