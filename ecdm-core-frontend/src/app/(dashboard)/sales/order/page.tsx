@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import api from '@/lib/axios';
+import toast from 'react-hot-toast';
 import { ClipboardList, Plus, X } from 'lucide-react';
 import { DataTable } from '@/components/ui/DataTable';
 import { createSalesOrderColumns, createActionsRenderer, type SalesOrder } from './columns';
@@ -29,7 +30,25 @@ export default function SalesOrderPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [delId, setDelId] = useState<string | null>(null);
+  const [salesLeads, setSalesLeads] = useState<any[]>([]);
+  const [loadingLeads, setLoadingLeads] = useState(false);
   const lim = 10; const tp = Math.ceil(total / lim);
+
+  // Fetch sales leads for dropdown
+  useEffect(() => {
+    setLoadingLeads(true);
+    api.get('/sales/leads?limit=1000')
+      .then(res => {
+        const leads = res.data?.data || [];
+        setSalesLeads(Array.isArray(leads) ? leads : []);
+      })
+      .catch((err) => { 
+        console.error('Failed to fetch sales leads:', err);
+        toast.error('Failed to load sales leads for dropdown');
+        setSalesLeads([]); 
+      })
+      .finally(() => setLoadingLeads(false));
+  }, []);
 
   const fetch_ = useCallback(async () => {
     setLoading(true);
@@ -39,8 +58,13 @@ export default function SalesOrderPage() {
       if (fFinalStatus) p.finalStatus = fFinalStatus;
       if (fTypeOfOrder) p.typeOfOrder = fTypeOfOrder;
       const { data } = await api.get('/sales/orders', { params: p });
-      setRows(data.data.data); setTotal(data.data.pagination.total);
-    } catch { }
+      setRows(data.data.data || []);
+      setTotal(data.data.pagination?.total || 0);
+    } catch (err) {
+      console.error('Failed to fetch sales orders:', err);
+      toast.error('Failed to load sales orders');
+      setRows([]);
+    }
     setLoading(false);
   }, [page, fStatus, fFinalStatus, fTypeOfOrder]);
   useEffect(() => { fetch_(); }, [fetch_]);
@@ -62,7 +86,18 @@ export default function SalesOrderPage() {
     } catch (e: unknown) { setError((e as { response?: { data?: { message?: string } } }).response?.data?.message || 'Failed'); }
     setSaving(false);
   };
-  const del = async () => { if (!delId) return; try { await api.delete(`/sales/orders/${delId}`); fetch_(); } catch { } setDelId(null); };
+  const del = async () => { 
+    if (!delId) return; 
+    try { 
+      await api.delete(`/sales/orders/${delId}`); 
+      toast.success('Order deleted successfully');
+      fetch_(); 
+    } catch (err) {
+      console.error('Failed to delete order:', err);
+      toast.error('Failed to delete order');
+    }
+    setDelId(null); 
+  };
   const u = (f: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setForm(p => ({ ...p, [f]: e.target.value }));
 
   // ─── Column Definitions ───────────────────────────────────────────────────
@@ -173,7 +208,29 @@ export default function SalesOrderPage() {
           <div className="w-full max-w-lg rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6 shadow-2xl">
             <div className="flex items-center justify-between mb-6"><h2 className="text-lg font-bold">New Order</h2><button onClick={() => setModal(false)}><X className="h-5 w-5" /></button></div>
             <form onSubmit={save} className="space-y-4">
-              <input placeholder="Sales Lead ID" value={form.salesLead} onChange={u('salesLead')} className={iCls} />
+              {/* Sales Lead Dropdown */}
+              <div>
+                <label className="block text-xs font-medium mb-1 text-[hsl(var(--muted-foreground))]">Sales Lead</label>
+                <select 
+                  required 
+                  value={form.salesLead} 
+                  onChange={u('salesLead')} 
+                  className={iCls}
+                >
+                  <option value="">Select Sales Lead...</option>
+                  {loadingLeads ? (
+                    <option disabled>Loading leads...</option>
+                  ) : salesLeads.length === 0 ? (
+                    <option disabled>No leads available</option>
+                  ) : (
+                    salesLeads.map(lead => (
+                      <option key={lead._id} value={lead._id}>
+                        {lead.customerId?.name || 'Customer'} - {(lead.issue || '').substring(0, 40)}{(lead.issue || '').length > 40 ? '...' : ''}
+                      </option>
+                    ))
+                  )}
+                </select>
+              </div>
               <select required value={form.quotationStatus} onChange={u('quotationStatus')} className={iCls}>{Q_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}</select>
               <select value={form.finalStatus} onChange={u('finalStatus')} className={iCls}><option value="">Final Status (optional)</option>{F_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}</select>
               <input type="number" placeholder="Total Amount (EGP)" value={form.totalAmount} onChange={u('totalAmount')} className={iCls} />

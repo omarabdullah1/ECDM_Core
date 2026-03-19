@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '@/lib/axios';
 import { ClipboardList, Plus, X, TrendingUp, Phone, CheckCircle } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { DataTable } from '@/components/ui/DataTable';
 import { createColumns, type FollowUp } from './columns';
 
@@ -21,7 +22,39 @@ export default function FollowUpPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [delId, setDelId] = useState<string | null>(null);
+
+  // Dropdown data
+  const [workOrders, setWorkOrders] = useState<any[]>([]);
+  const [customers, setCustomers] = useState<any[]>([]);
+  const [csrUsers, setCsrUsers] = useState<any[]>([]);
+  const [loadingLookups, setLoadingLookups] = useState(false);
+
   const lim = 10;
+
+  // Fetch lookup data when modal opens
+  useEffect(() => {
+    if (modal) {
+      setLoadingLookups(true);
+      Promise.all([
+        api.get('/operations/work-orders?limit=1000').catch(() => ({ data: { data: [] } })),
+        api.get('/shared/customers?limit=1000').catch(() => ({ data: { data: [] } })),
+        api.get('/hr/users?limit=1000').catch(() => ({ data: { data: [] } }))
+      ])
+        .then(([woRes, custRes, csrRes]) => {
+          setWorkOrders(woRes.data?.data || []);
+          setCustomers(custRes.data?.data || []);
+          // Filter for CSR role users
+          const csrs = (csrRes.data?.data || []).filter((u: any) => u.role === 'CustomerService');
+          setCsrUsers(csrs);
+        })
+        .catch(() => {
+          setWorkOrders([]);
+          setCustomers([]);
+          setCsrUsers([]);
+        })
+        .finally(() => setLoadingLookups(false));
+    }
+  }, [modal]);
 
   const fetch_ = useCallback(async () => {
     setLoading(true);
@@ -30,9 +63,13 @@ export default function FollowUpPage() {
       if (statusFilter !== '') p.status = statusFilter;
       if (fSolved !== '') p.solvedIssue = fSolved;
       const { data } = await api.get('/customer/follow-up', { params: p });
-      setRows(data.data.data);
-      setTotal(data.data.pagination.total);
-    } catch { }
+      setRows(data.data?.data || []);
+      setTotal(data.data?.pagination?.total || 0);
+    } catch (err) {
+      console.error('Failed to fetch follow-ups:', err);
+      toast.error('Failed to load follow-ups');
+      setRows([]);
+    }
     setLoading(false);
   }, [page, statusFilter, fSolved]);
 
@@ -47,15 +84,26 @@ export default function FollowUpPage() {
   const openE = (r: FollowUp) => {
     setEditing(r);
     setForm({
-      workOrder: '',
-      customer: '',
-      csr: '',
+      workOrder: r.workOrder?._id || '',
+      customer: r.customer?._id || '',
+      csr: r.csr?._id || '',
       followUpDate: r.followUpDate?.slice(0, 10) || '',
       status: r.status || 'Pending',
       notes: r.notes || ''
     });
     setError('');
     setModal(true);
+  };
+
+  // Handle WorkOrder selection and auto-fill customer
+  const handleWorkOrderChange = (workOrderId: string) => {
+    const wo = workOrders.find(w => w._id === workOrderId);
+    setForm(prev => ({
+      ...prev,
+      workOrder: workOrderId,
+      // Auto-fill customer from workOrder if not already set
+      customer: prev.customer || (wo?.customerOrderId?.customerId?._id || '')
+    }));
   };
 
   const save = async (ev: React.FormEvent) => {
@@ -218,9 +266,82 @@ export default function FollowUpPage() {
               <button onClick={() => setModal(false)}><X className="h-5 w-5" /></button>
             </div>
             <form onSubmit={save} className="space-y-4">
-              {!editing && <input required placeholder="Work Order ID (optional)" value={form.workOrder} onChange={u('workOrder')} className={iCls} />}
-              {!editing && <input required placeholder="Customer ID" value={form.customer} onChange={u('customer')} className={iCls} />}
-              {!editing && <input placeholder="CSR (User ID)" value={form.csr} onChange={u('csr')} className={iCls} />}
+              {/* Work Order Dropdown */}
+              {!editing && (
+                <div>
+                  <label className="block text-xs font-medium mb-1 text-[hsl(var(--muted-foreground))]">Work Order (Optional)</label>
+                  <select 
+                    value={form.workOrder} 
+                    onChange={(e) => handleWorkOrderChange(e.target.value)} 
+                    className={iCls}
+                  >
+                    <option value="">Select Work Order...</option>
+                    {loadingLookups ? (
+                      <option disabled>Loading...</option>
+                    ) : workOrders.length === 0 ? (
+                      <option disabled>No work orders available</option>
+                    ) : (
+                      workOrders.map(wo => (
+                        <option key={wo._id} value={wo._id}>
+                          {wo.maintenanceEngineer || 'Engineer'} - {(wo.customerOrderId?.issue || '').substring(0, 40)}
+                        </option>
+                      ))
+                    )}
+                  </select>
+                </div>
+              )}
+
+              {/* Customer Dropdown */}
+              {!editing && (
+                <div>
+                  <label className="block text-xs font-medium mb-1 text-[hsl(var(--muted-foreground))]">Customer</label>
+                  <select 
+                    required
+                    value={form.customer} 
+                    onChange={u('customer')} 
+                    className={iCls}
+                  >
+                    <option value="">Select Customer...</option>
+                    {loadingLookups ? (
+                      <option disabled>Loading...</option>
+                    ) : customers.length === 0 ? (
+                      <option disabled>No customers available</option>
+                    ) : (
+                      customers.map(c => (
+                        <option key={c._id} value={c._id}>
+                          {c.name} - {c.phone}
+                        </option>
+                      ))
+                    )}
+                  </select>
+                </div>
+              )}
+
+              {/* CSR Dropdown */}
+              {!editing && (
+                <div>
+                  <label className="block text-xs font-medium mb-1 text-[hsl(var(--muted-foreground))]">CSR (Optional)</label>
+                  <select 
+                    value={form.csr} 
+                    onChange={u('csr')} 
+                    className={iCls}
+                  >
+                    <option value="">Select CSR...</option>
+                    {loadingLookups ? (
+                      <option disabled>Loading...</option>
+                    ) : csrUsers.length === 0 ? (
+                      <option disabled>No CSR users available</option>
+                    ) : (
+                      csrUsers.map(u => (
+                        <option key={u._id} value={u._id}>
+                          {u.firstName} {u.lastName}
+                        </option>
+                      ))
+                    )}
+                  </select>
+                </div>
+              )}
+
               <input type="date" value={form.followUpDate} onChange={u('followUpDate')} className={iCls} />
               <select value={form.status} onChange={u('status')} className={iCls}>
                 <option value="Pending">Pending</option>

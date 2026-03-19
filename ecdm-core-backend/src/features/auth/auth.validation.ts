@@ -6,7 +6,6 @@ export const registerSchema = z.object({
     lastName: z.string().min(1, 'Last name is required').max(50),
     email: z.string().email('Invalid email address'),
     password: z.string().min(8, 'Password must be at least 8 characters'),
-    role: z.nativeEnum(UserRole).optional(),
     phone: z.string().optional(),
 });
 

@@ -3,6 +3,11 @@ import { AppError } from '../../../utils/apiError';
 import { CreateWorkOrderInput, UpdateWorkOrderInput } from '../validation/work-order.validation';
 
 /**
+ * Escape special regex characters to prevent ReDoS/injection attacks.
+ */
+const escapeRegex = (str: string): string => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/**
  * Work Order Service - Maintenance/Workshop Module
  * 
  * Handles CRUD operations for Work Orders.
@@ -21,7 +26,7 @@ export const getAll = async (query: Record<string, unknown>) => {
 
     const filter: Record<string, unknown> = {};
     if (customerOrderId)     filter.customerOrderId     = customerOrderId;
-    if (maintenanceEngineer) filter.maintenanceEngineer = { $regex: maintenanceEngineer, $options: 'i' };
+    if (maintenanceEngineer) filter.maintenanceEngineer = { $regex: escapeRegex(maintenanceEngineer as string), $options: 'i' };
     if (punctuality)         filter.punctuality         = punctuality;
     if (taskCompleted)       filter.taskCompleted       = taskCompleted;
 

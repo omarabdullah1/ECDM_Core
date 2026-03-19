@@ -32,6 +32,7 @@ interface EditCustomerOrderDialogProps {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const formSchema = z.object({
+  engineerId: z.string().optional(),
   engineerName: z.string().optional(),
   actualVisitDate: z.string().optional(),
   devicePickupType: z.string().optional(), // 'Customer Drop-off', 'Company Pickup', 'On-site Repair'
@@ -128,6 +129,7 @@ export default function EditCustomerOrderDialog({ order, onClose, onSuccess }: E
   const form = useForm<FormSchema>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      engineerId: order.engineerId || '',
       engineerName: order.engineerName || '',
       actualVisitDate: toDateTimeLocal(order.actualVisitDate),
       devicePickupType: order.devicePickupType || '',
@@ -145,7 +147,7 @@ export default function EditCustomerOrderDialog({ order, onClose, onSuccess }: E
     const fetchEngineers = async () => {
       setLoadingEngineers(true);
       try {
-        const { data } = await api.get('/hr/employees', {
+        const { data } = await api.get('/hr/users', {
           params: { limit: 1000, isActive: true }
         });
         // Filter for engineers (MaintenanceEngineer role or department contains 'Engineering')
@@ -184,9 +186,16 @@ export default function EditCustomerOrderDialog({ order, onClose, onSuccess }: E
       // Prepare payload
       const payload: Record<string, unknown> = {};
 
-      // String fields
-      if (values.engineerName !== undefined) {
-        payload.engineerName = values.engineerName;
+      // Engineer fields - send both ID (relational) and Name (denormalized for display)
+      if (values.engineerId !== undefined) {
+        payload.engineerId = values.engineerId;
+        // Also update denormalized engineerName for display purposes
+        const selectedEngineer = engineers.find(e => e._id === values.engineerId);
+        if (selectedEngineer) {
+          payload.engineerName = `${selectedEngineer.firstName} ${selectedEngineer.lastName}`;
+        } else if (values.engineerName) {
+          payload.engineerName = values.engineerName;
+        }
       }
       if (values.devicePickupType !== undefined && values.devicePickupType !== '') {
         payload.devicePickupType = values.devicePickupType;
@@ -324,13 +333,13 @@ export default function EditCustomerOrderDialog({ order, onClose, onSuccess }: E
                 <div>
                   <label className={labelCls}>Engineer Name</label>
                   <select 
-                    {...form.register('engineerName')} 
+                    {...form.register('engineerId')} 
                     className={iCls}
                     disabled={loadingEngineers}
                   >
                     <option value="">{loadingEngineers ? 'Loading engineers...' : 'Select an Engineer...'}</option>
                     {engineers.map((engineer) => (
-                      <option key={engineer._id} value={`${engineer.firstName} ${engineer.lastName}`}>
+                      <option key={engineer._id} value={engineer._id}>
                         {engineer.firstName} {engineer.lastName} {engineer.department ? `(${engineer.department})` : ''}
                       </option>
                     ))}

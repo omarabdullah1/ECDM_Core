@@ -92,9 +92,13 @@ export default function SalesLeadsPage() {
       if (fStatus) p.status = fStatus;
       if (fOrder) p.order = fOrder;
       const { data } = await api.get('/sales/leads', { params: p });
-      setRows(data.data.data);
-      setTotal(data.data.pagination.total);
-    } catch { /* ignore */ }
+      setRows(data.data.data || []);
+      setTotal(data.data.pagination?.total || 0);
+    } catch (err) {
+      console.error('Failed to fetch sales leads:', err);
+      toast.error('Failed to load sales leads');
+      setRows([]);
+    }
     setLoading(false);
   }, [page, fStatus, fOrder]);
 
@@ -170,7 +174,14 @@ export default function SalesLeadsPage() {
 
   const del = async () => {
     if (!delId) return;
-    try { await api.delete(`/sales/leads/${delId}`); fetch_(); } catch { /* ignore */ }
+    try { 
+      await api.delete(`/sales/leads/${delId}`); 
+      toast.success('Lead deleted successfully');
+      fetch_(); 
+    } catch (err) {
+      console.error('Failed to delete lead:', err);
+      toast.error('Failed to delete lead');
+    }
     setDelId(null);
   };
 

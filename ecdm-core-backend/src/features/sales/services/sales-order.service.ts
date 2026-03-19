@@ -7,6 +7,7 @@ import WorkOrder from '../../operations/models/work-order.model';
 import SalesOrder from '../models/sales-order.model';
 import { ISalesOrderDocument } from '../types/sales-order.types';
 import { CreateSalesOrderInput, UpdateSalesOrderInput } from '../validation/sales-order.validation';
+import { updateCampaignRevenueFromSalesOrder } from '../../marketing/services/campaign-roi.service';
 
 export const create = async (data: CreateSalesOrderInput): Promise<ISalesOrderDocument> =>
     SalesOrder.create(data);
@@ -56,6 +57,10 @@ export const getById = async (id: string): Promise<ISalesOrderDocument> => {
 export const update = async (id: string, data: UpdateSalesOrderInput): Promise<ISalesOrderDocument> => {
     console.log('🔄 Service: Processing sales order update...');
     console.log('Raw input data:', JSON.stringify(data, null, 2));
+
+    // Capture previous status for Campaign ROI tracking
+    const previousOrder = await SalesOrder.findById(id).select('finalStatus');
+    const previousFinalStatus = previousOrder?.finalStatus;
 
     // ═════════════════════════════════════════════════════════════════════════
     // Type Conversion Layer - FormData sends everything as strings
@@ -289,6 +294,24 @@ export const update = async (id: string, data: UpdateSalesOrderInput): Promise<I
         }
     } else {
         console.log('ℹ️ No siteInspectionDate set, skipping cascade');
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // CAMPAIGN ROI TRACKING: Update Campaign revenue when Order is Won
+    // ═════════════════════════════════════════════════════════════════════════
+    const newFinalStatus = processedData.finalStatus;
+    if (previousFinalStatus !== 'Won' && newFinalStatus === 'Won') {
+        console.log('🎯 Campaign ROI Trigger: SalesOrder marked as Won');
+        try {
+            const campaignUpdate = await updateCampaignRevenueFromSalesOrder(id);
+            if (campaignUpdate) {
+                console.log(`   → Campaign "${campaignUpdate.campaignName}" revenue: +${campaignUpdate.addedRevenue}`);
+            } else {
+                console.log('   → No associated Campaign found for this SalesOrder');
+            }
+        } catch (campaignError) {
+            console.error('⚠️ Failed to update Campaign revenue:', campaignError);
+        }
     }
 
     console.log('✅ Service: Sales order updated successfully');

@@ -11,7 +11,10 @@ import authRoutes from './features/auth/auth.routes';
 // ── Shared domain ───────────────────────────────────────────────────
 import sharedCustomerRoutes from './features/shared/routes/customer.routes';
 import sharedEmployeeRoutes from './features/shared/routes/employee.routes';
+import inventoryFinanceRoutes from './features/finance/routes/inventory-finance.routes';
 
+import expenseRoutes from './features/finance/routes/expense.routes';
+import salaryRoutes from './features/finance/routes/salary.routes';
 // ── Marketing domain ────────────────────────────────────────────────
 import campaignRoutes from './features/marketing/routes/campaign.routes';
 import contentTrackerRoutes from './features/marketing/routes/content-tracker.routes';
@@ -42,7 +45,7 @@ import dashboardRoutes from './features/dashboard/dashboard.routes';
 
 // ── HR domain ───────────────────────────────────────────────────────
 import hrAttendanceRoutes from './features/hr/routes/attendance.routes';
-import hrEmployeeRoutes from './features/hr/routes/employee.routes';
+import hrEmployeeRoutes from './features/hr/routes/user.routes';
 
 // ── R&D domain ──────────────────────────────────────────────────────
 import rndRoutes from './features/rnd/routes/rnd.routes';
@@ -50,6 +53,10 @@ import rndRoutes from './features/rnd/routes/rnd.routes';
 // ── Admin / Maker-Checker Workflow ─────────────────────────────────
 import auditLogRoutes from './features/shared/routes/audit-log.routes';
 import modificationRequestRoutes from './features/shared/routes/modification-request.routes';
+
+// ── ERP Routes ─────────────────────────────────────────────────────────
+import invoiceRoutes from './features/erp/invoice/invoice.routes';
+import taskRoutes from './features/erp/task/task.routes';
 
 const app: Application = express();
 
@@ -153,7 +160,12 @@ app.use('/api/dashboard', dashboardRoutes);
 
 // HR
 app.use('/api/hr/attendance', hrAttendanceRoutes);
-app.use('/api/hr/employees',  hrEmployeeRoutes);
+app.use('/api/hr/users',  hrEmployeeRoutes);
+
+// Finance
+app.use('/api/finance/inventory', inventoryFinanceRoutes);
+app.use('/api/finance/expenses', expenseRoutes);
+app.use('/api/finance/salaries', salaryRoutes);
 
 // R&D
 app.use('/api/rnd', rndRoutes);
@@ -161,6 +173,10 @@ app.use('/api/rnd', rndRoutes);
 // Admin
 app.use('/api/admin/modification-requests', modificationRequestRoutes);
 app.use('/api/admin/audit-logs', auditLogRoutes);
+
+// ERP
+app.use('/api/erp/invoices', invoiceRoutes);
+app.use('/api/erp/tasks', taskRoutes);
 
 // ── Global error handler (must be last) ─────────────────────────────
 app.use(errorHandler);

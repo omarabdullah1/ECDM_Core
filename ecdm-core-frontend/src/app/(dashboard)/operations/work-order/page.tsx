@@ -1,18 +1,25 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import api from '@/lib/axios';
-import { Wrench, X } from 'lucide-react';
+import { Wrench, X, Trash2, Plus } from 'lucide-react';
 import DataTable from '@/components/ui/DataTable';
 import { columns, WorkOrder } from './columns';
 import toast from 'react-hot-toast';
 
-const iCls = 'w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-4 py-3 text-sm placeholder:text-[hsl(var(--muted-foreground))] focus:border-[hsl(var(--primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/20 transition-all';
+// ─────────────────────────────────────────────────────────────────────────────
+// Types
+// ─────────────────────────────────────────────────────────────────────────────
 
-const PUNCTUALITIES = ['Same time', 'Late'];
-const TASK_COMPLETED = ['Yes', 'No'];
-const SPARE_PARTS_AVAILABILITY = ['Available', 'Not Available', 'Requested'];
+interface PartEntry {
+  id: string;
+  inventoryItemId: string;
+  itemName: string;
+  quantity: number;
+  unitCost: number;
+}
 
 type FormData = {
+  customerOrderId: string;
   maintenanceEngineer: string;
   taskDate: string;
   startMaintenanceDate: string;
@@ -22,12 +29,12 @@ type FormData = {
   taskCompleted: string;
   reasonForIncompletion: string;
   rating: string;
-  sparePartsId: string;
   sparePartsAvailability: string;
   notes: string;
 };
 
 const blank: FormData = {
+  customerOrderId: '',
   maintenanceEngineer: '',
   taskDate: '',
   startMaintenanceDate: '',
@@ -37,7 +44,6 @@ const blank: FormData = {
   taskCompleted: '',
   reasonForIncompletion: '',
   rating: '',
-  sparePartsId: '',
   sparePartsAvailability: '',
   notes: '',
 };
@@ -55,8 +61,77 @@ export default function WorkOrderPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [delId, setDelId] = useState<string | null>(null);
+
+  // Dropdown data for Smart Dialog
+  const [priceList, setPriceList] = useState<any[]>([]);
+  const [customerOrders, setCustomerOrders] = useState<any[]>([]);
+  const [loadingLookups, setLoadingLookups] = useState(false);
+
+  // Parts management for dynamic partsUsed array
+  const [partsUsed, setPartsUsed] = useState<PartEntry[]>([]);
+
+  // Fetch dropdown data when modal opens
+  useEffect(() => {
+    if (modal) {
+      setLoadingLookups(true);
+      Promise.all([
+        api.get('/finance/inventory?limit=1000').catch(() => ({ data: { data: [] } })),
+        api.get('/customer/orders?limit=1000').catch(() => ({ data: { data: [] } }))
+      ])
+        .then(([priceRes, ordersRes]) => {
+          const priceData = priceRes.data?.data || priceRes.data || [];
+          const ordersData = ordersRes.data?.data || ordersRes.data || [];
+          setPriceList(Array.isArray(priceData) ? priceData : []);
+          setCustomerOrders(Array.isArray(ordersData) ? ordersData : []);
+        })
+        .catch(() => {
+          setPriceList([]);
+          setCustomerOrders([]);
+        })
+        .finally(() => setLoadingLookups(false));
+    }
+  }, [modal]);
+
+  // Parts management functions
+  const generatePartId = () => `part-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+  const addPart = () => {
+    setPartsUsed([
+      ...partsUsed,
+      { id: generatePartId(), inventoryItemId: '', itemName: '', quantity: 1, unitCost: 0 }
+    ]);
+  };
+
+  const removePart = (id: string) => {
+    setPartsUsed(partsUsed.filter(p => p.id !== id));
+  };
+
+  const updatePart = (id: string, field: keyof PartEntry, value: any) => {
+    setPartsUsed(partsUsed.map(p => {
+      if (p.id !== id) return p;
+
+      const updated = { ...p, [field]: value };
+
+      // Auto-fill unitCost when inventory item changes
+      if (field === 'inventoryItemId') {
+        const item = priceList.find(i => i._id === value);
+        if (item) {
+          updated.unitCost = item.price || 0;
+          updated.itemName = item.itemName || '';
+        }
+      }
+
+      return updated;
+    }));
+  };
+
   const lim = 10;
   const tp = Math.ceil(total / lim);
+
+  const PUNCTUALITIES = ['Same time', 'Late'];
+  const TASK_COMPLETED = ['Yes', 'No'];
+  const SPARE_PARTS_AVAILABILITY = ['Available', 'Not Available', 'Requested'];
+  const iCls = 'w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-4 py-3 text-sm placeholder:text-[hsl(var(--muted-foreground))] focus:border-[hsl(var(--primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/20 transition-all';
 
   const fetch_ = useCallback(async () => {
     setLoading(true);
@@ -81,7 +156,41 @@ export default function WorkOrderPage() {
   // ─── Edit Handler ────────────────────────────────────────────────────────
   const openE = (r: WorkOrder) => {
     setEditing(r);
+    // customerOrderId can be either an Object (populated) or string (ID only)
+    const orderId = typeof r.customerOrderId === 'object' && r.customerOrderId !== null 
+      ? r.customerOrderId._id 
+      : (r.customerOrderId as any) || '';
+    
+    // Initialize partsUsed from existing work order
+    const existingParts: PartEntry[] = [];
+    if (r.partsUsed && r.partsUsed.length > 0) {
+      // Map from populated partsUsed array
+      r.partsUsed.forEach((part: any) => {
+        existingParts.push({
+          id: generatePartId(),
+          inventoryItemId: typeof part.inventoryItemId === 'object' ? part.inventoryItemId._id : part.inventoryItemId,
+          itemName: part.inventoryItemId?.itemName || '',
+          quantity: part.quantity || 1,
+          unitCost: part.unitCost || 0,
+        });
+      });
+    } else if (r.sparePartsId) {
+      // Legacy: Convert old sparePartsId to partsUsed
+      const item = priceList.find(i => i._id === r.sparePartsId || i.sparePartsId === r.sparePartsId);
+      if (item) {
+        existingParts.push({
+          id: generatePartId(),
+          inventoryItemId: item._id,
+          itemName: item.itemName,
+          quantity: 1,
+          unitCost: item.price || 0,
+        });
+      }
+    }
+    setPartsUsed(existingParts);
+
     setForm({
+      customerOrderId: orderId,
       maintenanceEngineer: r.maintenanceEngineer || '',
       taskDate: r.taskDate ? r.taskDate.split('T')[0] : '',
       startMaintenanceDate: r.startMaintenanceDate ? r.startMaintenanceDate.split('T')[0] : '',
@@ -91,7 +200,6 @@ export default function WorkOrderPage() {
       taskCompleted: r.taskCompleted || '',
       reasonForIncompletion: r.reasonForIncompletion || '',
       rating: r.rating || '',
-      sparePartsId: r.sparePartsId || '',
       sparePartsAvailability: r.sparePartsAvailability || '',
       notes: r.notes || '',
     });
@@ -109,12 +217,22 @@ export default function WorkOrderPage() {
       if (v !== '') pl[k] = v;
     }
 
+    // Format partsUsed array for backend
+    pl.partsUsed = partsUsed
+      .filter(p => p.inventoryItemId !== '')
+      .map(p => ({
+        inventoryItemId: p.inventoryItemId,
+        quantity: p.quantity,
+        unitCost: p.unitCost,
+      }));
+
     try {
       if (editing) {
         await api.put(`/operations/work-order/${editing._id}`, pl);
         toast.success('Work order updated successfully');
       }
       setModal(false);
+      setPartsUsed([]);
       fetch_();
     } catch (e: unknown) {
       const message = (e as { response?: { data?: { message?: string } } }).response?.data?.message || 'Failed to save';
@@ -243,7 +361,41 @@ export default function WorkOrderPage() {
               </button>
             </div>
             <form onSubmit={save} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Customer Order - Smart Dropdown */}
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Customer Order
+                    {form.customerOrderId && <span className="text-xs text-green-600 ml-2">(Auto-linked)</span>}
+                  </label>
+                  <select
+                    value={form.customerOrderId}
+                    onChange={(e) => {
+                      const selected = customerOrders.find(o => o._id === e.target.value);
+                      setForm({
+                        ...form,
+                        customerOrderId: e.target.value,
+                        // Auto-fill engineer from order if available
+                        maintenanceEngineer: selected?.engineerName || form.maintenanceEngineer,
+                      });
+                    }}
+                    className={iCls}
+                  >
+                    <option value="">Select Customer Order</option>
+                    {loadingLookups ? (
+                      <option disabled>Loading orders...</option>
+                    ) : customerOrders.length === 0 ? (
+                      <option disabled>No orders available</option>
+                    ) : (
+                      customerOrders.map(order => (
+                        <option key={order._id} value={order._id}>
+                          {order.issue?.substring(0, 40) || 'Order'} - {order.customerId?.name || 'Unknown Customer'}
+                        </option>
+                      ))
+                    )}
+                  </select>
+                </div>
+
                 {/* Maintenance Engineer */}
                 <div>
                   <label className="block text-sm font-medium mb-1">Maintenance Engineer</label>
@@ -347,17 +499,6 @@ export default function WorkOrderPage() {
                   />
                 </div>
 
-                {/* Spare Parts ID */}
-                <div>
-                  <label className="block text-sm font-medium mb-1">Spare Parts ID</label>
-                  <input
-                    placeholder="Spare Parts ID"
-                    value={form.sparePartsId}
-                    onChange={u('sparePartsId')}
-                    className={iCls}
-                  />
-                </div>
-
                 {/* Spare Parts Availability */}
                 <div>
                   <label className="block text-sm font-medium mb-1">Spare Parts Availability</label>
@@ -374,6 +515,117 @@ export default function WorkOrderPage() {
                     ))}
                   </select>
                 </div>
+              </div>
+
+              {/* Dynamic Parts Used Section */}
+              <div className="border border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-4 space-y-4">
+                <div className="flex items-center justify-between">
+                  <label className="block text-sm font-medium">Parts Used</label>
+                  <button
+                    type="button"
+                    onClick={addPart}
+                    className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] hover:opacity-90 transition-opacity"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    Add Part
+                  </button>
+                </div>
+
+                {partsUsed.length === 0 ? (
+                  <p className="text-sm text-[hsl(var(--muted-foreground))] text-center py-4">
+                    No parts added. Click "Add Part" to add parts from inventory.
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {/* Header */}
+                    <div className="grid grid-cols-12 gap-2 text-xs font-medium text-[hsl(var(--muted-foreground))] px-1">
+                      <div className="col-span-1">#</div>
+                      <div className="col-span-5">Part</div>
+                      <div className="col-span-2">Qty</div>
+                      <div className="col-span-2">Unit Cost</div>
+                      <div className="col-span-1"></div>
+                      <div className="col-span-1"></div>
+                    </div>
+                    
+                    {/* Parts List */}
+                    {partsUsed.map((part, index) => (
+                      <div key={part.id} className="grid grid-cols-12 gap-2 items-center bg-[hsl(var(--accent))]/50 dark:bg-[hsl(var(--accent))]/30 rounded-lg p-2">
+                        {/* Part Number */}
+                        <div className="col-span-1 text-xs font-medium text-[hsl(var(--muted-foreground))]">
+                          {index + 1}
+                        </div>
+                        
+                        {/* Part Select */}
+                        <div className="col-span-5">
+                          <select
+                            value={part.inventoryItemId}
+                            onChange={(e) => updatePart(part.id, 'inventoryItemId', e.target.value)}
+                            className={iCls}
+                          >
+                            <option value="">Select Part</option>
+                            {loadingLookups ? (
+                              <option disabled>Loading...</option>
+                            ) : priceList.filter(item => item.stockNumber > 0).length === 0 ? (
+                              <option disabled>No parts in stock</option>
+                            ) : (
+                              priceList
+                                .filter(item => item.stockNumber > 0)
+                                .map(item => (
+                                  <option key={item._id} value={item._id}>
+                                    {item.itemName} (Stock: {item.stockNumber})
+                                  </option>
+                                ))
+                            )}
+                          </select>
+                        </div>
+                        
+                        {/* Quantity */}
+                        <div className="col-span-2">
+                          <input
+                            type="number"
+                            min="1"
+                            value={part.quantity}
+                            onChange={(e) => updatePart(part.id, 'quantity', parseInt(e.target.value) || 1)}
+                            className={iCls}
+                          />
+                        </div>
+                        
+                        {/* Unit Cost (read-only) */}
+                        <div className="col-span-2">
+                          <input
+                            type="number"
+                            value={part.unitCost}
+                            readOnly
+                            className={`${iCls} bg-[hsl(var(--muted))]/50 cursor-not-allowed`}
+                          />
+                        </div>
+                        
+                        {/* Subtotal */}
+                        <div className="col-span-1 text-right text-xs font-medium">
+                          EGP {(part.quantity * part.unitCost).toFixed(0)}
+                        </div>
+                        
+                        {/* Remove Button */}
+                        <div className="col-span-1 flex justify-center">
+                          <button
+                            type="button"
+                            onClick={() => removePart(part.id)}
+                            className="p-1.5 text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                    
+                    {/* Total */}
+                    <div className="flex justify-end pt-2 border-t border-[hsl(var(--border))]">
+                      <span className="text-sm font-semibold">
+                        Total Parts Cost: EGP {partsUsed.reduce((sum, p) => sum + (p.quantity * p.unitCost), 0).toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Notes (full width) */}
@@ -400,7 +652,10 @@ export default function WorkOrderPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setModal(false)}
+                  onClick={() => {
+                    setModal(false);
+                    setPartsUsed([]);
+                  }}
                   className="flex-1 rounded-xl border border-[hsl(var(--border))] py-2.5 text-sm"
                 >
                   Cancel

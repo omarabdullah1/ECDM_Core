@@ -6,6 +6,7 @@ import { useReactTable, getCoreRowModel, VisibilityState, getPaginationRowModel,
 import { useAuthStore } from '@/features/auth/useAuth';
 import toast from 'react-hot-toast';
 import api from '@/lib/axios';
+import { TableSkeleton } from './skeleton';
 
 /**
  * Shared DataTable component with RBAC-protected bulk delete functionality.
@@ -280,9 +281,9 @@ export function DataTable<T extends { _id: string }>({
       </div>
 
       {/* Data Table */}
-      <div className="relative w-full overflow-x-auto custom-table-scrollbar rounded-md border border-gray-200 bg-white shadow-sm">
+      <div className="relative w-full overflow-x-auto custom-table-scrollbar rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--card))]">
         {loading ? (
-          <div className="p-8 text-center text-[hsl(var(--muted-foreground))]">Loading…</div>
+          <TableSkeleton rows={10} columns={visibleColumns.length + (renderActions ? 1 : 0)} height="h-10" />
         ) : (
           <table className="w-full text-sm whitespace-nowrap min-w-max">
             <thead className="border-b border-[hsl(var(--border))] bg-[hsl(var(--muted))]/30">

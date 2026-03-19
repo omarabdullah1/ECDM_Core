@@ -31,6 +31,7 @@ export interface IEmployee {
     position:        string;
     hireDate?:       Date;
     salary?:         number;
+    salaryId?:       Types.ObjectId;  // Reference to Salary model
     status:          EmployeeStatus;
     userId?:         Types.ObjectId;
     jobDescription?: string;

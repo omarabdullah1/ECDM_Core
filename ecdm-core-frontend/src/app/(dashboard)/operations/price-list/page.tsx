@@ -1,6 +1,7 @@
 'use client';
 import { DataTable } from '@/components/ui/DataTable';
 import api from '@/lib/axios';
+import toast from 'react-hot-toast';
 import { Plus, Tags, X } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import AddPriceListDialog from './AddPriceListDialog';
@@ -42,10 +43,12 @@ export default function PriceListPage() {
             if (categoryFilter) params.category = categoryFilter;
 
             const { data } = await api.get('/operations/price-list', { params });
-            setRows(data.data.data);
-            setTotal(data.data.pagination.total);
+            setRows(data.data.data || []);
+            setTotal(data.data.pagination?.total || 0);
         } catch (err) {
             console.error('Failed to fetch price list:', err);
+            toast.error('Failed to load price list');
+            setRows([]);
         }
         setLoading(false);
     }, [page, search, categoryFilter]);

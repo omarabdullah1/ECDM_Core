@@ -92,12 +92,12 @@ export interface FollowUp {
   status: 'Pending' | 'Contacted' | 'Scheduled' | 'Completed' | 'Canceled';
   
   // Source references
-  customer?: Customer;
-  customerOrderId?: CustomerOrder;
+  customer?: Customer & { _id: string };
+  customerOrderId?: CustomerOrder & { _id: string };
   salesDataId?: SalesData;
   leadId?: SalesLead;
-  workOrder?: { typeOfOrder?: string; issue?: string };
-  csr?: { firstName?: string; lastName?: string };
+  workOrder?: { _id: string; typeOfOrder?: string; issue?: string };
+  csr?: { _id: string; firstName?: string; lastName?: string };
   
   // QC Fields
   punctuality?: string;        // 'Same Visit Time' | 'Late' | ''

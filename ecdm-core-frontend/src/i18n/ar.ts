@@ -1,4 +1,4 @@
-import type { Translations } from './en';
+import type { Translations } from './types';
 
 const ar: Translations = {
   auth: {
@@ -45,6 +45,8 @@ const ar: Translations = {
     customerFeedback: 'التقييمات',
     finance: 'المالية',
     orderFinance: 'تمويل الطلبات',
+    generalExpenses: 'المصروفات العامة',
+    salaries: 'الرواتب',
     operations: 'العمليات',
     workOrder: 'أوامر العمل',
     priceList: 'قائمة الأسعار',
@@ -60,6 +62,7 @@ const ar: Translations = {
     userManagement: 'إدارة المستخدمين',
     modificationRequests: 'طلبات التعديل',
     auditLogs: 'سجل النشاط',
+    netProfitReport: 'تقرير صافي الربح',
     salesInsights: 'تحليلات المبيعات',
     marketingInsights: 'تحليلات التسويق',
     erpPlatform: 'منصة ERP و CRM',

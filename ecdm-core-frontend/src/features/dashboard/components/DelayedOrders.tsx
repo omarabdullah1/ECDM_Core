@@ -46,7 +46,7 @@ export default function DelayedOrders({ data }: Props) {
                 <div className="flex flex-col gap-2 overflow-y-auto max-h-[280px]">
                     {data.map((order) => {
                         const engName = order.assignedEngineer
-                            ? `${d.eng} ${order.assignedEngineer.firstName} ${order.assignedEngineer.lastName}`
+                            ? `${d.eng} ${order.assignedEngineer?.firstName ?? ''} ${order.assignedEngineer?.lastName ?? ''}`
                             : '—';
                         return (
                             <div key={order._id}

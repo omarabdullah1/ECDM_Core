@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import api from '@/lib/axios';
+import toast from 'react-hot-toast';
 import { TrendingUp, Plus, Edit2, Trash2, X, ChevronLeft, ChevronRight, Sheet, Upload, Loader2, AlertTriangle, Check, RefreshCw, Save, Database } from 'lucide-react';
 import { DataTable } from '@/components/ui/DataTable';
 
@@ -100,9 +101,13 @@ export default function MarketingLeadsPage() {
       if (fType) p.type = fType;
       if (fSector) p.sector = fSector;
       const { data } = await api.get('/marketing/leads', { params: p });
-      setRows(data.data.data);
-      setTotal(data.data.pagination.total);
-    } catch { }
+      setRows(data.data.data || []);
+      setTotal(data.data.pagination?.total || 0);
+    } catch (err) {
+      console.error('Failed to fetch marketing leads:', err);
+      toast.error('Failed to load marketing leads');
+      setRows([]);
+    }
     setLoading(false);
   }, [page, fType, fSector]);
 
@@ -112,8 +117,11 @@ export default function MarketingLeadsPage() {
   const fetchSavedConnections = useCallback(async () => {
     try {
       const { data } = await api.get('/marketing/saved-sheets');
-      setSavedConnections(data.data);
-    } catch { }
+      setSavedConnections(data.data || []);
+    } catch (err) {
+      console.error('Failed to fetch saved connections:', err);
+      setSavedConnections([]);
+    }
   }, []);
 
   useEffect(() => { fetchSavedConnections(); }, [fetchSavedConnections]);
@@ -190,7 +198,14 @@ export default function MarketingLeadsPage() {
 
   const del = async () => {
     if (!delId) return;
-    try { await api.delete(`/marketing/leads/${delId}`); fetch_(); } catch { }
+    try { 
+      await api.delete(`/marketing/leads/${delId}`); 
+      toast.success('Lead deleted successfully');
+      fetch_(); 
+    } catch (err) {
+      console.error('Failed to delete lead:', err);
+      toast.error('Failed to delete lead');
+    }
     setDelId(null);
   };
 

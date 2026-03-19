@@ -103,6 +103,13 @@ export interface WorkOrder {
   sparePartsAvailability?: string;
   notes?: string;
   
+  // Parts usage (integration with Inventory)
+  partsUsed?: {
+    inventoryItemId: string | { _id: string; itemName?: string };
+    quantity: number;
+    unitCost: number;
+  }[];
+  
   // Tracking
   updatedBy?: User;
   createdAt?: string;

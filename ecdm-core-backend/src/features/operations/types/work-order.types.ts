@@ -55,6 +55,25 @@ export enum DevicePickupType {
 // Interfaces
 // ─────────────────────────────────────────────────────────────────────────────
 
+/**
+ * Part used in a work order
+ */
+export interface IWorkOrderPart {
+    inventoryItemId: Types.ObjectId;  // Reference to InventoryFinance
+    quantity: number;                 // Quantity used
+    unitCost: number;                 // Unit cost
+}
+
+/**
+ * Work order cost summary
+ */
+export interface IWorkOrderCost {
+    partsTotal: number;              // Sum of all parts costs
+    laborCost: number;               // Labor cost (if applicable)
+    otherCosts: number;              // Other costs
+    grandTotal: number;               // Total cost
+}
+
 export interface IWorkOrder {
     // Required: Reference to CustomerOrder (inherits customer, sales, and ops data)
     customerOrderId: Types.ObjectId;
@@ -67,11 +86,15 @@ export interface IWorkOrder {
     punctuality:            Punctuality;
     reasonForDelay:         string;
     taskCompleted:          TaskCompleted;
-    reasonForIncompletion:  string;
+    reasonForIncompletion: string;
     rating:                 string;
-    sparePartsId:           string;
     sparePartsAvailability: SparePartsAvailability;
     notes:                  string;
+    
+    // Parts usage tracking (integration with Inventory)
+    partsUsed: IWorkOrderPart[];
+    cost: IWorkOrderCost;
+    actualCost?: number;  // Calculated actual cost of parts used after deduction
     
     // Tracking
     updatedBy?: Types.ObjectId;   // → User who last modified

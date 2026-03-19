@@ -12,7 +12,8 @@ router.get('/patch-ids',    isAdmin, ctrl.patchMissingIds);
 // Smart Auto-Increment: Get next available Customer ID
 router.get('/next-id',      isAdmin, ctrl.getNextId);
 
-router.post('/',            ctrl.create);
+// Customer creation - Admin, Manager, SuperAdmin, Sales, Marketing allowed
+router.post('/',            authorise(UserRole.SuperAdmin, UserRole.Manager, UserRole.Admin, UserRole.Sales, UserRole.Marketing), ctrl.create);
 router.get('/',             ctrl.getAll);
 router.get('/:id',          ctrl.getById);
 router.get('/:id/history',  ctrl.getHistory);  // History/timeline across all modules

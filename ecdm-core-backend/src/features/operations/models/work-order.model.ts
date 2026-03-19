@@ -4,6 +4,7 @@ import {
     Punctuality,
     TaskCompleted,
     SparePartsAvailability,
+    IWorkOrderCost,
 } from '../types/work-order.types';
 
 /**
@@ -12,7 +13,32 @@ import {
  * Automatically generated when a CustomerOrder is created (cascaded from Sales Order).
  * References CustomerOrder to inherit customer, sales, and ops data.
  * Contains maintenance-specific fields for the workshop team.
+ * Includes integration with Inventory for parts tracking.
  */
+
+// ── Sub-schemas ──────────────────────────────────────────────────────────────
+
+const workOrderPartSchema = new Schema(
+    {
+        inventoryItemId: { type: Schema.Types.ObjectId, ref: 'InventoryFinance', required: true },
+        quantity: { type: Number, required: true, min: 1 },
+        unitCost: { type: Number, required: true, min: 0 },
+    },
+    { _id: false },
+);
+
+const workOrderCostSchema = new Schema<IWorkOrderCost>(
+    {
+        partsTotal: { type: Number, default: 0, min: 0 },
+        laborCost: { type: Number, default: 0, min: 0 },
+        otherCosts: { type: Number, default: 0, min: 0 },
+        grandTotal: { type: Number, default: 0, min: 0 },
+    },
+    { _id: false },
+);
+
+// ── Main schema ──────────────────────────────────────────────────────────────
+
 const workOrderSchema = new Schema<IWorkOrderDocument>(
     {
         // Required: Reference to CustomerOrder (inherits all upstream data via population)
@@ -40,13 +66,17 @@ const workOrderSchema = new Schema<IWorkOrderDocument>(
         },
         reasonForIncompletion: { type: String, default: '' },
         rating:              { type: String, default: '' },
-        sparePartsId:        { type: String, default: '' },
         sparePartsAvailability: {
             type:    String,
             enum:    Object.values(SparePartsAvailability),
             default: SparePartsAvailability.Empty,
         },
         notes: { type: String, default: '', maxlength: [2000, 'Notes cannot exceed 2000 characters'] },
+
+        // Parts usage tracking (integration with Inventory)
+        partsUsed: { type: [workOrderPartSchema], default: [] },
+        cost: { type: workOrderCostSchema, default: () => ({}) },
+        actualCost: { type: Number, default: 0 },  // Calculated actual cost of parts used
 
         // Tracking
         updatedBy: { type: Schema.Types.ObjectId, ref: 'User' },
@@ -57,6 +87,20 @@ const workOrderSchema = new Schema<IWorkOrderDocument>(
         toObject:   { virtuals: true },
     },
 );
+
+// ── Pre-save hook to calculate costs ───────────────────────────────────────
+
+workOrderSchema.pre<IWorkOrderDocument>('save', function (next) {
+    // Calculate parts total based on quantity * unitCost
+    if (this.partsUsed && this.partsUsed.length > 0) {
+        this.cost.partsTotal = this.partsUsed.reduce((sum, part) => sum + (part.quantity * part.unitCost), 0);
+    }
+    // Calculate grand total
+    this.cost.grandTotal = this.cost.partsTotal + this.cost.laborCost + this.cost.otherCosts;
+    next();
+});
+
+// ── Indexes ──────────────────────────────────────────────────────────────
 
 // Indexes for common queries
 workOrderSchema.index({ customerOrderId: 1 });

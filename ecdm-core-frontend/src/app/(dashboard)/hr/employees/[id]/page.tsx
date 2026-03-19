@@ -158,7 +158,7 @@ export default function EmployeeProfilePage() {
             setLoading(true);
             setError(null);
             try {
-                const { data } = await api.get(`/hr/employees/${employeeId}/profile`);
+                const { data } = await api.get(`/hr/users/${employeeId}/profile`);
                 setProfile(data.data);
 
                 // Fetch sales performance if employee is in Sales role
@@ -202,7 +202,7 @@ export default function EmployeeProfilePage() {
             formData.append('title', docTitle);
             formData.append('document', docFile);
 
-            const { data } = await api.post(`/hr/employees/${employeeId}/documents/upload`, formData, {
+            const { data } = await api.post(`/hr/users/${employeeId}/documents/upload`, formData, {
                 headers: { 'Content-Type': 'multipart/form-data' },
             });
 
@@ -220,7 +220,7 @@ export default function EmployeeProfilePage() {
         if (!confirm('Are you sure you want to delete this document?')) return;
 
         try {
-            const { data } = await api.delete(`/hr/employees/${employeeId}/documents/${docId}`);
+            const { data } = await api.delete(`/hr/users/${employeeId}/documents/${docId}`);
             setProfile(prev => prev ? { ...prev, employee: data.data.item } : null);
             toast.success('Document deleted');
         } catch {
@@ -262,7 +262,7 @@ export default function EmployeeProfilePage() {
         <div className="space-y-6">
             {/* Back button */}
             <Link
-                href="/hr/employees"
+                href="/hr/users"
                 className="inline-flex items-center gap-2 text-sm text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
             >
                 <ArrowLeft className="h-4 w-4" />

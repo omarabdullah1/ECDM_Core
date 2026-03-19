@@ -13,11 +13,14 @@ import { cn } from '@/lib/utils';
 import {
     Activity,
     Archive,
+    Banknote,
     BarChart3,
     Briefcase,
     Calendar,
     ChevronDown, ChevronLeft, ChevronRight,
+    ClipboardCheck,
     ClipboardList,
+    CreditCard,
     DollarSign,
     FileEdit,
     FileSpreadsheet,
@@ -49,7 +52,8 @@ import React, { useState } from 'react';
 const iconMap: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
     LayoutDashboard, Users,
     Package, TrendingUp, ShoppingCart,
-    Megaphone, Wrench, Star, Headphones, MessageSquare, ClipboardList,
+    Megaphone, Wrench, Star, Headphones, MessageSquare, ClipboardList, ClipboardCheck,
+    CreditCard, Banknote,
     FileText, UserCog, FileEdit, Activity, Calendar, UserCheck, Archive,
     Kanban, FolderKanban, TrendingUpDown, Briefcase, DollarSign,
 };
@@ -84,11 +88,14 @@ const NAV: NavItem[] = [
             { labelKey: 'customerFeedback', href: '/customer/feedback', icon: 'MessageSquare' },
         ]
     },
-    {
-        labelKey: 'finance', icon: 'DollarSign', children: [
-            { labelKey: 'orderFinance', href: '/finance/orders', icon: 'DollarSign' },
-        ]
-    },
+{
+    labelKey: 'finance', icon: 'DollarSign', children: [
+        { labelKey: 'orderFinance', href: '/finance/orders', icon: 'DollarSign' },
+        { labelKey: 'inventoryFinance', href: '/finance/inventory', icon: 'Package' },
+        { labelKey: 'generalExpenses', href: '/finance/expenses', icon: 'CreditCard' },
+        { labelKey: 'salaries', href: '/finance/salaries', icon: 'Banknote' },
+    ]
+},
     {
         labelKey: 'operations', icon: 'Wrench', children: [
             { labelKey: 'workOrder', href: '/operations/work-order', icon: 'Wrench' },
@@ -98,7 +105,7 @@ const NAV: NavItem[] = [
     },
     {
         labelKey: 'hr', icon: 'UserCheck', children: [
-            { labelKey: 'hrEmployees', href: '/hr/employees', icon: 'Users' },
+            { labelKey: 'hrEmployees', href: '/hr/users', icon: 'Users' },
             { labelKey: 'hrAttendance', href: '/hr/attendance', icon: 'Calendar' },
         ]
     },
@@ -114,6 +121,7 @@ const NAV: NavItem[] = [
             { labelKey: 'userManagement', href: '/users', icon: 'Users' },
             { labelKey: 'modificationRequests', href: '/admin/requests', icon: 'FileEdit' },
             { labelKey: 'auditLogs', href: '/admin/audit-logs', icon: 'Activity' },
+            { labelKey: 'netProfitReport', href: '/reports/net-profit', icon: 'DollarSign' },
         ]
     },
 ];
@@ -355,6 +363,30 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
                                 <Users size={15} className="shrink-0" />
                                 {!isCollapsed && <span className="truncate">Operation Members</span>}
                             </Link>
+<Link href="/reports/employee-evaluation"
+    title={isCollapsed ? "Employee Evaluation" : undefined}
+    className={cn(
+        'flex items-center rounded-lg py-1.5 text-[13px] font-medium transition-all',
+        isCollapsed ? 'justify-center px-0' : 'gap-2 px-2',
+        pathname === '/reports/employee-evaluation'
+            ? 'bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))]'
+            : 'text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--secondary))] hover:text-[hsl(var(--foreground))]',
+    )}>
+    <ClipboardCheck size={15} className="shrink-0" />
+    {!isCollapsed && <span className="truncate">Employee Evaluation</span>}
+</Link>
+<Link href="/reports/hr-efficiency"
+    title={isCollapsed ? "HR Efficiency" : undefined}
+    className={cn(
+        'flex items-center rounded-lg py-1.5 text-[13px] font-medium transition-all',
+        isCollapsed ? 'justify-center px-0' : 'gap-2 px-2',
+        pathname === '/reports/hr-efficiency'
+            ? 'bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))]'
+            : 'text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--secondary))] hover:text-[hsl(var(--foreground))]',
+    )}>
+    <BarChart3 size={15} className="shrink-0" />
+    {!isCollapsed && <span className="truncate">HR Efficiency</span>}
+</Link>
                         </div>
                     </div>
                 )}

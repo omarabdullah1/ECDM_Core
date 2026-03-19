@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '@/lib/axios';
 import { MessageSquare, Plus, Trash2, X, ChevronLeft, ChevronRight, Edit2 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { DataTable } from '@/components/ui/DataTable';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -93,13 +94,43 @@ export default function FeedbackPage() {
   const [delId, setDelId] = useState<string | null>(null);
   const lim = 10; const tp = Math.ceil(total / lim);
 
+  // Dropdown data
+  const [customers, setCustomers] = useState<any[]>([]);
+  const [customerOrders, setCustomerOrders] = useState<any[]>([]);
+  const [loadingLookups, setLoadingLookups] = useState(false);
+
+  // Fetch lookup data when modal opens
+  useEffect(() => {
+    if (modal) {
+      setLoadingLookups(true);
+      Promise.all([
+        api.get('/shared/customers?limit=1000').catch(() => ({ data: { data: [] } })),
+        api.get('/customer/orders?limit=1000').catch(() => ({ data: { data: [] } }))
+      ])
+        .then(([custRes, coRes]) => {
+          setCustomers(custRes.data?.data || []);
+          setCustomerOrders(coRes.data?.data?.data || coRes.data?.data || []);
+        })
+        .catch(() => {
+          setCustomers([]);
+          setCustomerOrders([]);
+        })
+        .finally(() => setLoadingLookups(false));
+    }
+  }, [modal]);
+
   const fetch_ = useCallback(async () => {
     setLoading(true);
     try {
       const p: Record<string, string | number> = { page, limit: lim };
       const { data } = await api.get('/customer/feedback', { params: p });
-      setRows(data.data.data); setTotal(data.data.pagination.total);
-    } catch { }
+      setRows(data.data?.data || []);
+      setTotal(data.data?.pagination?.total || 0);
+    } catch (err) {
+      console.error('Failed to fetch feedback:', err);
+      toast.error('Failed to load feedback');
+      setRows([]);
+    }
     setLoading(false);
   }, [page]);
   useEffect(() => { fetch_(); }, [fetch_]);
@@ -197,8 +228,52 @@ export default function FeedbackPage() {
             <form onSubmit={save} className="space-y-4">
               {!editing && (
                 <>
-                  <input required placeholder="Customer ID (ObjectId)" value={form.customerId} onChange={u('customerId')} className={iCls} />
-                  <input placeholder="Customer Order ID (ObjectId)" value={form.customerOrderId} onChange={u('customerOrderId')} className={iCls} />
+                  {/* Customer Dropdown */}
+                  <div>
+                    <label className="block text-xs font-medium mb-1 text-[hsl(var(--muted-foreground))]">Customer</label>
+                    <select 
+                      required
+                      value={form.customerId} 
+                      onChange={u('customerId')} 
+                      className={iCls}
+                    >
+                      <option value="">Select Customer...</option>
+                      {loadingLookups ? (
+                        <option disabled>Loading...</option>
+                      ) : customers.length === 0 ? (
+                        <option disabled>No customers available</option>
+                      ) : (
+                        customers.map(c => (
+                          <option key={c._id} value={c._id}>
+                            {c.name} - {c.phone}
+                          </option>
+                        ))
+                      )}
+                    </select>
+                  </div>
+
+                  {/* Customer Order Dropdown */}
+                  <div>
+                    <label className="block text-xs font-medium mb-1 text-[hsl(var(--muted-foreground))]">Customer Order (Optional)</label>
+                    <select 
+                      value={form.customerOrderId} 
+                      onChange={u('customerOrderId')} 
+                      className={iCls}
+                    >
+                      <option value="">Select Order...</option>
+                      {loadingLookups ? (
+                        <option disabled>Loading...</option>
+                      ) : customerOrders.length === 0 ? (
+                        <option disabled>No orders available</option>
+                      ) : (
+                        customerOrders.map(o => (
+                          <option key={o._id} value={o._id}>
+                            {(o.issue || 'Order').substring(0, 40)} - {o.customerId?.name || 'Customer'}
+                          </option>
+                        ))
+                      )}
+                    </select>
+                  </div>
                 </>
               )}
               <div className="flex gap-4">

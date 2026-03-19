@@ -54,6 +54,8 @@ export default function ContentTrackerPage() {
     });
     const [file, setFile] = useState<File | null>(null);
     const [saving, setSaving] = useState(false);
+    const [users, setUsers] = useState<any[]>([]);
+    const [loadingUsers, setLoadingUsers] = useState(false);
 
     const fetchData = useCallback(async () => {
         setLoading(true);
@@ -71,6 +73,23 @@ export default function ContentTrackerPage() {
     useEffect(() => {
         fetchData();
     }, [fetchData]);
+
+    // Fetch users for owner dropdown
+    useEffect(() => {
+        if (showModal) {
+            setLoadingUsers(true);
+            api.get('/hr/users?limit=1000')
+                .then(res => {
+                    const userList = res.data?.data || [];
+                    setUsers(Array.isArray(userList) ? userList : []);
+                })
+                .catch(err => {
+                    console.error('Failed to fetch users:', err);
+                    setUsers([]);
+                })
+                .finally(() => setLoadingUsers(false));
+        }
+    }, [showModal]);
 
     const openAdd = () => {
         setFormData({
@@ -285,13 +304,19 @@ export default function ContentTrackerPage() {
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className={labelCls}>Owner</label>
-                                    <input
-                                        type="text"
+                                    <select
                                         value={formData.owner}
                                         onChange={(e) => setFormData({ ...formData, owner: e.target.value })}
                                         className={iCls}
-                                        placeholder="Content owner"
-                                    />
+                                        disabled={loadingUsers}
+                                    >
+                                        <option value="">{loadingUsers ? 'Loading users...' : 'Select owner...'}</option>
+                                        {users.map(user => (
+                                            <option key={user._id} value={user._id}>
+                                                {user.firstName} {user.lastName} {user.role ? `(${user.role})` : ''}
+                                            </option>
+                                        ))}
+                                    </select>
                                 </div>
 
                                 <div>

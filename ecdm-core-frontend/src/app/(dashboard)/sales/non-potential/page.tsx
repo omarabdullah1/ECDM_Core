@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import api from '@/lib/axios';
+import toast from 'react-hot-toast';
 import { Archive } from 'lucide-react';
 import { DataTable } from '@/components/ui/DataTable';
 import { createSalesOrderColumns, type SalesOrder, createActionsRenderer } from '../order/columns';
@@ -27,10 +28,12 @@ export default function NonPotentialOrdersPage() {
             if (fFinalStatus) p.finalStatus = fFinalStatus;
             if (fTypeOfOrder) p.typeOfOrder = fTypeOfOrder;
             const { data } = await api.get('/sales/orders', { params: p });
-            setRows(data.data.data);
-            setTotal(data.data.pagination.total);
+            setRows(data.data?.data || []);
+            setTotal(data.data?.pagination?.total || 0);
         } catch (error) {
             console.error("Failed to fetch non-potential orders", error);
+            toast.error('Failed to load non-potential orders');
+            setRows([]);
         }
         setLoading(false);
     }, [page, fStatus, fFinalStatus, fTypeOfOrder]);
