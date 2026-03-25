@@ -5,42 +5,84 @@ import User from './auth.model';
 import { IUserDocument, UserRole } from './auth.types';
 import { RegisterInput, LoginInput } from './auth.validation';
 
-// ── Helper: generate JWT ────────────────────────────────────────────
-const signToken = (user: IUserDocument): string => {
-    return jwt.sign(
+export interface TokenPayload {
+    userId: string;
+    role: UserRole;
+}
+
+export interface AuthTokens {
+    accessToken: string;
+    refreshToken: string;
+}
+
+export const generateTokens = (user: IUserDocument): AuthTokens => {
+    const accessToken = jwt.sign(
         { userId: user._id.toString(), role: user.role },
         env.JWT_SECRET,
         { expiresIn: env.JWT_EXPIRES_IN as unknown as number },
     );
+
+    const refreshToken = jwt.sign(
+        { userId: user._id.toString() },
+        env.JWT_REFRESH_SECRET,
+        { expiresIn: env.JWT_REFRESH_EXPIRES_IN as unknown as number },
+    );
+
+    return { accessToken, refreshToken };
+};
+
+export const verifyRefreshToken = (token: string): TokenPayload => {
+    return jwt.verify(token, env.JWT_REFRESH_SECRET) as TokenPayload;
 };
 
 // ── Register ────────────────────────────────────────────────────────
-export const registerUser = async (data: RegisterInput): Promise<{ user: IUserDocument; token: string }> => {
+export const registerUser = async (data: RegisterInput): Promise<{ user: IUserDocument; tokens: AuthTokens }> => {
     const existing = await User.findOne({ email: data.email });
     if (existing) {
         throw new AppError('Email already registered', 409);
     }
 
-    const user = await User.create({
+    const createData = {
         firstName: data.firstName,
         lastName: data.lastName,
         email: data.email,
         password: data.password,
-        role: data.role || UserRole.Sales,
+        role: UserRole.Sales,
         phone: data.phone,
-    });
+    };
 
-    const token = signToken(user);
+    const user = await User.create(createData);
 
-    // Remove password from response
-    user.password = undefined as unknown as string;
+    const tokens = generateTokens(user);
 
-    return { user, token };
+    await User.findByIdAndUpdate(user._id, { refreshToken: tokens.refreshToken });
+
+    const userResponse = {
+        _id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        role: user.role,
+        isActive: user.isActive,
+        lastLogin: user.lastLogin,
+        phone: user.phone,
+        avatar: user.avatar,
+        avatarUrl: user.avatarUrl,
+        address: user.address,
+        employeeId: user.employeeId,
+        documents: user.documents,
+        targetBudget: user.targetBudget,
+        targetSales: user.targetSales,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+    } as IUserDocument;
+
+    return { user: userResponse, tokens };
 };
 
 // ── Login ───────────────────────────────────────────────────────────
-export const loginUser = async (data: LoginInput): Promise<{ user: IUserDocument; token: string }> => {
-    const user = await User.findOne({ email: data.email }).select('+password');
+export const loginUser = async (data: LoginInput): Promise<{ user: IUserDocument; tokens: AuthTokens }> => {
+    const user = await User.findOne({ email: data.email }).select('+password +refreshToken');
     if (!user || !user.isActive) {
         throw new AppError('Invalid email or password', 401);
     }
@@ -50,14 +92,54 @@ export const loginUser = async (data: LoginInput): Promise<{ user: IUserDocument
         throw new AppError('Invalid email or password', 401);
     }
 
-    // Update last login
     user.lastLogin = new Date();
+
+    const tokens = generateTokens(user);
+    (user as unknown as Record<string, unknown>).refreshToken = tokens.refreshToken;
     await user.save({ validateBeforeSave: false });
 
-    const token = signToken(user);
-    user.password = undefined as unknown as string;
+    const userResponse = {
+        _id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        role: user.role,
+        isActive: user.isActive,
+        lastLogin: user.lastLogin,
+        phone: user.phone,
+        avatar: user.avatar,
+        avatarUrl: user.avatarUrl,
+        address: user.address,
+        employeeId: user.employeeId,
+        documents: user.documents,
+        targetBudget: user.targetBudget,
+        targetSales: user.targetSales,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+    } as IUserDocument;
 
-    return { user, token };
+    return { user: userResponse, tokens };
+};
+
+// ── Refresh Token ───────────────────────────────────────────────────
+export const refreshAccessToken = async (refreshToken: string): Promise<AuthTokens> => {
+    const user = await User.findOne({ refreshToken }).select('+refreshToken');
+    if (!user) {
+        throw new AppError('Invalid refresh token', 401);
+    }
+
+    verifyRefreshToken(refreshToken);
+
+    const tokens = generateTokens(user);
+    (user as unknown as Record<string, unknown>).refreshToken = tokens.refreshToken;
+    await user.save({ validateBeforeSave: false });
+
+    return tokens;
+};
+
+// ── Logout ─────────────────────────────────────────────────────────
+export const logoutUser = async (userId: string): Promise<void> => {
+    await User.findByIdAndUpdate(userId, { refreshToken: null });
 };
 
 // ── Get current user ────────────────────────────────────────────────

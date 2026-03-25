@@ -66,6 +66,9 @@ interface SalesOrder {
   issueDescription?: string;
   quotationStatus?: string;
   finalStatus?: string;
+  quotation?: {
+    grandTotal?: number;
+  };
 }
 
 interface User {
@@ -337,15 +340,18 @@ export const columns: Array<{
     },
 
     // ─────────────────────────────────────────────────────────────────────────
-    // 14. Cost
+    // 14. Cost (Auto-pulled from Quotation Grand Total)
     // ─────────────────────────────────────────────────────────────────────────
     {
       key: 'cost',
       header: 'Cost',
       render: (row: CustomerOrder) => {
+        const quotationTotal = row.salesOrderId?.quotation?.grandTotal;
+        const displayCost = quotationTotal !== undefined ? quotationTotal : row.cost;
+
         return (
-          <span className="text-sm font-mono">
-            {row.cost && row.cost > 0 ? `$${row.cost.toFixed(2)}` : '-'}
+          <span className="text-sm font-mono whitespace-nowrap">
+            {displayCost !== undefined && displayCost > 0 ? `EGP ${Number(displayCost).toFixed(2)}` : '-'}
           </span>
         );
       },

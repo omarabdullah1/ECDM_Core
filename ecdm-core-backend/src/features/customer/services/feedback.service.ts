@@ -1,10 +1,38 @@
 import Feedback from '../models/feedback.model';
+import CustomerOrder from '../models/customer-order.model';
 import { CreateFeedbackInput, UpdateFeedbackInput } from '../validation/feedback.validation';
-import { IFeedbackDocument } from '../types/feedback.types';
+import { IFeedbackDocument, IOrderContext } from '../types/feedback.types';
 import { AppError } from '../../../utils/apiError';
 
-export const create = async (data: CreateFeedbackInput): Promise<IFeedbackDocument> =>
-    Feedback.create(data);
+const populateOrderContext = async (customerOrderId: string, customerId?: string): Promise<IOrderContext | undefined> => {
+    const order = await CustomerOrder.findById(customerOrderId).populate('customerId', 'name phone customerId');
+    if (!order) return undefined;
+    
+    const customer = order.customerId as unknown as { name?: string; phone?: string; customerId?: string };
+    
+    return {
+        customerName: customer?.name || '',
+        customerPhone: customer?.phone || '',
+        customerId: customer?.customerId || String(customerId) || '',
+        engineerName: order.engineerName || '',
+        visitDate: order.actualVisitDate || order.scheduledVisitDate,
+        scheduledVisitDate: order.scheduledVisitDate,
+        actualVisitDate: order.actualVisitDate,
+        startDate: order.startDate,
+        endDate: order.endDate,
+        dealStatus: order.deal || '',
+        orderId: String(customerOrderId),
+    };
+};
+
+export const create = async (data: CreateFeedbackInput): Promise<IFeedbackDocument> => {
+    const orderContext = await populateOrderContext(data.customerOrderId, data.customerId);
+    const payload = {
+        ...data,
+        orderContext,
+    };
+    return Feedback.create(payload);
+};
 
 export const getAll = async (query: Record<string, unknown>) => {
     const { page = 1, limit = 10, customerId, customerOrderId } = query;
@@ -34,7 +62,19 @@ export const getById = async (id: string): Promise<IFeedbackDocument> => {
 };
 
 export const update = async (id: string, data: UpdateFeedbackInput): Promise<IFeedbackDocument> => {
-    const doc = await Feedback.findByIdAndUpdate(id, data, { new: true, runValidators: true });
+    const existing = await Feedback.findById(id);
+    if (!existing) throw new AppError('Feedback not found', 404);
+    
+    const customerOrderId = data.customerOrderId || existing.customerOrderId?.toString();
+    const customerId = data.customerId || existing.customerId?.toString();
+    const orderContext = customerOrderId ? await populateOrderContext(customerOrderId, customerId) : undefined;
+    
+    const updateData = {
+        ...data,
+        orderContext: orderContext || existing.orderContext,
+    };
+    
+    const doc = await Feedback.findByIdAndUpdate(id, updateData, { new: true, runValidators: true });
     if (!doc) throw new AppError('Feedback not found', 404);
     return doc;
 };

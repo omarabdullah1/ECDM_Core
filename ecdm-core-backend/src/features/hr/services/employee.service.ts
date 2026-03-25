@@ -73,35 +73,67 @@ export const getById = async (id: string) => {
  * Aggregates: User profile, Attendance records, Assigned tasks/work orders
  */
 export const get360Profile = async (id: string) => {
-    const employee = await User.findById(id).select('-password');
+    // 1. Smart Lookup: Handle both MongoDB _id and custom employeeId (e.g. EMP-1042)
+    const isObjectId = Types.ObjectId.isValid(id);
+    const query = isObjectId ? { _id: id } : { employeeId: id };
+    
+    const employee = await User.findOne(query).select('-password');
     if (!employee) throw new AppError('Employee not found', 404);
+
+    // Get the real ObjectId as string for references
+    const realId = employee._id.toString();
+
+    // Build attendance query dynamically to avoid passing undefined
+    const attendanceOrConditions: any[] = [{ userId: new Types.ObjectId(realId) }];
+    if (employee.employeeId && Types.ObjectId.isValid(employee.employeeId)) {
+        attendanceOrConditions.push({ employeeId: new Types.ObjectId(employee.employeeId) });
+    }
 
     // Get attendance records for this employee
     const attendanceRecords = await Attendance.find({ 
-        $or: [
-            { userId: new Types.ObjectId(id) },
-            { employeeId: employee.employeeId }
-        ]
+        $or: attendanceOrConditions
     })
     .sort({ date: -1 })
     .limit(100);
 
     // Calculate attendance statistics
-    const attendanceStats = await getAttendanceStats(id, employee.employeeId);
+    const attendanceStats = await getAttendanceStats(realId, employee.employeeId);
 
-    // Get work orders assigned to this employee
-    const workOrders = await WorkOrder.find({
-        $or: [
-            { maintenanceEngineer: { $regex: `${employee.firstName}|${employee.lastName}`, $options: 'i' } },
-            { updatedBy: new Types.ObjectId(id) }
-        ]
-    })
-    .populate({
-        path: 'customerOrderId',
-        populate: { path: 'customerId' }
-    })
-    .sort({ createdAt: -1 })
-    .limit(50);
+    // 2. Safe Work Orders Query
+    const woOrConditions: any[] = [{ updatedBy: new Types.ObjectId(realId) }];
+    
+    // Extract all possible name parts (fallback to fullName or name)
+    const nameParts: string[] = [];
+    if (employee.firstName) nameParts.push(employee.firstName.trim());
+    if (employee.lastName) nameParts.push(employee.lastName.trim());
+    if (employee.fullName) {
+        nameParts.push(...employee.fullName.split(' ').map((s: string) => s.trim()));
+    }
+    if ((employee as any).name) { // Fallback just in case the schema uses 'name'
+        nameParts.push(...(employee as any).name.split(' ').map((s: string) => s.trim()));
+    }
+    
+    // Clean up: remove duplicates, empty strings, and extremely short strings (<= 2 chars)
+    const validTerms = [...new Set(nameParts)].filter(term => term && term.length > 2);
+    
+    if (validTerms.length > 0) {
+        // Escape native regex special characters to prevent MongoDB 500 MongoServerError on invalid regex
+        const escapeRegex = (string: string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const regexString = validTerms.map(escapeRegex).join('|');
+        
+        // Use native MongoDB $regex syntax for absolute compatibility
+        woOrConditions.push({ 
+            maintenanceEngineer: { $regex: regexString, $options: 'i' }
+        });
+    }
+
+    const workOrders = await WorkOrder.find({ $or: woOrConditions })
+        .populate({
+            path: 'customerOrderId',
+            populate: { path: 'customerId' }
+        })
+        .sort({ createdAt: -1 })
+        .limit(50);
 
     // Calculate performance metrics
     const performanceStats = calculatePerformanceStats(workOrders);
@@ -125,10 +157,10 @@ export const get360Profile = async (id: string) => {
 const getAttendanceStats = async (userId: string, employeeId?: string) => {
     const filter: Record<string, unknown> = {};
     
-    if (employeeId) {
+    if (employeeId && Types.ObjectId.isValid(employeeId)) {
         filter.$or = [
             { userId: new Types.ObjectId(userId) },
-            { employeeId }
+            { employeeId: new Types.ObjectId(employeeId) }
         ];
     } else {
         filter.userId = new Types.ObjectId(userId);

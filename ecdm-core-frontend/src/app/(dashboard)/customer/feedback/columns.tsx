@@ -55,6 +55,20 @@ interface User {
   lastName?: string;
 }
 
+interface OrderContext {
+  customerName?: string;
+  customerPhone?: string;
+  customerId?: string;
+  engineerName?: string;
+  visitDate?: string;
+  scheduledVisitDate?: string;
+  actualVisitDate?: string;
+  startDate?: string;
+  endDate?: string;
+  dealStatus?: string;
+  orderId?: string;
+}
+
 export interface Feedback {
   _id: string;
   
@@ -62,6 +76,9 @@ export interface Feedback {
   customerId?: Customer;
   customerOrderId?: CustomerOrder;
   updatedBy?: User;
+  
+  // Order Context - Single Source of Truth
+  orderContext?: OrderContext;
   
   // Feedback specific fields
   solvedIssue?: string; // 'Yes' | 'No' | ''
@@ -114,7 +131,7 @@ export const columns: Array<{
       key: 'customerId',
       header: 'Customer ID',
       render: (row: Feedback) => {
-        const custId = row.customerId?.customerId;
+        const custId = row.orderContext?.customerId || row.customerId?.customerId;
         return (
           <span className="font-mono text-xs text-[hsl(var(--muted-foreground))]">
             {custId || '-'}
@@ -130,7 +147,7 @@ export const columns: Array<{
       key: 'customer.name',
       header: 'Name',
       render: (row: Feedback) => {
-        const name = row.customerId?.name;
+        const name = row.orderContext?.customerName || row.customerId?.name;
         return (
           <span className="font-medium">
             {name || '-'}
@@ -146,7 +163,7 @@ export const columns: Array<{
       key: 'customer.phone',
       header: 'Phone',
       render: (row: Feedback) => {
-        const phone = row.customerId?.phone;
+        const phone = row.orderContext?.customerPhone || row.customerId?.phone;
         return (
           <span className="font-mono text-sm">
             {phone || '-'}
@@ -166,7 +183,7 @@ export const columns: Array<{
       key: 'engineerName',
       header: 'Engineer Name',
       render: (row: Feedback) => {
-        const engineerName = row.customerOrderId?.engineerName;
+        const engineerName = row.orderContext?.engineerName || row.customerOrderId?.engineerName;
         return (
           <span className="font-medium">
             {engineerName || '-'}
@@ -182,7 +199,7 @@ export const columns: Array<{
       key: 'visitDate',
       header: 'Visit Engineer Date',
       render: (row: Feedback) => {
-        const visitDate = row.customerOrderId?.actualVisitDate;
+        const visitDate = row.orderContext?.actualVisitDate || row.orderContext?.visitDate || row.customerOrderId?.actualVisitDate;
         return (
           <span className="text-sm">
             {formatDate(visitDate)}
@@ -198,7 +215,7 @@ export const columns: Array<{
       key: 'startDate',
       header: 'Start Date',
       render: (row: Feedback) => {
-        const startDate = row.customerOrderId?.startDate;
+        const startDate = row.orderContext?.startDate || row.customerOrderId?.startDate;
         return (
           <span className="text-sm">
             {formatDate(startDate)}
@@ -214,7 +231,7 @@ export const columns: Array<{
       key: 'endDate',
       header: 'End Date',
       render: (row: Feedback) => {
-        const endDate = row.customerOrderId?.endDate;
+        const endDate = row.orderContext?.endDate || row.customerOrderId?.endDate;
         return (
           <span className="text-sm">
             {formatDate(endDate)}

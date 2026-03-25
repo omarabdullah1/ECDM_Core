@@ -4,7 +4,6 @@ import { env } from '../config/env';
 import { AppError } from '../utils/apiError';
 import { UserRole } from '../features/auth/auth.types';
 
-// ── Augment Express Request with user payload ───────────────────────
 export interface JwtPayload {
     userId: string;
     role: UserRole;
@@ -14,22 +13,35 @@ declare global {
     namespace Express {
         interface Request {
             user?: JwtPayload;
+            cookies?: {
+                accessToken?: string;
+                refreshToken?: string;
+            };
         }
     }
 }
 
-/**
- * Verify JWT access token from the Authorization header.
- */
-export const authenticate = (req: Request, _res: Response, next: NextFunction): void => {
+const extractToken = (req: Request): string | undefined => {
     const header = req.headers.authorization;
+    if (header && header.startsWith('Bearer ')) {
+        return header.split(' ')[1];
+    }
+    
+    if (req.cookies?.accessToken) {
+        return req.cookies.accessToken;
+    }
+    
+    return undefined;
+};
 
-    if (!header || !header.startsWith('Bearer ')) {
+export const authenticate = (req: Request, _res: Response, next: NextFunction): void => {
+    const token = extractToken(req);
+
+    if (!token) {
         return next(new AppError('Authentication required', 401));
     }
 
     try {
-        const token = header.split(' ')[1];
         const decoded = jwt.verify(token, env.JWT_SECRET) as JwtPayload;
         req.user = decoded;
         next();

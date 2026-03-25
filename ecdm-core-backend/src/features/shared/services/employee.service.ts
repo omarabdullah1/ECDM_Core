@@ -1,4 +1,5 @@
 import Employee from '../models/employee.model';
+import User from '../../auth/auth.model';
 import { CreateEmployeeInput, UpdateEmployeeInput } from '../validation/employee.validation';
 import { IEmployeeDocument } from '../types/employee.types';
 import { AppError } from '../../../utils/apiError';
@@ -20,10 +21,35 @@ export const getEmployees = async (query: Record<string, unknown>) => {
     return { data, pagination: { page: Number(page), limit: Number(limit), total, pages: Math.ceil(total / Number(limit)) } };
 };
 
-export const getEmployeeById = async (id: string): Promise<IEmployeeDocument> => {
-    const emp = await Employee.findById(id);
-    if (!emp) throw new AppError('Employee not found', 404);
-    return emp;
+export const getEmployeeById = async (id: string): Promise<any> => {
+    const emp = await Employee.findOne({
+        $or: [
+            { _id: id },
+            { userId: id }
+        ]
+    }).populate('userId');
+    
+    if (emp) return emp;
+
+    // Smart Lookup Fallback: Fetch basic user data
+    const user = await User.findById(id);
+    if (!user) throw new AppError('Employee and User not found', 404);
+
+    return {
+        _id: user._id,
+        userId: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        fullName: user.firstName + ' ' + user.lastName,
+        email: user.email,
+        role: user.role,
+        isActive: user.isActive,
+        phone: user.phone,
+        address: user.address,
+        employeeId: user.employeeId,
+        avatarUrl: user.avatarUrl,
+        createdAt: user.createdAt,
+    };
 };
 
 export const updateEmployee = async (id: string, data: UpdateEmployeeInput): Promise<IEmployeeDocument> => {

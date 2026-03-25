@@ -109,13 +109,7 @@ const NAV: NavItem[] = [
             { labelKey: 'hrAttendance', href: '/hr/attendance', icon: 'Calendar' },
         ]
     },
-    {
-        labelKey: 'rnd', icon: 'FolderKanban', children: [
-            { labelKey: 'personalBoard', href: '/rnd/personal-board', icon: 'Kanban' },
-            { labelKey: 'rndProjects', href: '/rnd/projects', icon: 'FolderKanban' },
-            { labelKey: 'myPerformance', href: '/rnd/performance', icon: 'TrendingUpDown' },
-        ]
-    },
+
     {
         labelKey: 'administration', icon: 'UserCog', children: [
             { labelKey: 'userManagement', href: '/users', icon: 'Users' },
@@ -137,7 +131,7 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
     const t = useT();
     const nav = t.nav;
     const { user, logout } = useAuthStore();
-    const [openGroups, setOpenGroups] = useState<string[]>(['marketing', 'sales', 'customer', 'finance', 'operations', 'hr', 'administration', 'rnd']);
+    const [openGroups, setOpenGroups] = useState<string[]>(['marketing', 'sales', 'customer', 'finance', 'operations', 'hr', 'administration']);
 
     const label = (key: string) => (nav as Record<string, string>)[key] ?? key;
 
@@ -150,50 +144,47 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
     const getFilteredNav = () => {
         const role = user?.role;
 
-        // Admin and SuperAdmin: see everything
-        if (role === 'Admin' || role === 'SuperAdmin') {
+        const adminRoles = ['Admin', 'SuperAdmin', 'Manager'];
+        if (adminRoles.includes(role || '')) {
             return NAV;
         }
 
-        // R&D Engineer: ONLY Dashboard + R&D Workspace
-        if (role === 'R&D_Engineer' || role === 'R&D') {
-            return NAV.filter(item => ['dashboard', 'rnd'].includes(item.labelKey));
-        }
-
-        // Sales: ONLY Dashboard + Sales
         if (role === 'Sales') {
             return NAV.filter(item => ['dashboard', 'sales'].includes(item.labelKey));
         }
 
-        // Marketing: ONLY Dashboard + Marketing
         if (role === 'Marketing') {
             return NAV.filter(item => ['dashboard', 'marketing'].includes(item.labelKey));
         }
 
-        // Customer Service: ONLY Dashboard + Customer
-        // NOTE: backend enum is 'CustomerService' (no space) — match both variants for resilience
         if (role === 'CustomerService' || role === 'Customer Service') {
             return NAV.filter(item => ['dashboard', 'customer'].includes(item.labelKey));
         }
 
-        // Operations: ONLY Dashboard + Operations
         if (role === 'Operations') {
             return NAV.filter(item => ['dashboard', 'operations'].includes(item.labelKey));
         }
 
-        // HR: ONLY Dashboard + HR
         if (role === 'HR') {
             return NAV.filter(item => ['dashboard', 'hr'].includes(item.labelKey));
         }
 
-        // Default (unknown/unhandled role): Dashboard only — fail closed, never leak sections
+        if (role === 'Maintenance' || role === 'MaintenanceEngineer') {
+            return NAV.filter(item => ['dashboard', 'operations'].includes(item.labelKey));
+        }
+
+        if (role === 'R&D_Engineer' || role === 'R&D') {
+            return NAV.filter(item => ['dashboard'].includes(item.labelKey));
+        }
+
         return NAV.filter(item => item.labelKey === 'dashboard');
     };
 
     const filteredNav = getFilteredNav();
 
     const initials = `${user?.firstName?.[0] ?? ''}${user?.lastName?.[0] ?? ''}`;
-    const isAdmin = user?.role === 'Admin' || user?.role === 'SuperAdmin';
+    const adminRoles = ['Admin', 'SuperAdmin', 'Manager'];
+    const isAdmin = adminRoles.includes(user?.role || '');
 
     return (
         <aside className={cn(

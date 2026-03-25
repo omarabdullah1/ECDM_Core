@@ -1,0 +1,92 @@
+name: CI Build & Test
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  # Backend CI
+  backend-ci:
+    name: Backend Build
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: ecdm-core-backend/package-lock.json
+      
+      - name: Install dependencies
+        working-directory: ecdm-core-backend
+        run: npm ci
+      
+      - name: TypeScript type check
+        working-directory: ecdm-core-backend
+        run: npm run build
+      
+      - name: Lint
+        working-directory: ecdm-core-backend
+        run: npm run lint || true
+
+  # Frontend CI
+  frontend-ci:
+    name: Frontend Build
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: ecdm-core-frontend/package-lock.json
+      
+      - name: Install dependencies
+        working-directory: ecdm-core-frontend
+        run: npm ci
+      
+      - name: TypeScript type check
+        working-directory: ecdm-core-frontend
+        run: npm run build
+      
+      - name: Lint
+        working-directory: ecdm-core-frontend
+        run: npm run lint || true
+
+  # Docker build test
+  docker-test:
+    name: Docker Build Test
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Build Backend Docker
+        uses: docker/build-push-action@v5
+        with:
+          context: ./ecdm-core-backend
+          push: false
+          load: true
+          tags: ecdm-backend:test
+      
+      - name: Build Frontend Docker
+        uses: docker/build-push-action@v5
+        with:
+          context: ./ecdm-core-frontend
+          push: false
+          load: true
+          tags: ecdm-frontend:test

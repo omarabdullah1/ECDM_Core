@@ -1,0 +1,83 @@
+src/features/auth/auth.controller.ts(78,52): error TS2345: Argument of type 'string | string[]' is not assignable to parameter of type 'string'.
+  Type 'string[]' is not assignable to type 'string'.
+src/features/auth/auth.controller.ts(88,51): error TS2345: Argument of type 'string | string[]' is not assignable to parameter of type 'string'.
+  Type 'string[]' is not assignable to type 'string'.
+src/features/auth/auth.controller.ts(98,38): error TS2345: Argument of type 'string | string[]' is not assignable to parameter of type 'string'.
+  Type 'string[]' is not assignable to type 'string'.
+src/features/auth/auth.service.ts(29,20): error TS2339: Property 'role' does not exist on type '{ firstName: string; lastName: string; email: string; password: string; phone?: string | undefined; }'.
+src/features/customer/controllers/customer-order.controller.ts(19,23): error TS7030: Not all code paths return a value.
+src/features/marketing/models/campaign.model.ts(2,29): error TS6133: 'CampaignStatus' is declared but its value is never read.
+src/features/marketing/models/campaign.model.ts(2,45): error TS6133: 'NextSteps' is declared but its value is never read.
+src/features/marketing/models/campaign.model.ts(36,48): error TS2339: Property 'findOne' does not exist on type 'Function'.
+src/features/marketing/models/content-tracker.model.ts(11,9): error TS2322: Type '{ type: StringConstructor; enum: string[]; default: "New"; }' is not assignable to type 'SchemaDefinitionProperty<"" | ContentStatus, IContentTrackerDocument, Document<unknown, {}, FlatRecord<IContentTrackerDocument>, {}, DefaultSchemaOptions> & FlatRecord<...> & Required<...> & { ...; }> | undefined'.
+  Type '{ type: StringConstructor; enum: string[]; default: "New"; }' is not assignable to type 'undefined'.
+src/features/marketing/models/content-tracker.model.ts(28,29): error TS2339: Property 'contentId' does not exist on type 'IfAny<FlatRecord<DocType>, any, TVirtuals & TInstanceMethods extends Record<string, never> ? Document<unknown, {}, FlatRecord<...>, TVirtuals, ResolveSchemaOptions<...>> & Default__v<...> : IfAny<...>>'.
+src/features/marketing/models/content-tracker.model.ts(29,48): error TS2339: Property 'findOne' does not exist on type 'Function'.
+src/features/marketing/models/content-tracker.model.ts(31,14): error TS2339: Property 'contentId' does not exist on type 'IfAny<FlatRecord<DocType>, any, TVirtuals & TInstanceMethods extends Record<string, never> ? Document<unknown, {}, FlatRecord<...>, TVirtuals, ResolveSchemaOptions<...>> & Default__v<...> : IfAny<...>>'.
+src/features/marketing/routes/campaign.routes.ts(41,23): error TS6133: 'req' is declared but its value is never read.
+src/features/marketing/routes/campaign.routes.ts(41,28): error TS6133: 'res' is declared but its value is never read.
+src/features/operations/controllers/work-order.controller.ts(27,23): error TS7030: Not all code paths return a value.
+src/features/operations/models/price-list.model.ts(68,9): error TS2322: Type '{ type: StringConstructor; enum: { values: string[]; message: string; }; default: ""; }' is not assignable to type 'SchemaDefinitionProperty<"Maintenance" | "Supply and installation" | "General supply", IPriceListDocument, Document<unknown, {}, FlatRecord<IPriceListDocument>, {}, DefaultSchemaOptions> & FlatRecord<...> & Required<...> & { ...; }> | undefined'.
+  Type '{ type: StringConstructor; enum: { values: string[]; message: string; }; default: ""; }' is not assignable to type 'undefined'.
+src/features/operations/models/price-list.model.ts(106,15): error TS2339: Property 'sparePartsId' does not exist on type 'IfAny<FlatRecord<DocType>, any, TVirtuals & TInstanceMethods extends Record<string, never> ? Document<unknown, {}, FlatRecord<...>, TVirtuals, ResolveSchemaOptions<...>> & Default__v<...> : IfAny<...>>'.
+src/features/operations/models/price-list.model.ts(108,14): error TS2339: Property 'sparePartsId' does not exist on type 'IfAny<FlatRecord<DocType>, any, TVirtuals & TInstanceMethods extends Record<string, never> ? Document<unknown, {}, FlatRecord<...>, TVirtuals, ResolveSchemaOptions<...>> & Default__v<...> : IfAny<...>>'.
+src/features/sales/routes/sales-order.routes.ts(5,34): error TS6133: 'updateSalesOrderSchema' is declared but its value is never read.
+src/features/sales/tests/smart-update.test.template.ts(11,30): error TS2307: Cannot find module '../utils/makerChecker' or its corresponding type declarations.
+src/features/sales/tests/smart-update.test.template.ts(13,1): error TS2582: Cannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/features/sales/tests/smart-update.test.template.ts(14,5): error TS2582: Cannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/features/sales/tests/smart-update.test.template.ts(15,9): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/features/sales/tests/smart-update.test.template.ts(16,13): error TS2304: Cannot find name 'expect'.
+src/features/sales/tests/smart-update.test.template.ts(19,9): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/features/sales/tests/smart-update.test.template.ts(20,13): error TS2304: Cannot find name 'expect'.
+src/features/sales/tests/smart-update.test.template.ts(23,9): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/features/sales/tests/smart-update.test.template.ts(24,13): error TS2304: Cannot find name 'expect'.
+src/features/sales/tests/smart-update.test.template.ts(27,9): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/features/sales/tests/smart-update.test.template.ts(28,13): error TS2304: Cannot find name 'expect'.
+src/features/sales/tests/smart-update.test.template.ts(31,9): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/features/sales/tests/smart-update.test.template.ts(32,13): error TS2304: Cannot find name 'expect'.
+src/features/sales/tests/smart-update.test.template.ts(35,9): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/features/sales/tests/smart-update.test.template.ts(36,13): error TS2304: Cannot find name 'expect'.
+src/features/sales/tests/smart-update.test.template.ts(39,9): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/features/sales/tests/smart-update.test.template.ts(40,13): error TS2304: Cannot find name 'expect'.
+src/features/sales/tests/smart-update.test.template.ts(43,9): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/features/sales/tests/smart-update.test.template.ts(44,13): error TS2304: Cannot find name 'expect'.
+src/features/sales/tests/smart-update.test.template.ts(47,9): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/features/sales/tests/smart-update.test.template.ts(48,13): error TS2304: Cannot find name 'expect'.
+src/features/sales/tests/smart-update.test.template.ts(51,9): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/features/sales/tests/smart-update.test.template.ts(52,13): error TS2304: Cannot find name 'expect'.
+src/features/sales/tests/smart-update.test.template.ts(57,1): error TS2582: Cannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/features/sales/tests/smart-update.test.template.ts(58,5): error TS2582: Cannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/features/sales/tests/smart-update.test.template.ts(59,15): error TS6133: 'mockSalesOrder' is declared but its value is never read.
+src/features/sales/tests/smart-update.test.template.ts(74,9): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/features/sales/tests/smart-update.test.template.ts(75,19): error TS6133: 'proposedData' is declared but its value is never read.
+src/features/sales/tests/smart-update.test.template.ts(93,9): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/features/sales/tests/smart-update.test.template.ts(94,19): error TS6133: 'proposedData' is declared but its value is never read.
+src/features/sales/tests/smart-update.test.template.ts(112,9): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/features/sales/tests/smart-update.test.template.ts(113,19): error TS6133: 'proposedData' is declared but its value is never read.
+src/features/sales/tests/smart-update.test.template.ts(135,9): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/features/sales/tests/smart-update.test.template.ts(136,19): error TS6133: 'proposedData' is declared but its value is never read.
+src/features/sales/tests/smart-update.test.template.ts(152,9): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/features/sales/tests/smart-update.test.template.ts(153,19): error TS6133: 'proposedData' is declared but its value is never read.
+src/features/sales/tests/smart-update.test.template.ts(168,9): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/features/sales/tests/smart-update.test.template.ts(169,19): error TS6133: 'proposedData' is declared but its value is never read.
+src/features/sales/tests/smart-update.test.template.ts(183,5): error TS2582: Cannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/features/sales/tests/smart-update.test.template.ts(184,9): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/features/sales/tests/smart-update.test.template.ts(185,19): error TS6133: 'mockDocument' is declared but its value is never read.
+src/features/sales/tests/smart-update.test.template.ts(189,19): error TS6133: 'proposedData' is declared but its value is never read.
+src/features/sales/tests/smart-update.test.template.ts(197,9): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/features/sales/tests/smart-update.test.template.ts(198,19): error TS6133: 'mockDocument' is declared but its value is never read.
+src/features/sales/tests/smart-update.test.template.ts(202,19): error TS6133: 'proposedData' is declared but its value is never read.
+src/features/sales/tests/smart-update.test.template.ts(211,9): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/features/sales/tests/smart-update.test.template.ts(212,19): error TS6133: 'mockDocument' is declared but its value is never read.
+src/features/sales/tests/smart-update.test.template.ts(216,19): error TS6133: 'proposedData' is declared but its value is never read.
+src/features/sales/tests/smart-update.test.template.ts(225,5): error TS2582: Cannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/features/sales/tests/smart-update.test.template.ts(226,9): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/features/sales/tests/smart-update.test.template.ts(227,19): error TS6133: 'mockDocument' is declared but its value is never read.
+src/features/sales/tests/smart-update.test.template.ts(232,19): error TS6133: 'proposedData' is declared but its value is never read.
+src/features/sales/tests/smart-update.test.template.ts(244,5): error TS2582: Cannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/features/sales/tests/smart-update.test.template.ts(245,9): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/features/sales/tests/smart-update.test.template.ts(246,19): error TS6133: 'proposedData' is declared but its value is never read.
+src/features/sales/tests/smart-update.test.template.ts(259,9): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/features/sales/validation/sales-data.validation.ts(2,32): error TS6133: 'YesNo' is declared but its value is never read.
+src/features/shared/controllers/customer.controller.ts(60,33): error TS6133: 'req' is declared but its value is never read.
+src/features/shared/controllers/customer.controller.ts(77,39): error TS6133: 'req' is declared but its value is never read.

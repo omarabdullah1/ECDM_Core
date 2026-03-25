@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { sendSuccess } from '../../utils/apiResponse';
+import mongoose from 'mongoose';
 
 // ── Models ──────────────────────────────────────────────────────────
 import Customer from '../shared/models/contact.model';
@@ -195,6 +196,74 @@ export const getStats = async (_req: Request, res: Response, next: NextFunction)
                 recentFeedback,
             },
         }, 'Dashboard data loaded');
+    } catch (err) {
+        next(err);
+    }
+};
+
+// ═══════════════════════════════════════════════════════════════════
+// GET /api/dashboard/summary
+// Optimized single-query summary using MongoDB Aggregation Pipeline
+// Returns: totalSales, lowStockAlerts, recentActivities in one request
+// ═══════════════════════════════════════════════════════════════════
+export const getSummary = async (_req: Request, res: Response, next: NextFunction) => {
+    try {
+        const now = new Date();
+        const startOfLast7Days = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+        const db = mongoose.connection.db;
+        const summary = db ? await db.collection('summary_view').findOne({}).catch(() => null) : null;
+
+        const [
+            totalSales,
+            lowStockAlerts,
+            pendingFollowUpsCount,
+            activeWorkOrdersCount,
+        ] = await Promise.all([
+            Invoice.aggregate([
+                { $match: { status: 'Paid' } },
+                { $group: { _id: null, total: { $sum: '$total' } } },
+            ]),
+            Product.aggregate([
+                { $match: { isActive: true } },
+                { $addFields: { stockRatio: { $divide: ['$currentStock', { $ifNull: ['$lowStockThreshold', 1] }] } } },
+                { $match: { $expr: { $lte: ['$stockRatio', 1] } } },
+                { $group: { _id: null, count: { $sum: 1 }, items: { $push: { name: '$name', sku: '$sku', stock: '$currentStock', threshold: '$lowStockThreshold' } } } },
+            ]),
+            FollowUp.countDocuments({ solvedIssue: false }),
+            WorkOrder.countDocuments({ endMaintenanceDate: null }),
+        ]);
+
+        let recentActivities: unknown[] = [];
+        if (db) {
+            try {
+                recentActivities = await db.collection('auditlogs').aggregate([
+                    { $match: { createdAt: { $gte: startOfLast7Days } } },
+                    { $sort: { createdAt: -1 } },
+                    { $limit: 20 },
+                    { $project: { action: 1, entity: 1, userId: 1, createdAt: 1, details: 1 } },
+                ]).toArray();
+            } catch {
+                recentActivities = [];
+            }
+        }
+
+        sendSuccess(res, {
+            totalSales: totalSales[0]?.total ?? 0,
+            totalSalesThisMonth: summary?.revenueThisMonth ?? 0,
+            lowStockAlerts: {
+                count: lowStockAlerts[0]?.count ?? 0,
+                items: lowStockAlerts[0]?.items?.slice(0, 5) ?? [],
+            },
+            recentActivities,
+            pendingFollowUpsCount,
+            activeWorkOrdersCount,
+            quickStats: {
+                totalCustomers: summary?.totalCustomers ?? 0,
+                totalInvoices: summary?.totalInvoices ?? 0,
+                totalWorkOrders: summary?.totalWorkOrders ?? 0,
+            },
+        }, 'Dashboard summary loaded');
     } catch (err) {
         next(err);
     }

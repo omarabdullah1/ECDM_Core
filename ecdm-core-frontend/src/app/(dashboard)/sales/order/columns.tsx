@@ -438,7 +438,16 @@ const formatDateTime = (dateValue: string | Date | null | undefined): string => 
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Column Definitions (23 Columns - CEO Approved Order)
+// Safe Money Formatter
+// ─────────────────────────────────────────────────────────────────────────────
+
+const formatMoney = (val: any): string => {
+  const num = Number(val);
+  return isNaN(num) ? 'EGP 0.00' : `EGP ${num.toFixed(2)}`;
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Column Definitions (24 Columns - CEO Approved Order)
 // ─────────────────────────────────────────────────────────────────────────────
 
 interface SalesOrderColumnsConfig {
@@ -593,12 +602,28 @@ export const createSalesOrderColumns = (config?: SalesOrderColumnsConfig) => {
     // ─────────────────────────────────────────────────────────────────────────
     {
       key: 'typeOfOrder',
-      header: 'Type Of Order',
+      header: 'Type of Order',
       render: (row: SalesOrder) => {
         const type = row.typeOfOrder || row.salesLead?.typeOfOrder || row.salesData?.typeOfOrder || '-';
         return (
           <span className="text-sm">
             {type}
+          </span>
+        );
+      },
+    },
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // 10b. Total Amount (From Quotation grandTotal)
+    // ─────────────────────────────────────────────────────────────────────────
+    {
+      key: 'totalAmount',
+      header: 'Total Amount',
+      render: (row: SalesOrder) => {
+        const amount = row.quotation?.grandTotal || row.totalAmount || row.price || 0;
+        return (
+          <span className="text-sm font-medium">
+            {formatMoney(amount)}
           </span>
         );
       },
@@ -876,7 +901,7 @@ export const createSalesOrderColumns = (config?: SalesOrderColumnsConfig) => {
     // ─────────────────────────────────────────────────────────────────────────
     {
       key: 'salesPersonId',
-      header: 'SalesPerson ID',
+      header: 'Sales Person ID',
       render: (row: SalesOrder) => {
         // Try to get from multiple possible sources
         const salesPersonId = row.salesPersonId

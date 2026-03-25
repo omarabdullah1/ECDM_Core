@@ -12,12 +12,30 @@ export enum FollowUpStatus {
     Canceled = 'Canceled',
 }
 
+// Order Context - Single Source of Truth for inheriting from CustomerOrder
+export interface IOrderContext {
+    customerName?: string;
+    customerPhone?: string;
+    customerId?: string;
+    engineerName?: string;
+    visitDate?: Date;
+    scheduledVisitDate?: Date;
+    actualVisitDate?: Date;
+    startDate?: Date;
+    endDate?: Date;
+    dealStatus?: string;
+    orderId?: string;
+}
+
 export interface IFollowUp {
     // Source references (at least one should be set, or source = 'Manual')
     workOrder?:           Types.ObjectId;    // → WorkOrder
     leadId?:              Types.ObjectId;    // → SalesLead
     salesDataId?:         Types.ObjectId;    // → SalesData
-    customerOrderId?:     Types.ObjectId;    // → CustomerOrder (New: for QC pipeline)
+    customerOrderId?:     Types.ObjectId;    // → CustomerOrder (for QC pipeline)
+    
+    // Order Context - Single Source of Truth (inherited from CustomerOrder)
+    orderContext?:        IOrderContext;
     
     customer:             Types.ObjectId;    // → Customer (shared SSOT)
     csr?:                 Types.ObjectId;    // → User (CustomerService role)
@@ -29,6 +47,7 @@ export interface IFollowUp {
     reasonForDelay?:      string;                            // New QC field
     solvedIssue?:         'Yes' | 'No' | '';                 // Changed from boolean to string enum
     reasonForNotSolving?: string;
+    followUp?:            boolean | null;                    // Does this need another follow-up?
     
     followUpDate:         Date;
     notes?:               string;

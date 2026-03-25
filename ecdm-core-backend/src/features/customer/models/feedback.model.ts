@@ -4,7 +4,22 @@ import { IFeedbackDocument } from '../types/feedback.types';
 const feedbackSchema = new Schema<IFeedbackDocument>(
     {
         customerId:      { type: Schema.Types.ObjectId, ref: 'Customer',      required: [true, 'Customer reference is required'] },
-        customerOrderId: { type: Schema.Types.ObjectId, ref: 'CustomerOrder' }, // To inherit Engineer & Dates
+        customerOrderId: { type: Schema.Types.ObjectId, ref: 'CustomerOrder', required: [true, 'Feedback must be linked to a specific order'] },
+        
+        // Order Context - Single Source of Truth (inherited from CustomerOrder)
+        orderContext: {
+            customerName: { type: String, default: '' },
+            customerPhone: { type: String, default: '' },
+            customerId: { type: String, default: '' },
+            engineerName: { type: String, default: '' },
+            visitDate: { type: Date },
+            scheduledVisitDate: { type: Date },
+            actualVisitDate: { type: Date },
+            startDate: { type: Date },
+            endDate: { type: Date },
+            dealStatus: { type: String, default: '' },
+            orderId: { type: String, default: '' },
+        },
         
         // Feedback specific fields
         solvedIssue:           { type: String, enum: ['Yes', 'No', ''], default: '' },

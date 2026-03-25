@@ -5,11 +5,33 @@ import { parsePagination, buildPaginatedResult } from '../../utils/pagination';
 import { logAction } from '../../utils/auditLogger';
 import { AuditAction } from '../shared/types/audit-log.types';
 
+const cookieOptions = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict' as const,
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+};
+
+const accessTokenCookieOptions = {
+    ...cookieOptions,
+    maxAge: 15 * 60 * 1000,
+};
+
+const getRefreshToken = (req: Request): string | undefined => {
+    if (req.cookies?.refreshToken) return req.cookies.refreshToken;
+    if (typeof req.body.refreshToken === 'string') return req.body.refreshToken;
+    return undefined;
+};
+
 // ── POST /api/auth/register ─────────────────────────────────────────
 export const register = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-        const { user, token } = await authService.registerUser(req.body);
-        sendSuccess(res, { user, token }, 'User registered successfully', 201);
+        const { user, tokens } = await authService.registerUser(req.body);
+        
+        res.cookie('accessToken', tokens.accessToken, accessTokenCookieOptions);
+        res.cookie('refreshToken', tokens.refreshToken, cookieOptions);
+        
+        sendSuccess(res, { user, accessToken: tokens.accessToken }, 'User registered successfully', 201);
     } catch (err) {
         next(err);
     }
@@ -18,12 +40,50 @@ export const register = async (req: Request, res: Response, next: NextFunction):
 // ── POST /api/auth/login ────────────────────────────────────────────
 export const login = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-        const { user, token } = await authService.loginUser(req.body);
+        const { user, tokens } = await authService.loginUser(req.body);
         
-        // Log the login action
         await logAction(user._id, AuditAction.LOGIN, 'User', user._id, { email: user.email }, req);
         
-        sendSuccess(res, { user, token }, 'Login successful');
+        res.cookie('accessToken', tokens.accessToken, accessTokenCookieOptions);
+        res.cookie('refreshToken', tokens.refreshToken, cookieOptions);
+        
+        sendSuccess(res, { user, accessToken: tokens.accessToken }, 'Login successful');
+    } catch (err) {
+        next(err);
+    }
+};
+
+// ── POST /api/auth/refresh ─────────────────────────────────────────
+export const refreshToken = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+        const refreshTokenStr = getRefreshToken(req);
+        if (!refreshTokenStr) {
+            sendSuccess(res, { accessToken: null }, 'No refresh token provided');
+            return;
+        }
+        
+        const tokens = await authService.refreshAccessToken(refreshTokenStr);
+        
+        res.cookie('accessToken', tokens.accessToken, accessTokenCookieOptions);
+        res.cookie('refreshToken', tokens.refreshToken, cookieOptions);
+        
+        sendSuccess(res, { accessToken: tokens.accessToken }, 'Token refreshed');
+    } catch (err) {
+        next(err);
+    }
+};
+
+// ── POST /api/auth/logout ─────────────────────────────────────────
+export const logout = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+        if (req.user) {
+            await authService.logoutUser(req.user.userId);
+        }
+        
+        res.clearCookie('accessToken');
+        res.clearCookie('refreshToken');
+        
+        sendSuccess(res, null, 'Logged out successfully');
     } catch (err) {
         next(err);
     }
@@ -75,7 +135,7 @@ export const createUser = async (req: Request, res: Response, next: NextFunction
 // ── GET /api/auth/users/:id ─────────────────────────────────────────
 export const getUser = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-        const user = await authService.getUserById(req.params.id);
+        const user = await authService.getUserById(req.params.id as string);
         sendSuccess(res, { user }, 'User retrieved');
     } catch (err) {
         next(err);
@@ -85,7 +145,7 @@ export const getUser = async (req: Request, res: Response, next: NextFunction): 
 // ── PUT /api/auth/users/:id ─────────────────────────────────────────
 export const updateUser = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-        const user = await authService.updateUser(req.params.id, req.body);
+        const user = await authService.updateUser(req.params.id as string, req.body);
         sendSuccess(res, { user }, 'User updated successfully');
     } catch (err) {
         next(err);
@@ -95,7 +155,7 @@ export const updateUser = async (req: Request, res: Response, next: NextFunction
 // ── DELETE /api/auth/users/:id ──────────────────────────────────────
 export const deleteUser = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-        await authService.deleteUser(req.params.id);
+        await authService.deleteUser(req.params.id as string);
         sendSuccess(res, null, 'User deleted successfully');
     } catch (err) {
         next(err);

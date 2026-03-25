@@ -228,14 +228,7 @@ export default function AddQuotationDialog({ order, onClose, onSuccess }: AddQuo
               </p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-2 hover:bg-[hsl(var(--accent))] rounded-lg transition-all"
-            disabled={saving}
-          >
-            <X className="w-5 h-5" />
-          </button>
+
         </DialogHeader>
 
         {/* Form */}
@@ -300,22 +293,10 @@ export default function AddQuotationDialog({ order, onClose, onSuccess }: AddQuo
                               </optgroup>
                             ))}
 
-                            {/* Custom entry fallback */}
-                            <optgroup label="═══ Custom Entry ═══">
-                              <option value="__custom__">➕ Enter Custom Item...</option>
-                            </optgroup>
+
                           </select>
 
-                          {/* Free-text for custom items */}
-                          {item.description === '__custom__' && (
-                            <input
-                              type="text"
-                              placeholder="Type custom item description"
-                              onChange={(e) => handleItemChange(index, 'description', e.target.value)}
-                              className="w-full px-3 py-2 border border-[hsl(var(--border))] rounded-lg text-sm focus:border-[hsl(var(--primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/20 mt-2"
-                              autoFocus
-                            />
-                          )}
+
                         </td>
 
                         {/* Quantity */}

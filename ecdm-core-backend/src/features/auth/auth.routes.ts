@@ -10,6 +10,8 @@ const router = Router();
 // Public
 router.post('/register', validate(registerSchema), authController.register);
 router.post('/login', validate(loginSchema), authController.login);
+router.post('/refresh', authController.refreshToken);
+router.post('/logout', authenticate, authController.logout);
 
 // Protected
 router.get('/me', authenticate, authController.getMe);

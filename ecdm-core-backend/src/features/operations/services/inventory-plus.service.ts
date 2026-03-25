@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import InventoryItem from '../models/inventory-item.model';
 import Category from '../models/category.model';
 import Product from '../models/product.model';
@@ -143,21 +144,60 @@ export const bulkDeleteProducts = async (ids: string[]): Promise<{ deletedCount:
 
 // ── StockMovement ─────────────────────────────────────────────────────────────
 export const createStockMovement = async (data: CreateStockMovementInput) => {
-    const movement = await StockMovement.create(data);
-    // Adjust product stock in real time
-    const delta = data.type === 'IN' ? data.quantity : data.type === 'OUT' ? -data.quantity : 0;
-    if (delta !== 0) {
-        await Product.findByIdAndUpdate(data.product, { $inc: { currentStock: delta } });
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    
+    try {
+        const delta = data.type === 'IN' ? data.quantity : data.type === 'OUT' ? -data.quantity : 0;
+        
+        if (delta !== 0) {
+            const product = await Product.findById(data.product).session(session);
+            if (!product) {
+                throw new AppError('Product not found', 404);
+            }
+            
+            if (delta < 0 && product.currentStock + delta < 0) {
+                throw new AppError(`Insufficient stock. Available: ${product.currentStock}, requested: ${Math.abs(delta)}`, 400);
+            }
+            
+            await Product.findByIdAndUpdate(data.product, { $inc: { currentStock: delta } }, { session });
+        }
+        
+        const movement = await StockMovement.create([data], { session });
+        await session.commitTransaction();
+        
+        return movement[0].populate({ path: 'product', select: 'sku name' });
+    } catch (error) {
+        await session.abortTransaction();
+        throw error;
+    } finally {
+        session.endSession();
     }
-    return movement;
 };
 
 export const getAllStockMovements = async (query: Record<string, unknown>) => {
-    const { page = 1, limit = 10, product, type } = query;
+    const { page = 1, limit = 10, product, type, search, startDate, endDate } = query;
     const skip = (Number(page) - 1) * Number(limit);
     const filter: Record<string, unknown> = {};
+    
     if (product) filter.product = product;
     if (type)    filter.type    = type;
+    
+    if (startDate || endDate) {
+        filter.createdAt = {};
+        if (startDate) (filter.createdAt as Record<string, Date>).$gte = new Date(startDate as string);
+        if (endDate) (filter.createdAt as Record<string, Date>).$lte = new Date(endDate as string);
+    }
+    
+    if (search) {
+        const searchRegex = { $regex: search, $options: 'i' };
+        filter.$or = [
+            { reason: searchRegex },
+            { reference: searchRegex },
+            { 'product.name': searchRegex },
+            { 'product.sku': searchRegex },
+        ];
+    }
 
     const [data, total] = await Promise.all([
         StockMovement.find(filter)

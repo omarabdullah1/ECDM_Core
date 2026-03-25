@@ -31,22 +31,30 @@ export const createCustomer = async (data: Record<string, unknown>): Promise<ICu
     Customer.create(data);
 
 export const getCustomers = async (query: Record<string, unknown>) => {
-    const { page = 1, limit = 10, search, sector, type, potentialStatus } = query;
+    const { page = 1, limit = 10, search, sector, type, potentialStatus, status } = query;
     const filter: Record<string, unknown> = {};
-    if (search) filter.$text = { $search: search as string };
+    
+    if (search) {
+        const searchRegex = { $regex: search, $options: 'i' };
+        filter.$or = [
+            { name: searchRegex },
+            { email: searchRegex },
+            { phone: searchRegex },
+            { companyName: searchRegex },
+            { customerId: searchRegex },
+        ];
+    }
     if (sector) filter.sector = sector;
     if (type)   filter.type   = type;
+    if (status) filter.status = status;
     
     const skip = (Number(page) - 1) * Number(limit);
     
-    // Get customers first
     let customers = await Customer.find(filter).sort({ createdAt: -1 }).skip(skip).limit(Number(limit)).lean();
     const total = await Customer.countDocuments(filter);
     
-    // Enrich each customer with potential status by checking SalesOrder
     const enrichedData = await Promise.all(
         customers.map(async (customer) => {
-            // Check if customer has any sales order marked as "Not Potential"
             const hasNonPotentialOrder = await SalesOrder.exists({ 
                 customer: customer._id, 
                 finalStatusThirdFollowUp: 'Not Potential' 
@@ -59,7 +67,6 @@ export const getCustomers = async (query: Record<string, unknown>) => {
         })
     );
     
-    // Apply potential status filter if provided
     let data = enrichedData;
     let filteredTotal = total;
     if (potentialStatus === 'Potential') {

@@ -1,8 +1,25 @@
 import { z } from 'zod';
 
+export const orderContextSchema = z.object({
+    customerName: z.string().optional(),
+    customerPhone: z.string().optional(),
+    customerId: z.string().optional(),
+    engineerName: z.string().optional(),
+    visitDate: z.string().optional(),
+    scheduledVisitDate: z.string().optional(),
+    actualVisitDate: z.string().optional(),
+    startDate: z.string().optional(),
+    endDate: z.string().optional(),
+    dealStatus: z.string().optional(),
+    orderId: z.string().optional(),
+});
+
 export const createFeedbackSchema = z.object({
     customerId:            z.string().min(1, 'Customer ID is required'),
-    customerOrderId:       z.string().optional(), // To inherit Engineer & Dates
+    customerOrderId:       z.string().min(1, 'Order reference is required - Feedback must be linked to a specific order'),
+    
+    // Order Context - Single Source of Truth (inherited from CustomerOrder)
+    orderContext:          orderContextSchema.optional(),
     
     // Feedback specific fields
     solvedIssue:           z.enum(['Yes', 'No', '']).optional(),

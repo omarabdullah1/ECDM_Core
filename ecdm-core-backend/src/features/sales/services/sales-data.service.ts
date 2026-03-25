@@ -7,8 +7,32 @@ import { ISalesDataDocument } from '../types/sales-data.types';
 import { OrderStatus } from '../types/sales-order.types';
 import { AppError } from '../../../utils/apiError';
 
-export const create = async (data: CreateSalesDataInput): Promise<ISalesDataDocument> =>
-    SalesData.create(data);
+export const create = async (data: CreateSalesDataInput): Promise<ISalesDataDocument> => {
+    const record = await SalesData.create(data);
+    console.log('✅ Sales Data record created:', record._id);
+
+    // AUTOMATION: If follow-up is required, auto-create a FollowUp record
+    if (data.followUp === 'Yes') {
+        try {
+            const existingFollowUp = await FollowUp.findOne({ salesDataId: record._id });
+            if (!existingFollowUp) {
+                const newFollowUp = await FollowUp.create({
+                    salesDataId: record._id,
+                    customer: record.customer,
+                    csr: record.salesPerson,
+                    status: FollowUpStatus.Pending,
+                    followUpDate: record.followUpDate || new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), // Use record date or default 3 days
+                });
+                console.log('✅ Follow-up auto-created from Sales Data create:', newFollowUp._id);
+            }
+        } catch (error) {
+            console.error('⚠️ Failed to auto-create Follow-up from Sales Data create:', error);
+            // Don't fail the entire operation if follow-up creation fails
+        }
+    }
+
+    return record;
+};
 
 export const getAll = async (query: Record<string, unknown>) => {
     const { page = 1, limit = 10, salesPerson, callOutcome, marketingData } = query;

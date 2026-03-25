@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Cairo } from "next/font/google";
 import LangProvider from "@/components/LangProvider";
 import ThemeProvider from "@/components/ThemeProvider";
+import { ToastProvider } from "@/features/common/useToast";
 import "./globals.css";
 
 const inter = Inter({
@@ -29,7 +30,10 @@ export default function RootLayout({
     <html lang="en" dir="ltr" className="dark" suppressHydrationWarning>
       <body className={`${inter.variable} ${cairo.variable} font-sans antialiased`} suppressHydrationWarning>
         <ThemeProvider>
-          <LangProvider>{children}</LangProvider>
+          <LangProvider>
+            <ToastProvider />
+            {children}
+          </LangProvider>
         </ThemeProvider>
       </body>
     </html>

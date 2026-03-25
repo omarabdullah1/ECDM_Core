@@ -59,7 +59,7 @@ export const getAll = async (query: Record<string, unknown>) => {
     const [data, total] = await Promise.all([
         CustomerOrder.find(filter)
             .populate('customerId',    'customerId name phone region sector address')
-            .populate('salesOrderId',  'salesOrderId issueDescription quotationStatus finalStatus')
+            .populate('salesOrderId',  'salesOrderId issueDescription quotationStatus finalStatus quotation')
             .populate('updatedBy',     'name email')
             .sort({ createdAt: -1 }).skip(skip).limit(Number(limit)),
         CustomerOrder.countDocuments(filter),
@@ -70,7 +70,7 @@ export const getAll = async (query: Record<string, unknown>) => {
 export const getById = async (id: string): Promise<ICustomerOrderDocument> => {
     const doc = await CustomerOrder.findById(id)
         .populate('customerId',    'customerId name phone region sector address email company')
-        .populate('salesOrderId',  'salesOrderId issueDescription quotationStatus finalStatus siteInspectionDate')
+        .populate('salesOrderId',  'salesOrderId issueDescription quotationStatus finalStatus siteInspectionDate quotation')
         .populate('updatedBy',     'name email');
     if (!doc) throw new AppError('Customer order not found', 404);
     return doc;
@@ -79,6 +79,26 @@ export const getById = async (id: string): Promise<ICustomerOrderDocument> => {
 export const update = async (id: string, data: UpdateCustomerOrderInput): Promise<ICustomerOrderDocument> => {
     const doc = await CustomerOrder.findByIdAndUpdate(id, data, { new: true, runValidators: true });
     if (!doc) throw new AppError('Customer order not found', 404);
+
+    // AUTOMATION: If order is now Approved, create a Follow-Up record (if not already existing)
+    if (doc.status === 'Approved') {
+        try {
+            const existingFollowUp = await FollowUp.findOne({ customerOrderId: doc._id });
+            if (!existingFollowUp) {
+                const newFollowUp = await FollowUp.create({
+                    customerOrderId: doc._id,
+                    customer: doc.customerId,
+                    status: FollowUpStatus.Pending,
+                    followUpDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // Default: 7 days later
+                });
+                console.log('✅ Follow-up auto-created on order Approval:', newFollowUp._id);
+            }
+        } catch (error) {
+            console.error('⚠️ Failed to auto-create Follow-up on order Approval:', error);
+            // Don't fail the update if follow-up creation fails
+        }
+    }
+
     return doc;
 };
 

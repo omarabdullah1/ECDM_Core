@@ -37,8 +37,19 @@ export const get360Profile = async (req: Request, res: Response, next: NextFunct
     try {
         const profile = await svc.get360Profile(String(req.params.id));
         sendSuccess(res, profile);
-    } catch (e) {
-        next(e);
+    } catch (e: any) {
+        console.error("============= GET360PROFILE 500 CRASH =============");
+        console.error("Error Message:", e.message);
+        console.error("Stack Trace:", e.stack);
+        console.error("Params ID:", req.params.id);
+        console.error("===================================================");
+        
+        // Force sending the exact error back to the client so Axios logs it
+        res.status(500).json({
+            success: false,
+            message: `CRASH IN BACKEND: ${e.message}`,
+            stack: e.stack
+        });
     }
 };
 

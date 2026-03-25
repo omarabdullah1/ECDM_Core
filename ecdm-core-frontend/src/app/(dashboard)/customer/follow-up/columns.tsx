@@ -87,6 +87,20 @@ interface User {
   lastName?: string;
 }
 
+interface OrderContext {
+  customerName?: string;
+  customerPhone?: string;
+  customerId?: string;
+  engineerName?: string;
+  visitDate?: string;
+  scheduledVisitDate?: string;
+  actualVisitDate?: string;
+  startDate?: string;
+  endDate?: string;
+  dealStatus?: string;
+  orderId?: string;
+}
+
 export interface FollowUp {
   _id: string;
   status: 'Pending' | 'Contacted' | 'Scheduled' | 'Completed' | 'Canceled';
@@ -99,13 +113,17 @@ export interface FollowUp {
   workOrder?: { _id: string; typeOfOrder?: string; issue?: string };
   csr?: { _id: string; firstName?: string; lastName?: string };
   
+  // Order Context - Single Source of Truth
+  orderContext?: OrderContext;
+  
   // QC Fields
   punctuality?: string;        // 'Same Visit Time' | 'Late' | ''
   reasonForDelay?: string;
   solvedIssue?: string;        // 'Yes' | 'No' | ''
+  reasonForNotSolving?: string;
   
   // Follow-up fields
-  followUp?: string;           // 'Yes' | 'No' | ''
+  followUp?: boolean | null;
   followUpDate?: string;
   notes?: string;
   
@@ -163,7 +181,7 @@ export const createColumns = (
     header: 'Customer ID',
     render: (row) => (
       <span className="font-mono text-xs text-[hsl(var(--muted-foreground))] whitespace-nowrap">
-        {row.customer?.customerId || '-'}
+        {row.orderContext?.customerId || row.customer?.customerId || '-'}
       </span>
     ),
   },
@@ -174,7 +192,7 @@ export const createColumns = (
     header: 'Name',
     render: (row) => (
       <span className="font-medium whitespace-nowrap">
-        {row.customer?.name || '-'}
+        {row.orderContext?.customerName || row.customer?.name || '-'}
       </span>
     ),
   },
@@ -185,7 +203,7 @@ export const createColumns = (
     header: 'Phone',
     render: (row) => (
       <span className="font-mono text-sm whitespace-nowrap">
-        {row.customer?.phone || '-'}
+        {row.orderContext?.customerPhone || row.customer?.phone || '-'}
       </span>
     ),
   },
@@ -221,7 +239,7 @@ export const createColumns = (
     header: 'Engineer Name',
     render: (row) => (
       <span className="font-medium whitespace-nowrap">
-        {row.customerOrderId?.engineerName || '-'}
+        {row.orderContext?.engineerName || row.customerOrderId?.engineerName || '-'}
       </span>
     ),
   },
@@ -232,7 +250,7 @@ export const createColumns = (
     header: 'Visit Date',
     render: (row) => (
       <span className="text-sm whitespace-nowrap">
-        {formatDate(row.customerOrderId?.actualVisitDate)}
+        {formatDate(row.orderContext?.actualVisitDate || row.orderContext?.visitDate || row.customerOrderId?.actualVisitDate)}
       </span>
     ),
   },
@@ -242,7 +260,7 @@ export const createColumns = (
     key: 'deal',
     header: 'Deal',
     render: (row) => {
-      const deal = row.customerOrderId?.deal;
+      const deal = row.orderContext?.dealStatus || row.customerOrderId?.deal;
       return deal ? <Badge>{deal}</Badge> : <span>-</span>;
     },
   },
@@ -253,7 +271,7 @@ export const createColumns = (
     header: 'Start Date',
     render: (row) => (
       <span className="text-sm whitespace-nowrap">
-        {formatDate(row.customerOrderId?.startDate)}
+        {formatDate(row.orderContext?.startDate || row.customerOrderId?.startDate)}
       </span>
     ),
   },
@@ -264,7 +282,7 @@ export const createColumns = (
     header: 'End Date',
     render: (row) => (
       <span className="text-sm whitespace-nowrap">
-        {formatDate(row.customerOrderId?.endDate)}
+        {formatDate(row.orderContext?.endDate || row.customerOrderId?.endDate)}
       </span>
     ),
   },
@@ -297,7 +315,10 @@ export const createColumns = (
     header: 'Late (Days)',
     render: (row) => (
       <span className="text-sm whitespace-nowrap">
-        {calculateLateDays(row.customerOrderId?.startDate, row.customerOrderId?.endDate)}
+        {calculateLateDays(
+          row.orderContext?.startDate || row.customerOrderId?.startDate,
+          row.orderContext?.endDate || row.customerOrderId?.endDate
+        )}
       </span>
     ),
   },
@@ -319,7 +340,7 @@ export const createColumns = (
     header: 'Solved Issue?',
     render: (row) => (
       <span className="text-sm whitespace-nowrap">
-        {row.solvedIssue || '-'}
+        {row.solvedIssue != null && row.solvedIssue !== '' ? row.solvedIssue : '-'}
       </span>
     ),
   },
@@ -328,11 +349,11 @@ export const createColumns = (
   {
     key: 'followUp',
     header: 'Follow Up',
-    render: (row) => (
-      <span className="text-sm whitespace-nowrap">
-        {row.followUp || '-'}
-      </span>
-    ),
+    render: (row) => {
+      if (row.followUp === true) return <span className="text-green-600 font-medium">Yes</span>;
+      if (row.followUp === false) return <span className="text-red-600 font-medium">No</span>;
+      return '-';
+    },
   },
   
   // 17. Follow-Up Date

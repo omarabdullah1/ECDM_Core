@@ -3,7 +3,9 @@ import express, { Application } from 'express';
 import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
 import path from 'path';
+import cookieParser from 'cookie-parser';
 import { errorHandler } from './middlewares/errorHandler.middleware';
+import { auditMiddleware } from './middlewares/audit.middleware';
 
 // ── Auth ────────────────────────────────────────────────────────────
 import authRoutes from './features/auth/auth.routes';
@@ -109,6 +111,7 @@ app.use(
 );
 
 // ── Body parsing ────────────────────────────────────────────────────
+app.use(cookieParser());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
@@ -150,7 +153,7 @@ app.use('/api/customer/follow-up',  followUpRoutes);
 app.use('/api/customer/feedback',   feedbackRoutes);
 
 // Operations
-app.use('/api/operations/work-order',      workOrderRoutes);
+app.use('/api/operations/work-orders',    workOrderRoutes);
 app.use('/api/operations/inventory-plus',  inventoryPlusRoutes);
 app.use('/api/operations/report',          reportRoutes);
 app.use('/api/operations/price-list',      priceListRoutes);
@@ -177,6 +180,9 @@ app.use('/api/admin/audit-logs', auditLogRoutes);
 // ERP
 app.use('/api/erp/invoices', invoiceRoutes);
 app.use('/api/erp/tasks', taskRoutes);
+
+// ── Audit Middleware (logs sensitive operations) ──────────────────
+app.use(auditMiddleware);
 
 // ── Global error handler (must be last) ─────────────────────────────
 app.use(errorHandler);

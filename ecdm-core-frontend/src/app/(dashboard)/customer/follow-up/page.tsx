@@ -1,13 +1,29 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import api from '@/lib/axios';
-import { ClipboardList, Plus, X, TrendingUp, Phone, CheckCircle } from 'lucide-react';
+import { ClipboardList, TrendingUp, Phone, CheckCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { DataTable } from '@/components/ui/DataTable';
 import { createColumns, type FollowUp } from './columns';
+import EditFollowUpDialog from './EditFollowUpDialog';
+import EditFeedbackDialog from '../feedback/EditFeedbackDialog';
+
+interface OrderContext {
+  customerName?: string;
+  customerPhone?: string;
+  customerId?: string;
+  engineerName?: string;
+  visitDate?: string;
+  scheduledVisitDate?: string;
+  actualVisitDate?: string;
+  startDate?: string;
+  endDate?: string;
+  dealStatus?: string;
+  orderId?: string;
+}
 
 const iCls = 'w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-4 py-3 text-sm placeholder:text-[hsl(var(--muted-foreground))] focus:border-[hsl(var(--primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/20 transition-all';
-const blank = { workOrder: '', customer: '', csr: '', followUpDate: '', status: 'Pending', notes: '' };
+const blank = { workOrder: '', customer: '', csr: '', customerOrderId: '', followUpDate: '', status: 'Pending', notes: '' };
 
 export default function FollowUpPage() {
   const [rows, setRows] = useState<FollowUp[]>([]);
@@ -17,16 +33,25 @@ export default function FollowUpPage() {
   const [fSolved, setFSolved] = useState('');
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(false);
+  const [feedbackModal, setFeedbackModal] = useState(false);
   const [editing, setEditing] = useState<FollowUp | null>(null);
   const [form, setForm] = useState(blank);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [delId, setDelId] = useState<string | null>(null);
 
+  // Feedback prefill data
+  const [feedbackPrefill, setFeedbackPrefill] = useState<{
+    customerId: string;
+    customerOrderId: string;
+    orderContext: OrderContext;
+  } | null>(null);
+
   // Dropdown data
   const [workOrders, setWorkOrders] = useState<any[]>([]);
   const [customers, setCustomers] = useState<any[]>([]);
   const [csrUsers, setCsrUsers] = useState<any[]>([]);
+  const [customerOrders, setCustomerOrders] = useState<any[]>([]);
   const [loadingLookups, setLoadingLookups] = useState(false);
 
   const lim = 10;
@@ -38,19 +63,21 @@ export default function FollowUpPage() {
       Promise.all([
         api.get('/operations/work-orders?limit=1000').catch(() => ({ data: { data: [] } })),
         api.get('/shared/customers?limit=1000').catch(() => ({ data: { data: [] } })),
-        api.get('/hr/users?limit=1000').catch(() => ({ data: { data: [] } }))
+        api.get('/hr/users?limit=1000').catch(() => ({ data: { data: [] } })),
+        api.get('/customer/orders?limit=1000').catch(() => ({ data: { data: [] } }))
       ])
-        .then(([woRes, custRes, csrRes]) => {
+        .then(([woRes, custRes, csrRes, ordersRes]) => {
           setWorkOrders(woRes.data?.data || []);
           setCustomers(custRes.data?.data || []);
-          // Filter for CSR role users
           const csrs = (csrRes.data?.data || []).filter((u: any) => u.role === 'CustomerService');
           setCsrUsers(csrs);
+          setCustomerOrders(ordersRes.data?.data || []);
         })
         .catch(() => {
           setWorkOrders([]);
           setCustomers([]);
           setCsrUsers([]);
+          setCustomerOrders([]);
         })
         .finally(() => setLoadingLookups(false));
     }
@@ -62,20 +89,25 @@ export default function FollowUpPage() {
       const p: Record<string, string | number> = { page, limit: lim };
       if (statusFilter !== '') p.status = statusFilter;
       if (fSolved !== '') p.solvedIssue = fSolved;
-      const { data } = await api.get('/customer/follow-up', { params: p });
-      setRows(data.data?.data || []);
-      setTotal(data.data?.pagination?.total || 0);
+      const response = await api.get('/customer/follow-up', { params: p });
+
+      const rawData = response.data?.data?.data ?? response.data?.data ?? response.data ?? [];
+      const followUpArray = Array.isArray(rawData) ? rawData : [];
+      setRows(followUpArray);
+
+      const pagination = response.data?.data?.pagination ?? response.data?.pagination ?? null;
+      setTotal(pagination?.total ?? 0);
     } catch (err) {
       console.error('Failed to fetch follow-ups:', err);
       toast.error('Failed to load follow-ups');
       setRows([]);
+      setTotal(0);
     }
     setLoading(false);
   }, [page, statusFilter, fSolved]);
 
   useEffect(() => { fetch_(); }, [fetch_]);
 
-  // Calculate insight stats
   const pendingCount = rows.filter(d => d.status === 'Pending').length;
   const contactedCount = rows.filter(d => d.status === 'Contacted').length;
   const completedCount = rows.filter(d => d.status === 'Completed').length;
@@ -87,6 +119,7 @@ export default function FollowUpPage() {
       workOrder: r.workOrder?._id || '',
       customer: r.customer?._id || '',
       csr: r.csr?._id || '',
+      customerOrderId: (r.customerOrderId as any)?._id || (r.customerOrderId as any)?.orderId || '',
       followUpDate: r.followUpDate?.slice(0, 10) || '',
       status: r.status || 'Pending',
       notes: r.notes || ''
@@ -95,14 +128,21 @@ export default function FollowUpPage() {
     setModal(true);
   };
 
-  // Handle WorkOrder selection and auto-fill customer
   const handleWorkOrderChange = (workOrderId: string) => {
     const wo = workOrders.find(w => w._id === workOrderId);
     setForm(prev => ({
       ...prev,
       workOrder: workOrderId,
-      // Auto-fill customer from workOrder if not already set
       customer: prev.customer || (wo?.customerOrderId?.customerId?._id || '')
+    }));
+  };
+
+  const handleCustomerOrderChange = (orderId: string) => {
+    const order = customerOrders.find(o => o._id === orderId);
+    setForm(prev => ({
+      ...prev,
+      customerOrderId: orderId,
+      customer: prev.customer || (order?.customerId?._id || '')
     }));
   };
 
@@ -120,7 +160,7 @@ export default function FollowUpPage() {
       setModal(false);
       fetch_();
     } catch (e: unknown) {
-      setError((e as { response?: { data?: { message?: string } } }).response?.data?.message || 'Failed');
+      setError((e as { response?: { data?: { message?: string } }).response?.data?.message || 'Failed');
     }
     setSaving(false);
   };
@@ -136,7 +176,6 @@ export default function FollowUpPage() {
 
   const u = (f: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setForm(p => ({ ...p, [f]: e.target.value }));
 
-  // Quick action: Update status
   const handleStatusUpdate = async (id: string, newStatus: string) => {
     try {
       await api.put(`/customer/follow-up/${id}`, { status: newStatus });
@@ -146,12 +185,19 @@ export default function FollowUpPage() {
     }
   };
 
-  // Create columns with handlers
+  const handleOpenFeedback = (orderContext: OrderContext, customerOrderId: string, customerId: string) => {
+    setFeedbackPrefill({
+      customerId,
+      customerOrderId,
+      orderContext
+    });
+    setFeedbackModal(true);
+  };
+
   const columns = createColumns(handleStatusUpdate, openE, setDelId);
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <ClipboardList className="h-7 w-7 text-[hsl(var(--primary))]" />
@@ -159,14 +205,12 @@ export default function FollowUpPage() {
         </div>
         <button
           onClick={openC}
-          className="flex items-center gap-2 rounded-xl bg-[hsl(var(--primary))] px-4 py-2 text-sm font-semibold text-[hsl(var(--primary-foreground))] hover:opacity-90 transition-opacity"
+          className="rounded-xl bg-[hsl(var(--primary))] px-4 py-2 text-sm font-semibold text-[hsl(var(--primary-foreground))] hover:opacity-90 transition-opacity"
         >
-          <Plus className="h-4 w-4" />
-          Add Follow Up
+          + Add Follow Up
         </button>
       </div>
 
-      {/* Insight Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="rounded-xl border border-[hsl(var(--border))] bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-950 dark:to-amber-900 p-6">
           <div className="flex items-center gap-3">
@@ -205,7 +249,6 @@ export default function FollowUpPage() {
         </div>
       </div>
 
-      {/* Status Filter */}
       <div className="flex gap-3 flex-wrap">
         <select
           value={statusFilter}
@@ -231,7 +274,6 @@ export default function FollowUpPage() {
         </select>
       </div>
 
-      {/* DataTable */}
       <DataTable
         columns={columns as any}
         data={rows as any}
@@ -257,107 +299,91 @@ export default function FollowUpPage() {
         }}
       />
 
-      {/* Edit/Create Modal */}
-      {modal && (
+      {/* Create/Edit Form Modal */}
+      {modal && !editing && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="w-full max-w-lg rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6 shadow-2xl">
+          <div className="rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6 shadow-2xl max-w-2xl w-full max-h-[85vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-bold">{editing ? 'Edit Follow Up' : 'New Follow Up'}</h2>
-              <button onClick={() => setModal(false)}><X className="h-5 w-5" /></button>
+              <h2 className="text-lg font-bold">Create Follow Up</h2>
+              <button onClick={() => setModal(false)} className="p-2 hover:bg-[hsl(var(--muted))] rounded-lg">
+                <X className="h-5 w-5" />
+              </button>
             </div>
+
             <form onSubmit={save} className="space-y-4">
-              {/* Work Order Dropdown */}
-              {!editing && (
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-medium mb-1 text-[hsl(var(--muted-foreground))]">Work Order (Optional)</label>
-                  <select 
-                    value={form.workOrder} 
-                    onChange={(e) => handleWorkOrderChange(e.target.value)} 
+                  <label className="text-xs font-semibold text-[hsl(var(--muted-foreground))] uppercase mb-1.5 block">Customer Order (Context)</label>
+                  <select
+                    value={form.customerOrderId}
+                    onChange={e => handleCustomerOrderChange(e.target.value)}
                     className={iCls}
+                    disabled={loadingLookups}
                   >
-                    <option value="">Select Work Order...</option>
-                    {loadingLookups ? (
-                      <option disabled>Loading...</option>
-                    ) : workOrders.length === 0 ? (
-                      <option disabled>No work orders available</option>
-                    ) : (
-                      workOrders.map(wo => (
-                        <option key={wo._id} value={wo._id}>
-                          {wo.maintenanceEngineer || 'Engineer'} - {(wo.customerOrderId?.issue || '').substring(0, 40)}
-                        </option>
-                      ))
-                    )}
+                    <option value="">Select Order (Optional)</option>
+                    {customerOrders.map(o => (
+                      <option key={o._id} value={o._id}>
+                        {o.customerId?.name || 'Order'} - {o.engineerName || 'No Engineer'}
+                      </option>
+                    ))}
                   </select>
                 </div>
-              )}
 
-              {/* Customer Dropdown */}
-              {!editing && (
                 <div>
-                  <label className="block text-xs font-medium mb-1 text-[hsl(var(--muted-foreground))]">Customer</label>
-                  <select 
-                    required
-                    value={form.customer} 
-                    onChange={u('customer')} 
+                  <label className="text-xs font-semibold text-[hsl(var(--muted-foreground))] uppercase mb-1.5 block">Customer</label>
+                  <select
+                    value={form.customer}
+                    onChange={u('customer')}
                     className={iCls}
+                    disabled={loadingLookups}
                   >
-                    <option value="">Select Customer...</option>
-                    {loadingLookups ? (
-                      <option disabled>Loading...</option>
-                    ) : customers.length === 0 ? (
-                      <option disabled>No customers available</option>
-                    ) : (
-                      customers.map(c => (
-                        <option key={c._id} value={c._id}>
-                          {c.name} - {c.phone}
-                        </option>
-                      ))
-                    )}
+                    <option value="">Select Customer</option>
+                    {customers.map(c => (
+                      <option key={c._id} value={c._id}>{c.name} - {c.phone}</option>
+                    ))}
                   </select>
                 </div>
-              )}
 
-              {/* CSR Dropdown */}
-              {!editing && (
                 <div>
-                  <label className="block text-xs font-medium mb-1 text-[hsl(var(--muted-foreground))]">CSR (Optional)</label>
-                  <select 
-                    value={form.csr} 
-                    onChange={u('csr')} 
-                    className={iCls}
-                  >
-                    <option value="">Select CSR...</option>
-                    {loadingLookups ? (
-                      <option disabled>Loading...</option>
-                    ) : csrUsers.length === 0 ? (
-                      <option disabled>No CSR users available</option>
-                    ) : (
-                      csrUsers.map(u => (
-                        <option key={u._id} value={u._id}>
-                          {u.firstName} {u.lastName}
-                        </option>
-                      ))
-                    )}
+                  <label className="text-xs font-semibold text-[hsl(var(--muted-foreground))] uppercase mb-1.5 block">CSR</label>
+                  <select value={form.csr} onChange={u('csr')} className={iCls} disabled={loadingLookups}>
+                    <option value="">Select CSR</option>
+                    {csrUsers.map(u => (
+                      <option key={u._id} value={u._id}>{u.firstName} {u.lastName}</option>
+                    ))}
                   </select>
                 </div>
-              )}
 
-              <input type="date" value={form.followUpDate} onChange={u('followUpDate')} className={iCls} />
-              <select value={form.status} onChange={u('status')} className={iCls}>
-                <option value="Pending">Pending</option>
-                <option value="Contacted">Contacted</option>
-                <option value="Scheduled">Scheduled</option>
-                <option value="Completed">Completed</option>
-                <option value="Canceled">Canceled</option>
-              </select>
-              <textarea placeholder="Notes" value={form.notes} onChange={u('notes')} className={iCls} rows={3} />
-              {error && <p className="text-sm text-destructive">{error}</p>}
-              <div className="flex gap-3 pt-2">
-                <button type="submit" disabled={saving} className="flex-1 rounded-xl bg-[hsl(var(--primary))] py-2.5 text-sm font-semibold text-[hsl(var(--primary-foreground))] disabled:opacity-60">
-                  {saving ? 'Saving…' : 'Save'}
-                </button>
-                <button type="button" onClick={() => setModal(false)} className="flex-1 rounded-xl border border-[hsl(var(--border))] py-2.5 text-sm">
+                <div>
+                  <label className="text-xs font-semibold text-[hsl(var(--muted-foreground))] uppercase mb-1.5 block">Follow Up Date</label>
+                  <input type="date" value={form.followUpDate} onChange={u('followUpDate')} className={iCls} />
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-[hsl(var(--muted-foreground))] uppercase mb-1.5 block">Status</label>
+                  <select value={form.status} onChange={u('status')} className={iCls}>
+                    <option value="Pending">Pending</option>
+                    <option value="Contacted">Contacted</option>
+                    <option value="Scheduled">Scheduled</option>
+                    <option value="Completed">Completed</option>
+                    <option value="Canceled">Canceled</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-[hsl(var(--muted-foreground))] uppercase mb-1.5 block">Notes</label>
+                <textarea value={form.notes} onChange={u('notes')} rows={3} className={iCls} placeholder="Enter notes..." />
+              </div>
+
+              {error && <p className="text-destructive text-sm">{error}</p>}
+
+              <div className="flex gap-3 pt-4">
+                <button type="button" onClick={() => setModal(false)} className="flex-1 rounded-xl border py-3 text-sm font-semibold hover:bg-[hsl(var(--muted))]/50">
                   Cancel
+                </button>
+                <button type="submit" disabled={saving} className="flex-1 rounded-xl bg-[hsl(var(--primary))] py-3 text-sm font-semibold text-[hsl(var(--primary-foreground))] hover:opacity-90 disabled:opacity-60">
+                  {saving ? 'Saving...' : 'Create Follow Up'}
                 </button>
               </div>
             </form>
@@ -365,7 +391,26 @@ export default function FollowUpPage() {
         </div>
       )}
 
-      {/* Delete Confirmation Modal */}
+      {/* Edit Dialog */}
+      {modal && editing && (
+        <EditFollowUpDialog
+          followUp={editing}
+          onClose={() => setModal(false)}
+          onSuccess={fetch_}
+          onOpenFeedback={handleOpenFeedback}
+        />
+      )}
+
+      {/* Feedback Dialog */}
+      {feedbackModal && feedbackPrefill && (
+        <EditFeedbackDialog
+          isNew={true}
+          prefillData={feedbackPrefill}
+          onClose={() => { setFeedbackModal(false); setFeedbackPrefill(null); }}
+          onSuccess={() => { setFeedbackModal(false); setFeedbackPrefill(null); fetch_(); }}
+        />
+      )}
+
       {delId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
           <div className="rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6 shadow-2xl max-w-sm w-full">
@@ -384,3 +429,5 @@ export default function FollowUpPage() {
     </div>
   );
 }
+
+import { X } from 'lucide-react';

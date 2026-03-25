@@ -86,13 +86,16 @@ export default function EmployeesPage() {
     const fetchEmployees = useCallback(async () => {
         setLoading(true);
         try {
-            // Fetch all employees at once with high limit
             const { data } = await api.get('/hr/users', { params: { limit: 1000 } });
-            setRows(data.data.data);
-        } catch {
+            const userList = data?.data?.data || data?.data || data || [];
+            setRows(Array.isArray(userList) ? userList : []);
+        } catch (error) {
+            console.error('Failed to fetch employees:', error);
             toast.error('Failed to load employees');
+            setRows([]);
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
     }, []);
 
     useEffect(() => {
@@ -195,9 +198,9 @@ export default function EmployeesPage() {
     ];
 
     // Actions renderer
-    const renderActions = (row: Employee) => (
+    const renderActions = (row: Employee & { userId?: string }) => (
         <Link
-            href={`/hr/users/${row._id}`}
+            href={`/hr/employees/${row.userId || row._id}`}
             className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))] hover:bg-[hsl(var(--primary))]/20 transition-colors"
         >
             <Eye className="h-3.5 w-3.5" />

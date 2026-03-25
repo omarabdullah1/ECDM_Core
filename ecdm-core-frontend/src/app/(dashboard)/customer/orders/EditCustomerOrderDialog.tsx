@@ -37,7 +37,6 @@ const formSchema = z.object({
   actualVisitDate: z.string().optional(),
   devicePickupType: z.string().optional(), // 'Customer Drop-off', 'Company Pickup', 'On-site Repair'
   deal: z.string().optional(), // 'Pending', 'Approved', 'Rejected', 'Done'
-  cost: z.number().optional(),
   startDate: z.string().optional(),
   endDate: z.string().optional(),
   deviceReturnedDate: z.string().optional(),
@@ -134,7 +133,6 @@ export default function EditCustomerOrderDialog({ order, onClose, onSuccess }: E
       actualVisitDate: toDateTimeLocal(order.actualVisitDate),
       devicePickupType: order.devicePickupType || '',
       deal: order.deal || 'Pending',
-      cost: Number(order.cost) || undefined,
       startDate: toDateLocal(order.startDate),
       endDate: toDateLocal(order.endDate),
       deviceReturnedDate: toDateLocal(order.deviceReturnedDate),
@@ -207,11 +205,6 @@ export default function EditCustomerOrderDialog({ order, onClose, onSuccess }: E
         payload.notes = values.notes;
       }
 
-      // Number field - ensure it's converted to number
-      if (values.cost !== undefined) {
-        payload.cost = Number(values.cost) || 0;
-      }
-
       // Date fields - Convert to ISO
       const dateFields: Array<keyof FormSchema> = [
         'actualVisitDate',
@@ -260,6 +253,11 @@ export default function EditCustomerOrderDialog({ order, onClose, onSuccess }: E
   const scheduledVisit = formatDateDisplay(order.scheduledVisitDate);
   const typeOfOrder = order.typeOfOrder || '-';
   const issue = order.issue || '-';
+
+  // Dynamically pull cost from Quotation if available, fallback to static cost
+  const quotationTotal = order.salesOrderId?.quotation?.grandTotal;
+  const finalCost = quotationTotal !== undefined ? quotationTotal : order.cost;
+  const displayCost = finalCost !== undefined && finalCost > 0 ? `EGP ${Number(finalCost).toFixed(2)}` : '-';
 
   return (
     <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
@@ -313,6 +311,11 @@ export default function EditCustomerOrderDialog({ order, onClose, onSuccess }: E
                 <div>
                   <label className={labelCls}>Issue</label>
                   <div className={readOnlyCls} title={issue}>{issue}</div>
+                </div>
+
+                <div>
+                  <label className={labelCls}>Cost</label>
+                  <div className={readOnlyCls}>{displayCost}</div>
                 </div>
               </div>
             </div>
@@ -382,18 +385,6 @@ export default function EditCustomerOrderDialog({ order, onClose, onSuccess }: E
                   </select>
                 </div>
 
-                {/* Cost */}
-                <div>
-                  <label className={labelCls}>Cost</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    placeholder="0.00"
-                    {...form.register('cost')}
-                    className={iCls}
-                  />
-                </div>
 
                 {/* Start Date */}
                 <div>

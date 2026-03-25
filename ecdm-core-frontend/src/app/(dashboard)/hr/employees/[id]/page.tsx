@@ -13,7 +13,6 @@ import {
 import { useAuthStore } from '@/features/auth/useAuth';
 import { Progress } from '@/components/ui/progress';
 
-// ─── Types ──────────────────────────────────────────────────────────────────────
 interface EmployeeDocument {
     _id: string;
     title: string;
@@ -136,7 +135,6 @@ export default function EmployeeProfilePage() {
     const [error, setError] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<TabKey>('info');
     
-    // Sales Performance State
     const [salesPerformance, setSalesPerformance] = useState<{
         targetAmount: number;
         achievedAmount: number;
@@ -146,7 +144,6 @@ export default function EmployeeProfilePage() {
     } | null>(null);
     const [loadingSalesPerformance, setLoadingSalesPerformance] = useState(false);
     
-    // Document upload state
     const [uploadingDoc, setUploadingDoc] = useState(false);
     const [docTitle, setDocTitle] = useState('');
     const [docFile, setDocFile] = useState<File | null>(null);
@@ -158,16 +155,33 @@ export default function EmployeeProfilePage() {
             setLoading(true);
             setError(null);
             try {
-                const { data } = await api.get(`/hr/users/${employeeId}/profile`);
-                setProfile(data.data);
+                const response = await api.get(`/hr/users/${employeeId}/profile`);
+                console.log("RAW API RESPONSE:", response.data); // Debugging line
+
+                // Handle both generic ApiResponse wrapper and direct returns
+                const profileData = response.data?.data || response.data;
+                
+                // If the backend wraps the employee in another object (e.g. data.item.employee)
+                const mappedProfile = {
+                    employee: profileData.employee || profileData.item?.employee || profileData,
+                    attendance: profileData.attendance || profileData.item?.attendance || { records: [], stats: { monthly: { breakdown: {}, presentRate: 0 }, yearly: { breakdown: {}, presentRate: 0 } } },
+                    workOrders: profileData.workOrders || profileData.item?.workOrders || { records: [], stats: { total: 0, completed: 0, completionRate: 0, onTime: 0, punctualityRate: 0 } },
+                };
+
+                console.log("MAPPED PROFILE:", mappedProfile); // Check what is actually set
+                setProfile(mappedProfile as ProfileData);
 
                 // Fetch sales performance if employee is in Sales role
-                if (data.data?.employee?.role === 'Sales') {
+                if (mappedProfile.employee?.role === 'Sales') {
                     fetchSalesPerformance();
                 }
-            } catch (err) {
+            } catch (err: any) {
                 setError('Failed to load employee profile.');
-                console.error(err);
+                if (err.response && err.response.data) {
+                    console.error('BACKEND 500 ERROR DETAILS:', err.response.data);
+                } else {
+                    console.error(err);
+                }
             }
             setLoading(false);
         };
@@ -178,10 +192,9 @@ export default function EmployeeProfilePage() {
                 const { data } = await api.get('/sales/targets/performance', {
                     params: { salespersonId: employeeId },
                 });
-                setSalesPerformance(data.data);
+                setSalesPerformance(data?.data ?? data ?? null);
             } catch (err) {
                 console.error('Failed to fetch sales performance:', err);
-                // Silently fail - not all sales users may have targets set
             } finally {
                 setLoadingSalesPerformance(false);
             }
@@ -190,42 +203,14 @@ export default function EmployeeProfilePage() {
         fetchProfile();
     }, [employeeId]);
 
+    // TODO: Implement document upload once backend adds endpoint at /shared/employees/:id/documents/upload
     const handleDocumentUpload = async () => {
-        if (!docTitle.trim() || !docFile) {
-            toast.error('Please enter a title and select a file');
-            return;
-        }
-
-        setUploadingDoc(true);
-        try {
-            const formData = new FormData();
-            formData.append('title', docTitle);
-            formData.append('document', docFile);
-
-            const { data } = await api.post(`/hr/users/${employeeId}/documents/upload`, formData, {
-                headers: { 'Content-Type': 'multipart/form-data' },
-            });
-
-            setProfile(prev => prev ? { ...prev, employee: data.data.item } : null);
-            toast.success('Document uploaded successfully');
-            setDocTitle('');
-            setDocFile(null);
-        } catch {
-            toast.error('Failed to upload document');
-        }
-        setUploadingDoc(false);
+        toast.error('Document upload not available yet. Backend endpoint pending.');
     };
 
+    // TODO: Implement document delete once backend adds endpoint at /shared/employees/:id/documents/:docId
     const handleDocumentDelete = async (docId: string) => {
-        if (!confirm('Are you sure you want to delete this document?')) return;
-
-        try {
-            const { data } = await api.delete(`/hr/users/${employeeId}/documents/${docId}`);
-            setProfile(prev => prev ? { ...prev, employee: data.data.item } : null);
-            toast.success('Document deleted');
-        } catch {
-            toast.error('Failed to delete document');
-        }
+        toast.error('Document delete not available yet. Backend endpoint pending.');
     };
 
     // Tab configuration
@@ -262,7 +247,7 @@ export default function EmployeeProfilePage() {
         <div className="space-y-6">
             {/* Back button */}
             <Link
-                href="/hr/users"
+                href="/hr/employees"
                 className="inline-flex items-center gap-2 text-sm text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
             >
                 <ArrowLeft className="h-4 w-4" />
@@ -276,10 +261,10 @@ export default function EmployeeProfilePage() {
                     <div className="flex-shrink-0">
                         <div className="h-32 w-32 rounded-2xl bg-[hsl(var(--primary))]/10 flex items-center justify-center overflow-hidden">
                             {employee.avatarUrl ? (
-                                <img src={employee.avatarUrl} alt={employee.fullName} className="h-full w-full object-cover" />
+                                <img src={employee.avatarUrl} alt={employee.fullName ?? 'Employee'} className="h-full w-full object-cover" />
                             ) : (
                                 <span className="text-4xl font-bold text-[hsl(var(--primary))]">
-                                    {employee.firstName?.[0]}{employee.lastName?.[0]}
+                                    {employee.firstName?.[0] ?? ''}{employee.lastName?.[0] ?? ''}
                                 </span>
                             )}
                         </div>
@@ -288,7 +273,7 @@ export default function EmployeeProfilePage() {
                     {/* Info */}
                     <div className="flex-1 space-y-4">
                         <div>
-                            <h1 className="text-2xl font-bold">{employee.fullName}</h1>
+                            <h1 className="text-2xl font-bold">{employee.fullName || `${employee.firstName || ''} ${employee.lastName || ''}`.trim() || 'Unknown Employee'}</h1>
                             <div className="flex flex-wrap items-center gap-3 mt-2">
                                 <span className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-sm font-medium ${
                                     employee.isActive 
@@ -300,7 +285,7 @@ export default function EmployeeProfilePage() {
                                 </span>
                                 <span className="inline-flex items-center gap-1 rounded-full px-3 py-1 text-sm font-medium bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))]">
                                     <Shield className="h-4 w-4" />
-                                    {ROLE_LABELS[employee.role] || employee.role}
+                                    {ROLE_LABELS[employee.role] ?? employee.role ?? 'N/A'}
                                 </span>
                             </div>
                         </div>
@@ -308,7 +293,7 @@ export default function EmployeeProfilePage() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                             <div className="flex items-center gap-2">
                                 <Mail className="h-4 w-4 text-[hsl(var(--muted-foreground))]" />
-                                <span>{employee.email}</span>
+                                <span>{employee.email ?? 'N/A'}</span>
                             </div>
                             {employee.phone && (
                                 <div className="flex items-center gap-2">
@@ -329,13 +314,13 @@ export default function EmployeeProfilePage() {
                     <div className="flex-shrink-0 grid grid-cols-2 gap-3">
                         <div className="rounded-xl bg-green-50 dark:bg-green-900/20 p-4 text-center">
                             <p className="text-2xl font-bold text-green-600 dark:text-green-400">
-                                {attendance.stats.monthly.presentRate}%
+                                {attendance?.stats?.monthly?.presentRate ?? 0}%
                             </p>
                             <p className="text-xs text-green-700 dark:text-green-300">Monthly Attendance</p>
                         </div>
                         <div className="rounded-xl bg-blue-50 dark:bg-blue-900/20 p-4 text-center">
                             <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                                {workOrders.stats.completionRate}%
+                                {workOrders?.stats?.completionRate ?? 0}%
                             </p>
                             <p className="text-xs text-blue-700 dark:text-blue-300">Task Completion</p>
                         </div>
@@ -376,15 +361,15 @@ export default function EmployeeProfilePage() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
                                 <label className="block text-sm font-medium text-[hsl(var(--muted-foreground))] mb-1">First Name</label>
-                                <p className="text-base">{employee.firstName}</p>
+                                <p className="text-base">{employee.firstName ?? 'N/A'}</p>
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-[hsl(var(--muted-foreground))] mb-1">Last Name</label>
-                                <p className="text-base">{employee.lastName}</p>
+                                <p className="text-base">{employee.lastName ?? 'N/A'}</p>
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-[hsl(var(--muted-foreground))] mb-1">Email</label>
-                                <p className="text-base">{employee.email}</p>
+                                <p className="text-base">{employee.email ?? 'N/A'}</p>
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-[hsl(var(--muted-foreground))] mb-1">Phone</label>
@@ -400,16 +385,18 @@ export default function EmployeeProfilePage() {
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-[hsl(var(--muted-foreground))] mb-1">Role</label>
-                                <p className="text-base">{ROLE_LABELS[employee.role] || employee.role}</p>
+                                <p className="text-base">{ROLE_LABELS[employee.role] ?? employee.role ?? 'N/A'}</p>
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-[hsl(var(--muted-foreground))] mb-1">Joined</label>
                                 <p className="text-base">
-                                    {new Date(employee.createdAt).toLocaleDateString('en-GB', {
-                                        day: '2-digit',
-                                        month: 'long',
-                                        year: 'numeric',
-                                    })}
+                                    {employee.createdAt && !isNaN(new Date(employee.createdAt).getTime())
+                                        ? new Date(employee.createdAt).toLocaleDateString('en-GB', {
+                                            day: '2-digit',
+                                            month: 'long',
+                                            year: 'numeric',
+                                        })
+                                        : '—'}
                                 </p>
                             </div>
                         </div>
@@ -430,19 +417,19 @@ export default function EmployeeProfilePage() {
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                             <div className="rounded-xl bg-[hsl(var(--muted))]/50 p-4">
                                 <p className="text-sm text-[hsl(var(--muted-foreground))]">Monthly Present</p>
-                                <p className="text-2xl font-bold">{attendance.stats.monthly.breakdown['Present'] || 0}</p>
+                                <p className="text-2xl font-bold">{attendance?.stats?.monthly?.breakdown?.['Present'] ?? 0}</p>
                             </div>
                             <div className="rounded-xl bg-[hsl(var(--muted))]/50 p-4">
                                 <p className="text-sm text-[hsl(var(--muted-foreground))]">Monthly Absent</p>
-                                <p className="text-2xl font-bold">{attendance.stats.monthly.breakdown['Absent'] || 0}</p>
+                                <p className="text-2xl font-bold">{attendance?.stats?.monthly?.breakdown?.['Absent'] ?? 0}</p>
                             </div>
                             <div className="rounded-xl bg-[hsl(var(--muted))]/50 p-4">
                                 <p className="text-sm text-[hsl(var(--muted-foreground))]">Monthly Late</p>
-                                <p className="text-2xl font-bold">{attendance.stats.monthly.breakdown['Late'] || 0}</p>
+                                <p className="text-2xl font-bold">{attendance?.stats?.monthly?.breakdown?.['Late'] ?? 0}</p>
                             </div>
                             <div className="rounded-xl bg-[hsl(var(--muted))]/50 p-4">
                                 <p className="text-sm text-[hsl(var(--muted-foreground))]">Monthly Leaves</p>
-                                <p className="text-2xl font-bold">{attendance.stats.monthly.breakdown['Leave'] || 0}</p>
+                                <p className="text-2xl font-bold">{attendance?.stats?.monthly?.breakdown?.['Leave'] ?? 0}</p>
                             </div>
                         </div>
 
@@ -460,26 +447,28 @@ export default function EmployeeProfilePage() {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-[hsl(var(--border))]">
-                                    {attendance.records.length === 0 ? (
+                                    {attendance?.records?.length === 0 ? (
                                         <tr>
                                             <td colSpan={6} className="px-4 py-8 text-center text-[hsl(var(--muted-foreground))]">
                                                 No attendance records found.
                                             </td>
                                         </tr>
                                     ) : (
-                                        attendance.records.slice(0, 20).map((record) => (
-                                            <tr key={record._id} className="hover:bg-[hsl(var(--muted))]/30">
+                                        attendance?.records?.slice(0, 20).map((record) => (
+                                            <tr key={record?._id ?? 'att'} className="hover:bg-[hsl(var(--muted))]/30">
                                                 <td className="px-4 py-3">
-                                                    {new Date(record.date).toLocaleDateString('en-GB', {
-                                                        day: '2-digit',
-                                                        month: 'short',
-                                                        year: 'numeric',
-                                                    })}
+                                                    {record?.date && !isNaN(new Date(record.date).getTime())
+                                                        ? new Date(record.date).toLocaleDateString('en-GB', {
+                                                            day: '2-digit',
+                                                            month: 'short',
+                                                            year: 'numeric',
+                                                        })
+                                                        : '—'}
                                                 </td>
-                                                <td className="px-4 py-3">{record.day || '—'}</td>
+                                                <td className="px-4 py-3">{record?.day || '—'}</td>
                                                 <td className="px-4 py-3">
                                                     <span className="flex items-center gap-1 text-green-600 dark:text-green-400">
-                                                        {record.checkIn ? (
+                                                        {record?.checkIn ? (
                                                             <>
                                                                 <Clock className="h-3 w-3" />
                                                                 {record.checkIn}
@@ -489,7 +478,7 @@ export default function EmployeeProfilePage() {
                                                 </td>
                                                 <td className="px-4 py-3">
                                                     <span className="flex items-center gap-1 text-orange-600 dark:text-orange-400">
-                                                        {record.checkOut ? (
+                                                        {record?.checkOut ? (
                                                             <>
                                                                 <Clock className="h-3 w-3" />
                                                                 {record.checkOut}
@@ -498,12 +487,12 @@ export default function EmployeeProfilePage() {
                                                     </span>
                                                 </td>
                                                 <td className="px-4 py-3">
-                                                    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS_STYLES[record.status] || 'bg-gray-100 text-gray-600'}`}>
-                                                        {record.status || 'N/A'}
+                                                    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS_STYLES[record?.status ?? ''] || 'bg-gray-100 text-gray-600'}`}>
+                                                        {record?.status || 'N/A'}
                                                     </span>
                                                 </td>
-                                                <td className="px-4 py-3 max-w-[200px] truncate" title={record.notes}>
-                                                    {record.notes || '—'}
+                                                <td className="px-4 py-3 max-w-[200px] truncate" title={record?.notes}>
+                                                    {record?.notes || '—'}
                                                 </td>
                                             </tr>
                                         ))
@@ -532,7 +521,7 @@ export default function EmployeeProfilePage() {
                                     <p className="text-sm text-indigo-700 dark:text-indigo-300">Total Tasks</p>
                                 </div>
                                 <p className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">
-                                    {workOrders.stats.total}
+                                    {workOrders?.stats?.total ?? 0}
                                 </p>
                             </div>
                             <div className="rounded-xl bg-green-50 dark:bg-green-900/20 p-4">
@@ -541,7 +530,7 @@ export default function EmployeeProfilePage() {
                                     <p className="text-sm text-green-700 dark:text-green-300">Completed</p>
                                 </div>
                                 <p className="text-2xl font-bold text-green-600 dark:text-green-400">
-                                    {workOrders.stats.completed}
+                                    {workOrders?.stats?.completed ?? 0}
                                 </p>
                             </div>
                             <div className="rounded-xl bg-purple-50 dark:bg-purple-900/20 p-4">
@@ -550,7 +539,7 @@ export default function EmployeeProfilePage() {
                                     <p className="text-sm text-purple-700 dark:text-purple-300">Completion Rate</p>
                                 </div>
                                 <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-                                    {workOrders.stats.completionRate}%
+                                    {workOrders?.stats?.completionRate ?? 0}%
                                 </p>
                             </div>
                             <div className="rounded-xl bg-amber-50 dark:bg-amber-900/20 p-4">
@@ -559,7 +548,7 @@ export default function EmployeeProfilePage() {
                                     <p className="text-sm text-amber-700 dark:text-amber-300">Punctuality</p>
                                 </div>
                                 <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">
-                                    {workOrders.stats.punctualityRate}%
+                                    {workOrders?.stats?.punctualityRate ?? 0}%
                                 </p>
                             </div>
                         </div>
@@ -585,13 +574,13 @@ export default function EmployeeProfilePage() {
                                             <div>
                                                 <p className="text-sm text-gray-600 dark:text-gray-400">Achieved</p>
                                                 <p className="text-2xl font-bold text-green-600 dark:text-green-400">
-                                                    EGP {salesPerformance.achievedAmount.toLocaleString()}
+                                                    EGP {(salesPerformance.achievedAmount ?? 0).toLocaleString()}
                                                 </p>
                                             </div>
                                             <div className="text-right">
                                                 <p className="text-sm text-gray-600 dark:text-gray-400">Target</p>
                                                 <p className="text-2xl font-bold text-blue-800 dark:text-blue-300">
-                                                    EGP {salesPerformance.targetAmount.toLocaleString()}
+                                                    EGP {(salesPerformance.targetAmount ?? 0).toLocaleString()}
                                                 </p>
                                             </div>
                                         </div>
@@ -599,10 +588,10 @@ export default function EmployeeProfilePage() {
                                         <div className="space-y-2">
                                             <div className="flex justify-between text-sm font-semibold text-blue-700 dark:text-blue-400">
                                                 <span>Progress</span>
-                                                <span>{salesPerformance.progressPercentage}%</span>
+                                                <span>{salesPerformance.progressPercentage ?? 0}%</span>
                                             </div>
                                             <Progress 
-                                                value={salesPerformance.progressPercentage} 
+                                                value={salesPerformance.progressPercentage ?? 0} 
                                                 max={100}
                                                 className="h-3 bg-blue-100 dark:bg-blue-900"
                                                 indicatorClassName="bg-blue-600 dark:bg-blue-400"
@@ -610,7 +599,7 @@ export default function EmployeeProfilePage() {
                                         </div>
 
                                         <p className="text-xs text-center text-gray-500 dark:text-gray-400 mt-3 pt-3 border-t border-blue-200 dark:border-blue-800">
-                                            {new Date(salesPerformance.year, salesPerformance.month - 1).toLocaleString('default', { month: 'long', year: 'numeric' })} Performance
+                                            {new Date(salesPerformance.year ?? new Date().getFullYear(), (salesPerformance.month ?? 1) - 1).toLocaleString('default', { month: 'long', year: 'numeric' })} Performance
                                         </p>
                                     </div>
                                 ) : (
@@ -643,7 +632,7 @@ export default function EmployeeProfilePage() {
                                         <div className="text-right">
                                             <p className="text-sm text-gray-600 dark:text-gray-400">Target Budget</p>
                                             <p className="text-2xl font-bold text-emerald-800 dark:text-emerald-300">
-                                                EGP {(employee.targetBudget || 0).toLocaleString()}
+                                                EGP {(employee.targetBudget ?? 0).toLocaleString()}
                                             </p>
                                         </div>
                                     </div>
@@ -683,26 +672,26 @@ export default function EmployeeProfilePage() {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-[hsl(var(--border))]">
-                                    {workOrders.records.length === 0 ? (
+                                    {workOrders?.records?.length === 0 ? (
                                         <tr>
                                             <td colSpan={7} className="px-4 py-8 text-center text-[hsl(var(--muted-foreground))]">
                                                 No work orders found.
                                             </td>
                                         </tr>
                                     ) : (
-                                        workOrders.records.slice(0, 20).map((wo) => (
-                                            <tr key={wo._id} className="hover:bg-[hsl(var(--muted))]/30">
+                                        workOrders?.records?.slice(0, 20).map((wo) => (
+                                            <tr key={wo?._id ?? 'wo'} className="hover:bg-[hsl(var(--muted))]/30">
                                                 <td className="px-4 py-3 font-medium">
-                                                    {wo.customerOrderId?.customerId?.name || '—'}
+                                                    {wo?.customerOrderId?.customerId?.name || '—'}
                                                 </td>
                                                 <td className="px-4 py-3 max-w-[200px] truncate">
-                                                    {wo.customerOrderId?.issue || '—'}
+                                                    {wo?.customerOrderId?.issue || '—'}
                                                 </td>
                                                 <td className="px-4 py-3">
-                                                    {wo.customerOrderId?.typeOfOrder || '—'}
+                                                    {wo?.customerOrderId?.typeOfOrder || '—'}
                                                 </td>
                                                 <td className="px-4 py-3">
-                                                    {wo.taskDate 
+                                                    {wo?.taskDate && !isNaN(new Date(wo.taskDate).getTime())
                                                         ? new Date(wo.taskDate).toLocaleDateString('en-GB', {
                                                             day: '2-digit',
                                                             month: 'short',
@@ -713,27 +702,27 @@ export default function EmployeeProfilePage() {
                                                 </td>
                                                 <td className="px-4 py-3">
                                                     <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${
-                                                        wo.punctuality === 'On Time' 
+                                                        wo?.punctuality === 'On Time' 
                                                             ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                                                            : wo.punctuality === 'Delayed'
+                                                            : wo?.punctuality === 'Delayed'
                                                                 ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
                                                                 : 'bg-gray-100 text-gray-600'
                                                     }`}>
-                                                        {wo.punctuality || 'N/A'}
+                                                        {wo?.punctuality || 'N/A'}
                                                     </span>
                                                 </td>
                                                 <td className="px-4 py-3">
                                                     <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${
-                                                        wo.taskCompleted === 'Yes' 
+                                                        wo?.taskCompleted === 'Yes' 
                                                             ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                                                            : wo.taskCompleted === 'No'
+                                                            : wo?.taskCompleted === 'No'
                                                                 ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
                                                                 : 'bg-gray-100 text-gray-600'
                                                     }`}>
-                                                        {wo.taskCompleted || 'N/A'}
+                                                        {wo?.taskCompleted || 'N/A'}
                                                     </span>
                                                 </td>
-                                                <td className="px-4 py-3">{wo.rating || '—'}</td>
+                                                <td className="px-4 py-3">{wo?.rating || '—'}</td>
                                             </tr>
                                         ))
                                     )}
@@ -802,7 +791,7 @@ export default function EmployeeProfilePage() {
                             ) : (
                                 employee.documents.map((doc) => (
                                     <div
-                                        key={doc._id}
+                                        key={doc?._id ?? `doc-${Math.random()}`}
                                         className="rounded-xl border border-[hsl(var(--border))] p-4 hover:bg-[hsl(var(--muted))]/30 transition-colors"
                                     >
                                         <div className="flex items-start justify-between gap-3">
@@ -811,19 +800,21 @@ export default function EmployeeProfilePage() {
                                                     <FileText className="h-6 w-6 text-[hsl(var(--primary))]" />
                                                 </div>
                                                 <div>
-                                                    <h4 className="font-medium">{doc.title}</h4>
+                                                    <h4 className="font-medium">{doc?.title ?? 'Untitled Document'}</h4>
                                                     <p className="text-xs text-[hsl(var(--muted-foreground))]">
-                                                        Uploaded {new Date(doc.uploadedAt).toLocaleDateString('en-GB', {
-                                                            day: '2-digit',
-                                                            month: 'short',
-                                                            year: 'numeric',
-                                                        })}
+                                                        Uploaded {doc?.uploadedAt 
+                                                            ? new Date(doc.uploadedAt).toLocaleDateString('en-GB', {
+                                                                day: '2-digit',
+                                                                month: 'short',
+                                                                year: 'numeric',
+                                                            })
+                                                            : 'N/A'}
                                                     </p>
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-1">
                                                 <a
-                                                    href={doc.fileUrl}
+                                                    href={doc?.fileUrl ?? '#'}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
                                                     className="rounded-lg p-2 hover:bg-[hsl(var(--secondary))] transition-colors"
@@ -833,7 +824,7 @@ export default function EmployeeProfilePage() {
                                                 </a>
                                                 {canEdit && (
                                                     <button
-                                                        onClick={() => handleDocumentDelete(doc._id)}
+                                                        onClick={() => doc?._id && handleDocumentDelete(doc._id)}
                                                         className="rounded-lg p-2 hover:bg-red-100 dark:hover:bg-red-900/30 text-red-600 transition-colors"
                                                         title="Delete"
                                                     >

@@ -1,24 +1,14 @@
 import axios from 'axios';
 import { API_BASE_URL } from './constants';
+import { showError } from '@/features/common/useToast';
 
 const api = axios.create({
     baseURL: API_BASE_URL,
-    // Don't set Content-Type globally - let axios handle it per request (especially for FormData)
     timeout: 15000,
+    withCredentials: true,
 });
 
-// ── Request interceptor: attach JWT and handle Content-Type ─────────
 api.interceptors.request.use((config) => {
-    // Attach JWT token
-    if (typeof window !== 'undefined') {
-        const token = localStorage.getItem('ecdm_token');
-        if (token) {
-            config.headers.Authorization = `Bearer ${token}`;
-        }
-    }
-    
-    // Only set Content-Type to application/json if it's not already set
-    // and the data is NOT FormData (FormData needs multipart/form-data with boundary)
     if (!config.headers['Content-Type'] && !(config.data instanceof FormData)) {
         config.headers['Content-Type'] = 'application/json';
     }
@@ -26,15 +16,35 @@ api.interceptors.request.use((config) => {
     return config;
 });
 
-// ── Response interceptor: handle 401 ────────────────────────────────
 api.interceptors.response.use(
     (response) => response,
-    (error) => {
+    async (error) => {
+        const originalRequest = error.config;
+        
+        if (error.response?.status === 401 && !originalRequest._retry) {
+            originalRequest._retry = true;
+            
+            try {
+                const { data } = await api.post('/auth/refresh');
+                if (data.success && data.data.accessToken) {
+                    return api(originalRequest);
+                }
+            } catch (refreshError) {
+                showError(refreshError as Parameters<typeof showError>[0], 'Session expired. Please log in again.');
+                if (typeof window !== 'undefined') {
+                    localStorage.removeItem('ecdm_user');
+                    window.location.href = '/login';
+                }
+            }
+        }
+        
+        showError(error);
+        
         if (error.response?.status === 401 && typeof window !== 'undefined') {
-            localStorage.removeItem('ecdm_token');
             localStorage.removeItem('ecdm_user');
             window.location.href = '/login';
         }
+        
         return Promise.reject(error);
     },
 );

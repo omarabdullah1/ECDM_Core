@@ -244,7 +244,7 @@ export const columns: Array<{
     // 7. Type Of Order
     {
       key: 'typeOfOrder',
-      header: 'Type Of Order',
+      header: 'Type of Order',
       render: (row: WorkOrder) => {
         return (
           <span className="text-sm">

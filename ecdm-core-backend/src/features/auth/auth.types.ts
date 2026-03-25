@@ -41,6 +41,7 @@ export interface IUser {
     documents?: IEmployeeDocument[]; // HR: Employee documents (contracts, IDs, etc.)
     targetBudget?: number;           // Target budget for marketing
     targetSales?: number;            // Target sales for sales reps
+    refreshToken?: string;           // JWT refresh token for session management
     createdAt: Date;
     updatedAt: Date;
 }

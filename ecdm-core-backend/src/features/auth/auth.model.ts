@@ -80,6 +80,10 @@ const userSchema = new Schema<IUserDocument>(
             type: Number,
             default: 0,
         },
+        refreshToken: {
+            type: String,
+            select: false,
+        },
     },
     {
         timestamps: true,
