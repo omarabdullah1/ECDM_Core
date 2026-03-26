@@ -247,7 +247,7 @@ export default function EmployeeProfilePage() {
         <div className="space-y-6">
             {/* Back button */}
             <Link
-                href="/hr/employees"
+                href="/hr/users"
                 className="inline-flex items-center gap-2 text-sm text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
             >
                 <ArrowLeft className="h-4 w-4" />

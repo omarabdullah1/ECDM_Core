@@ -150,7 +150,12 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
         }
 
         if (role === 'Sales') {
-            return NAV.filter(item => ['dashboard', 'sales'].includes(item.labelKey));
+            return NAV
+                .filter(item => item.labelKey === 'sales')
+                .map(item => ({
+                    ...item,
+                    children: item.children?.filter(child => child.labelKey !== 'salesInsights')
+                }));
         }
 
         if (role === 'Marketing') {

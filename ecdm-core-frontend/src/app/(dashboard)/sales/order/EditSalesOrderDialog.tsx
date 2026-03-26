@@ -43,6 +43,7 @@ interface EditSalesOrderDialogProps {
   order: SalesOrder;
   onClose: () => void;
   onSuccess: () => void;
+  readOnly?: boolean;
 }
 
 interface FormData {
@@ -146,7 +147,7 @@ const formatDateDisplay = (isoDate: string | null | undefined): string => {
 // Component
 // ─────────────────────────────────────────────────────────────────────────────
 
-export default function EditSalesOrderDialog({ order, onClose, onSuccess }: EditSalesOrderDialogProps) {
+export default function EditSalesOrderDialog({ order, onClose, onSuccess, readOnly = false }: EditSalesOrderDialogProps) {
   const [quotationFile, setQuotationFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
   const [showApprovalAlert, setShowApprovalAlert] = useState(false);
@@ -170,8 +171,8 @@ export default function EditSalesOrderDialog({ order, onClose, onSuccess }: Edit
   const isAdmin = currentUserRole === 'Admin' || currentUserRole === 'SuperAdmin' || currentUserRole === 'Manager';
   const isOwner = currentUserId && ownerId && currentUserId.toString() === ownerId.toString();
   
-  // Read-only mode: NOT admin AND NOT owner
-  const isReadOnly = !isAdmin && !isOwner;
+  // Read-only mode: explicit readOnly prop OR (NOT admin AND NOT owner)
+  const isReadOnly = readOnly || (!isAdmin && !isOwner);
   
   console.log('🔒 EditSalesOrderDialog - Access Control:', {
     currentUserId,

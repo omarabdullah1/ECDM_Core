@@ -4,10 +4,11 @@ import api from '@/lib/axios';
 import toast from 'react-hot-toast';
 import { ClipboardList, Plus, X } from 'lucide-react';
 import { DataTable } from '@/components/ui/DataTable';
-import { createSalesOrderColumns, createActionsRenderer, type SalesOrder } from './columns';
+import { createSalesOrderColumns, createActionsRenderer, isOrderOwnedByUser, type SalesOrder } from './columns';
 import EditSalesOrderDialog from './EditSalesOrderDialog';
 import AddQuotationDialog from './AddQuotationDialog';
 import { SalesPerformanceWidget } from '@/components/sales/SalesPerformanceWidget';
+import { useAuthStore } from '@/features/auth/useAuth';
 
 const iCls = 'w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-4 py-3 text-sm placeholder:text-[hsl(var(--muted-foreground))] focus:border-[hsl(var(--primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/20 transition-all';
 const Q_STATUSES = ['Draft', 'Sent', 'Approved', 'Rejected', 'Revised'];
@@ -16,7 +17,9 @@ const TYPE_OF_ORDER = ['Maintenance', 'General supplies', 'Supply and installati
 const blank = { salesLead: '', quotationStatus: 'Draft', finalStatus: '', totalAmount: '', notes: '' };
 
 export default function SalesOrderPage() {
+  const { user } = useAuthStore();
   const [rows, setRows] = useState<SalesOrder[]>([]);
+  const [previewMode, setPreviewMode] = useState(false);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [fStatus, setFStatus] = useState('');
@@ -69,10 +72,10 @@ export default function SalesOrderPage() {
   }, [page, fStatus, fFinalStatus, fTypeOfOrder]);
   useEffect(() => { fetch_(); }, [fetch_]);
 
-  const openC = () => { setEditing(null); setForm(blank); setError(''); setModal(true); };
-  const openE = (r: SalesOrder) => {
-    // For edit, we now use the dedicated EditSalesOrderDialog
+  const openC = () => { setEditing(null); setForm(blank); setError(''); setModal(true); setPreviewMode(false); };
+  const openE = (r: SalesOrder, isPreview = false) => {
     setEditing(r);
+    setPreviewMode(isPreview);
   };
 
   const save = async (ev: React.FormEvent) => {
@@ -102,15 +105,33 @@ export default function SalesOrderPage() {
 
   // ─── Column Definitions ───────────────────────────────────────────────────
   const columns = createSalesOrderColumns({
-    onCreateQuotation: (row: SalesOrder) => setQuotationOrder(row)
+    onCreateQuotation: (row: SalesOrder) => setQuotationOrder(row),
+    currentUserId: user?._id,
+    currentUserRole: user?.role,
   });
 
   // ─── Row Actions ──────────────────────────────────────────────────────────────
   const renderActions = createActionsRenderer({
-    onEdit: openE,
+    onEdit: (row: SalesOrder) => openE(row, false),
+    onPreview: (row: SalesOrder) => openE(row, true),
     onDelete: (row: SalesOrder) => setDelId(row._id),
-    // onHistory: (row: SalesOrder) => console.log('History for:', row._id), // Optional
+    currentUserId: user?._id,
+    currentUserRole: user?.role,
   });
+
+  // ─── Row ClassName for ownership dimming ─────────────────────────────────────
+  const adminRoles = ['Admin', 'SuperAdmin', 'Manager'];
+  const isAdmin = adminRoles.includes(user?.role || '');
+
+  const getRowClassName = (row: SalesOrder): string => {
+    if (!isAdmin) {
+      const owned = isOrderOwnedByUser(row, user?._id);
+      if (!owned) {
+        return 'opacity-50 grayscale';
+      }
+    }
+    return '';
+  };
 
   return (
     <div className="space-y-6">
@@ -152,6 +173,7 @@ export default function SalesOrderPage() {
           bulkDeleteEndpoint="/sales/orders/bulk-delete"
           onBulkDeleteSuccess={fetch_}
           renderActions={renderActions}
+          rowClassName={getRowClassName}
           defaultVisibility={{
             "customer.address": false,
             "customer.sector": false,
@@ -172,6 +194,7 @@ export default function SalesOrderPage() {
             followUpThird: false,
             finalStatusThirdFollowUp: false,
             salesPersonId: false,
+            salesPersonEmail: true,
             notes: false,
             finalStatus: false,
           }}
@@ -182,10 +205,12 @@ export default function SalesOrderPage() {
       {editing && (
         <EditSalesOrderDialog
           order={editing}
-          onClose={() => setEditing(null)}
+          readOnly={previewMode}
+          onClose={() => { setEditing(null); setPreviewMode(false); }}
           onSuccess={() => {
             fetch_();
             setEditing(null);
+            setPreviewMode(false);
           }}
         />
       )}

@@ -200,7 +200,7 @@ export default function EmployeesPage() {
     // Actions renderer
     const renderActions = (row: Employee & { userId?: string }) => (
         <Link
-            href={`/hr/employees/${row.userId || row._id}`}
+            href={`/hr/users/${row.userId || row._id}`}
             className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))] hover:bg-[hsl(var(--primary))]/20 transition-colors"
         >
             <Eye className="h-3.5 w-3.5" />

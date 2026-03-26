@@ -91,6 +91,7 @@ export interface CustomerOrder {
   scheduledVisitDate?: string;
 
   // Operational fields
+  engineerId?: string;
   engineerName?: string;
   actualVisitDate?: string;
   devicePickupType?: string;

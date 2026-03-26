@@ -13,6 +13,8 @@ import Campaign from '../marketing/models/campaign.model';
 import Invoice from '../erp/invoice/invoice.model';
 import Product from '../operations/models/product.model';
 import InventoryItem from '../operations/models/inventory-item.model';
+import { InventoryFinance } from '../finance/models/inventory-finance.model';
+import User from '../auth/auth.model';
 
 // ═══════════════════════════════════════════════════════════════════
 // GET /api/dashboard/stats
@@ -62,11 +64,11 @@ export const getStats = async (_req: Request, res: Response, next: NextFunction)
             Customer.countDocuments({ status: 'VIP' }),
 
             Invoice.aggregate([
-                { $match: { status: 'Paid', paidAt: { $gte: startOfMonth } } },
+                { $match: { status: 'Paid', issueDate: { $gte: startOfMonth } } },
                 { $group: { _id: null, total: { $sum: '$total' } } },
             ]),
             Invoice.aggregate([
-                { $match: { status: 'Paid', paidAt: { $gte: startOfPrevMonth, $lte: endOfPrevMonth } } },
+                { $match: { status: 'Paid', issueDate: { $gte: startOfPrevMonth, $lte: endOfPrevMonth } } },
                 { $group: { _id: null, total: { $sum: '$total' } } },
             ]),
 
@@ -209,19 +211,28 @@ export const getStats = async (_req: Request, res: Response, next: NextFunction)
 export const getSummary = async (_req: Request, res: Response, next: NextFunction) => {
     try {
         const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
         const startOfLast7Days = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
         const db = mongoose.connection.db;
         const summary = db ? await db.collection('summary_view').findOne({}).catch(() => null) : null;
 
         const [
-            totalSales,
+            realRevenueThisMonth,
+            projectedRevenueThisMonth,
             lowStockAlerts,
             pendingFollowUpsCount,
             activeWorkOrdersCount,
+            totalInventoryValue,
+            totalCompanySalesTarget,
+            totalCompanyMarketingBudget,
         ] = await Promise.all([
             Invoice.aggregate([
-                { $match: { status: 'Paid' } },
+                { $match: { status: 'Paid', issueDate: { $gte: startOfMonth } } },
+                { $group: { _id: null, total: { $sum: '$total' } } },
+            ]),
+            Invoice.aggregate([
+                { $match: { status: { $in: ['Sent', 'Overdue'] }, issueDate: { $gte: startOfMonth } } },
                 { $group: { _id: null, total: { $sum: '$total' } } },
             ]),
             Product.aggregate([
@@ -232,7 +243,28 @@ export const getSummary = async (_req: Request, res: Response, next: NextFunctio
             ]),
             FollowUp.countDocuments({ solvedIssue: false }),
             WorkOrder.countDocuments({ endMaintenanceDate: null }),
+            InventoryFinance.aggregate([
+                { $match: { status: { $ne: 'Sold out' } } },
+                { $group: { _id: null, totalValue: { $sum: { $multiply: ['$stockNumber', '$price'] } } } },
+            ]),
+            User.aggregate([
+                { $match: { role: { $in: ['Sales'] } } },
+                { $group: { _id: null, total: { $sum: { $ifNull: [{ $toDouble: '$targetSales' }, 0] } } } },
+            ]),
+            User.aggregate([
+                { $match: { role: { $in: ['Marketing'] } } },
+                { $group: { _id: null, total: { $sum: { $ifNull: [{ $toDouble: '$targetBudget' }, 0] } } } },
+            ]),
         ]);
+
+        console.log('[Dashboard] User targets:', {
+            salesTarget: totalCompanySalesTarget,
+            marketingBudget: totalCompanyMarketingBudget
+        });
+
+        // Debug: Check User model fields
+        console.log('[Dashboard] Debug - totalCompanySalesTarget[0]:', totalCompanySalesTarget[0]);
+        console.log('[Dashboard] Debug - totalCompanyMarketingBudget[0]:', totalCompanyMarketingBudget[0]);
 
         let recentActivities: unknown[] = [];
         if (db) {
@@ -249,7 +281,12 @@ export const getSummary = async (_req: Request, res: Response, next: NextFunctio
         }
 
         sendSuccess(res, {
-            totalSales: totalSales[0]?.total ?? 0,
+            financialMetrics: {
+                realRevenueThisMonth: realRevenueThisMonth[0]?.total ?? 0,
+                projectedRevenueThisMonth: projectedRevenueThisMonth[0]?.total ?? 0,
+                totalInventoryValue: totalInventoryValue[0]?.totalValue ?? 0,
+            },
+            totalSales: summary?.totalSales ?? 0,
             totalSalesThisMonth: summary?.revenueThisMonth ?? 0,
             lowStockAlerts: {
                 count: lowStockAlerts[0]?.count ?? 0,
@@ -263,6 +300,8 @@ export const getSummary = async (_req: Request, res: Response, next: NextFunctio
                 totalInvoices: summary?.totalInvoices ?? 0,
                 totalWorkOrders: summary?.totalWorkOrders ?? 0,
             },
+            totalCompanySalesTarget: totalCompanySalesTarget[0]?.total ?? 0,
+            totalCompanyMarketingBudget: totalCompanyMarketingBudget[0]?.total ?? 0,
         }, 'Dashboard summary loaded');
     } catch (err) {
         next(err);

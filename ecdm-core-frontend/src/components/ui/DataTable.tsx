@@ -66,6 +66,8 @@ interface DataTableProps<T extends { _id: string }> {
   // Meta object for custom handlers (e.g., onEdit, onDelete)
   meta?: any;
   defaultVisibility?: VisibilityState;
+  // Row className function for custom row styling (e.g., ownership dimming)
+  rowClassName?: (row: T) => string;
 }
 
 // Admin roles that can perform bulk delete
@@ -88,6 +90,7 @@ export function DataTable<T extends { _id: string }>({
   selectionDisabled = false,
   meta,
   defaultVisibility = {},
+  rowClassName,
 }: DataTableProps<T>) {
   const { user } = useAuthStore();
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
@@ -330,11 +333,11 @@ export function DataTable<T extends { _id: string }>({
             <tbody>
               {table.getRowModel().rows.map(tableRow => {
                 const row = tableRow.original;
+                const customRowClass = rowClassName ? rowClassName(row) : '';
                 return (
                   <tr
                     key={row._id}
-                    className={`border-b border-[hsl(var(--border))]/50 hover:bg-[hsl(var(--muted))]/20 ${selectedRows.has(row._id) ? 'bg-[hsl(var(--primary))]/5' : ''
-                      }`}
+                    className={`border-b border-[hsl(var(--border))]/50 hover:bg-[hsl(var(--muted))]/20 ${selectedRows.has(row._id) ? 'bg-[hsl(var(--primary))]/5' : ''} ${customRowClass}`}
                   >
                     {/* Checkbox cell */}
                     {canBulkDelete && (

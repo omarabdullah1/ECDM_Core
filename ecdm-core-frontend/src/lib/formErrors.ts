@@ -33,7 +33,7 @@ export const hasFieldError = (errors: FieldError[], field: string): boolean => {
 
 export const mapApiErrorsToForm = (
     error: ZodErrorResponse,
-    setError: (field: string, message: string) => void,
+    setError: (field: string, opts?: { type: string; message: string }) => void,
     clearErrors?: (field?: string | string[]) => void
 ) => {
     const fieldErrors = extractFieldErrors(error);

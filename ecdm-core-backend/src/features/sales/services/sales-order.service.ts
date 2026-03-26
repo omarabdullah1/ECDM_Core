@@ -34,9 +34,9 @@ export const getAll = async (query: Record<string, unknown>, userId?: string, us
     const [data, total] = await Promise.all([
         SalesOrder.find(filter)
             .populate('customer', 'customerId name phone region sector')
-            .populate('salesLead', 'issue typeOfOrder salesPlatform platform')
-            .populate('salesData', 'issue typeOfOrder salesPlatform callOutcome callDate')
-            .populate('salesPerson', 'firstName lastName email')
+            .populate('salesLead', 'issue typeOfOrder salesPlatform platform salesPerson')
+            .populate('salesData', 'issue typeOfOrder salesPlatform callOutcome callDate salesPerson')
+            .populate('salesPerson', '_id firstName lastName email')
             .sort({ createdAt: -1 }).skip(skip).limit(Number(limit)),
         SalesOrder.countDocuments(filter),
     ]);
@@ -49,7 +49,8 @@ export const getById = async (id: string): Promise<ISalesOrderDocument> => {
     const doc = await SalesOrder.findById(id)
         .populate('customer', 'customerId name phone region sector email company address')
         .populate('salesLead', 'issue typeOfOrder salesPlatform platform order date salesPerson')
-        .populate('salesData', 'issue typeOfOrder salesPlatform callOutcome callDate salesPerson');
+        .populate('salesData', 'issue typeOfOrder salesPlatform callOutcome callDate salesPerson')
+        .populate('salesPerson', '_id firstName lastName email');
     if (!doc) throw new AppError('Sales order not found', 404);
     return doc;
 };

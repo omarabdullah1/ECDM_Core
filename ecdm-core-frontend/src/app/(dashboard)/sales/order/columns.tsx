@@ -33,7 +33,7 @@ interface SalesLead {
   _id: string;
   issue?: string;
   order?: string;
-  salesPerson?: string;
+  salesPerson?: string | { _id: string; firstName?: string; lastName?: string };
   date?: string;
   typeOfOrder?: string;
   salesPlatform?: string;
@@ -76,7 +76,7 @@ export interface SalesOrder {
   quotationStatus?: string;
   reasonOfQuotation?: string;
   finalStatus?: string;
-  salesPerson?: string; // Reference to User (salesperson)
+  salesPerson?: string | { _id: string; firstName?: string; lastName?: string }; // Reference to User (salesperson) - can be string ID or populated object
   salesPersonId?: string; // Alternative field name for backward compatibility
   notes?: string;
 
@@ -94,6 +94,10 @@ export interface SalesOrder {
     notes?: string;
     createdAt?: Date;
   };
+
+  // Alternative amount fields
+  totalAmount?: number;
+  price?: number;
 
   // Follow-up fields
   followUpFirst?: string;
@@ -455,10 +459,24 @@ interface SalesOrderColumnsConfig {
   onDelete?: (row: SalesOrder) => void;
   onHistory?: (row: SalesOrder) => void;
   onCreateQuotation?: (row: SalesOrder) => void;
+  currentUserId?: string;
+  currentUserRole?: string;
 }
 
 export const createSalesOrderColumns = (config?: SalesOrderColumnsConfig) => {
-  const { onEdit, onDelete, onHistory, onCreateQuotation } = config || {};
+  const { onEdit, onDelete, onHistory, onCreateQuotation, currentUserId, currentUserRole } = config || {};
+  
+  const adminRoles = ['Admin', 'SuperAdmin', 'Manager'];
+  const isAdmin = adminRoles.includes(currentUserRole || '');
+  const isSalesRole = currentUserRole === 'Sales';
+  
+  const getOwnershipStatus = (row: SalesOrder) => {
+    const salesPersonFromData = row.salesData?.salesPerson as any;
+    const salesPersonDirect = row.salesPerson as any;
+    const orderOwnerId = salesPersonFromData?._id || salesPersonDirect?._id || row.salesPersonId;
+    const isOwner = orderOwnerId && currentUserId && orderOwnerId === currentUserId;
+    return { isOwner, isAdmin, isSalesRole };
+  };
 
   return [
     // ─────────────────────────────────────────────────────────────────────────
@@ -680,37 +698,44 @@ export const createSalesOrderColumns = (config?: SalesOrderColumnsConfig) => {
     {
       key: 'quotationFileUrl',
       header: 'Quotation',
-      render: (row: SalesOrder) => (
-        <div className="flex items-center gap-2">
-          <QuotationCell
-            fileUrl={row.quotationFileUrl}
-            fileName={row.quotationFileName}
-          />
-          {row.quotationFileUrl && (
-            <button
-              onClick={async () => {
-                if (!window.confirm('Remove uploaded quotation?')) return;
-                try {
-                  const response = await api.patch(`/sales/orders/${row._id}`, {
-                    quotationFileUrl: '',
-                    quotationFileName: ''
-                  });
-                  if (response.status === 200 || response.status === 204 || response.status === 202) {
-                    toast.success('Removed successfully');
-                    window.location.reload();
+      render: (row: SalesOrder) => {
+        const { isOwner, isAdmin } = getOwnershipStatus(row);
+        const canModify = isOwner || isAdmin;
+        
+        return (
+          <div className="flex items-center gap-2">
+            <div className={!canModify ? 'opacity-30 pointer-events-none' : ''}>
+              <QuotationCell
+                fileUrl={row.quotationFileUrl}
+                fileName={row.quotationFileName}
+              />
+            </div>
+            {row.quotationFileUrl && canModify && (
+              <button
+                onClick={async () => {
+                  if (!window.confirm('Remove uploaded quotation?')) return;
+                  try {
+                    const response = await api.patch(`/sales/orders/${row._id}`, {
+                      quotationFileUrl: '',
+                      quotationFileName: ''
+                    });
+                    if (response.status === 200 || response.status === 204 || response.status === 202) {
+                      toast.success('Removed successfully');
+                      window.location.reload();
+                    }
+                  } catch (error) {
+                    toast.error('Failed to remove');
                   }
-                } catch (error) {
-                  toast.error('Failed to remove');
-                }
-              }}
-              title="Remove File"
-              className="text-red-500 hover:text-red-700 transition-colors p-1 rounded hover:bg-red-50"
-            >
-              <Trash2 className="w-3 h-3" />
-            </button>
-          )}
-        </div>
-      ),
+                }}
+                title="Remove File"
+                className="text-red-500 hover:text-red-700 transition-colors p-1 rounded hover:bg-red-50"
+              >
+                <Trash2 className="w-3 h-3" />
+              </button>
+            )}
+          </div>
+        );
+      },
     },
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -720,10 +745,11 @@ export const createSalesOrderColumns = (config?: SalesOrderColumnsConfig) => {
       key: 'quotationActions',
       header: 'Quotation PDF',
       render: (row: SalesOrder) => {
+        const { isOwner, isAdmin } = getOwnershipStatus(row);
+        const canModify = isOwner || isAdmin;
         const hasQuotation = row.quotation && row.quotation.items && row.quotation.items.length > 0;
 
         if (hasQuotation) {
-          // If quotation EXISTS: Hide the '+' button and show View/Download
           return (
             <div className="flex items-center gap-2">
               <button
@@ -736,7 +762,8 @@ export const createSalesOrderColumns = (config?: SalesOrderColumnsConfig) => {
                   }
                 }}
                 title="View PDF"
-                className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors border border-blue-200 text-blue-600 hover:bg-blue-50 h-8 px-3"
+                disabled={!canModify}
+                className={`inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors border border-blue-200 h-8 px-3 ${canModify ? 'text-blue-600 hover:bg-blue-50' : 'opacity-30 cursor-not-allowed pointer-events-none'}`}
               >
                 <FileText className="w-4 h-4 mr-1" /> View
               </button>
@@ -750,44 +777,51 @@ export const createSalesOrderColumns = (config?: SalesOrderColumnsConfig) => {
                   }
                 }}
                 title="Download PDF"
-                className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors border border-green-200 text-green-600 hover:bg-green-50 h-8 px-3"
+                disabled={!canModify}
+                className={`inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors border h-8 px-3 ${canModify ? 'border-green-200 text-green-600 hover:bg-green-50' : 'opacity-30 cursor-not-allowed pointer-events-none'}`}
               >
                 <Download className="w-4 h-4" />
               </button>
-              <button
-                onClick={async () => {
-                  if (!window.confirm('Delete system quotation?')) return;
-                  try {
-                    const response = await api.patch(`/sales/orders/${row._id}`, {
-                      quotation: null
-                    });
-                    if (response.status === 200 || response.status === 204 || response.status === 202) {
-                      toast.success('Quotation removed');
-                      window.location.reload();
+              {canModify && (
+                <button
+                  onClick={async () => {
+                    if (!window.confirm('Delete system quotation?')) return;
+                    try {
+                      const response = await api.patch(`/sales/orders/${row._id}`, {
+                        quotation: null
+                      });
+                      if (response.status === 200 || response.status === 204 || response.status === 202) {
+                        toast.success('Quotation removed');
+                        window.location.reload();
+                      }
+                    } catch (error) {
+                      toast.error('Failed to remove');
                     }
-                  } catch (error) {
-                    toast.error('Failed to remove');
-                  }
-                }}
-                title="Remove Quotation"
-                className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors border border-red-200 text-red-600 hover:bg-red-50 h-8 px-2"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
+                  }}
+                  title="Remove Quotation"
+                  className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors border border-red-200 text-red-600 hover:bg-red-50 h-8 px-2"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              )}
             </div>
           );
         }
 
-        // If NO quotation: Show the '+' button ONLY
-        return (
-          <button
-            onClick={() => onCreateQuotation?.(row)}
-            title="Create Quotation"
-            className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors bg-gray-100 text-gray-900 hover:bg-gray-200 h-8 px-3"
-          >
-            <PlusCircle className="w-4 h-4 mr-2" /> Create
-          </button>
-        );
+        // If NO quotation: Show the '+' button ONLY if owner or admin
+        if (canModify) {
+          return (
+            <button
+              onClick={() => onCreateQuotation?.(row)}
+              title="Create Quotation"
+              className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors bg-gray-100 text-gray-900 hover:bg-gray-200 h-8 px-3"
+            >
+              <PlusCircle className="w-4 h-4 mr-2" /> Create
+            </button>
+          );
+        }
+        
+        return <span className="text-gray-400 text-xs">-</span>;
       },
     },
 
@@ -903,19 +937,32 @@ export const createSalesOrderColumns = (config?: SalesOrderColumnsConfig) => {
       key: 'salesPersonId',
       header: 'Sales Person ID',
       render: (row: SalesOrder) => {
-        // Try to get from multiple possible sources
         const salesPersonId = row.salesPersonId
           || row.salesLead?.salesPerson
-          || row.salesData?.salesPerson?._id
-          || (row.salesData?.salesPerson?.firstName && row.salesData?.salesPerson?.lastName
-            ? `${row.salesData.salesPerson.firstName} ${row.salesData.salesPerson.lastName}`
-            : null);
+          || row.salesData?.salesPerson?._id;
 
         return (
           <span className="text-sm font-mono">
             {salesPersonId || '-'}
           </span>
         );
+      },
+    },
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // 22b. SalesPerson Email
+    // ─────────────────────────────────────────────────────────────────────────
+    {
+      key: 'salesPersonEmail',
+      header: 'Sales Person',
+      render: (row: SalesOrder) => {
+        const salesPersonFromData = row.salesData?.salesPerson as any;
+        const salesPersonDirect = row.salesPerson as any;
+        const salesPersonFromLead = row.salesLead?.salesPerson as any;
+        
+        const email = salesPersonFromData?.email || salesPersonDirect?.email || salesPersonFromLead?.email || '';
+        
+        return <span className="text-xs font-mono">{email || 'Not Assigned'}</span>;
       },
     },
 
@@ -948,37 +995,103 @@ export const createActionsRenderer = (config: {
   onEdit: (row: SalesOrder) => void;
   onDelete: (row: SalesOrder) => void;
   onHistory?: (row: SalesOrder) => void;
+  onPreview?: (row: SalesOrder) => void;
+  currentUserId?: string;
+  currentUserRole?: string;
 }) => {
-  return (row: SalesOrder) => (
-    <div className="flex items-center gap-1">
-      {/* Edit Button */}
-      <button
-        onClick={() => config.onEdit(row)}
-        className="p-1 hover:text-[hsl(var(--primary))] transition-colors"
-        title="Edit Order"
-      >
-        <Edit2 className="h-3.5 w-3.5" />
-      </button>
+  const { onEdit, onDelete, onHistory, onPreview, currentUserId, currentUserRole } = config;
+  const adminRoles = ['Admin', 'SuperAdmin', 'Manager'];
+  const isAdmin = adminRoles.includes(currentUserRole || '');
+  const isSalesRole = currentUserRole === 'Sales';
 
-      {/* Delete Button */}
-      <button
-        onClick={() => config.onDelete(row)}
-        className="p-1 hover:text-destructive transition-colors"
-        title="Delete Order"
-      >
-        <Trash2 className="h-3.5 w-3.5" />
-      </button>
+  return (row: SalesOrder) => {
+    const salesPersonFromData = row.salesData?.salesPerson as any;
+    const salesPersonDirect = row.salesPerson as any;
+    const orderOwnerId = salesPersonFromData?._id || salesPersonDirect?._id || row.salesPersonId;
+    const isOwner = orderOwnerId && currentUserId && orderOwnerId === currentUserId;
 
-      {/* History Button (Optional) */}
-      {config.onHistory && (
-        <button
-          onClick={() => config.onHistory?.(row)}
-          className="p-1 hover:text-[hsl(var(--primary))] transition-colors"
-          title="View History"
-        >
-          <History className="h-3.5 w-3.5" />
-        </button>
-      )}
-    </div>
-  );
+    const handlePreview = () => {
+      if (onPreview) {
+        onPreview(row);
+      } else {
+        onEdit(row);
+      }
+    };
+
+    return (
+      <div className="flex items-center gap-1">
+        {/* Case 1: Owner - Show Pencil (Edit) icon */}
+        {isOwner && (
+          <button
+            onClick={() => onEdit(row)}
+            className="p-1 hover:text-[hsl(var(--primary))] transition-colors"
+            title="Edit Order"
+          >
+            <Edit2 className="h-3.5 w-3.5" />
+          </button>
+        )}
+
+        {/* Case 2: Other (not owner, not admin) - Show Eye (Preview) icon */}
+        {!isOwner && !isAdmin && (
+          <button
+            onClick={handlePreview}
+            className="p-1 hover:text-blue-500 transition-colors"
+            title="Preview Order"
+          >
+            <Eye className="h-3.5 w-3.5" />
+          </button>
+        )}
+
+        {/* Case 3: Admin (not Sales role) - Show Pencil (Edit) + Trash (Delete) icons */}
+        {isAdmin && !isSalesRole && (
+          <>
+            <button
+              onClick={() => onEdit(row)}
+              className="p-1 hover:text-[hsl(var(--primary))] transition-colors"
+              title="Edit Order"
+            >
+              <Edit2 className="h-3.5 w-3.5" />
+            </button>
+            <button
+              onClick={() => onDelete(row)}
+              className="p-1 hover:text-destructive transition-colors"
+              title="Delete Order"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          </>
+        )}
+
+        {/* Case 4: Admin but is also Sales role - Show only Pencil (Edit), NO Delete */}
+        {isAdmin && isSalesRole && (
+          <button
+            onClick={() => onEdit(row)}
+            className="p-1 hover:text-[hsl(var(--primary))] transition-colors"
+            title="Edit Order"
+          >
+            <Edit2 className="h-3.5 w-3.5" />
+          </button>
+        )}
+
+        {/* History Button (Optional) */}
+        {onHistory && (
+          <button
+            onClick={() => onHistory(row)}
+            className="p-1 hover:text-[hsl(var(--primary))] transition-colors"
+            title="View History"
+          >
+            <History className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
+    );
+  };
+};
+
+export const isOrderOwnedByUser = (row: SalesOrder, userId?: string): boolean => {
+  if (!userId) return false;
+  const salesPersonFromData = row.salesData?.salesPerson as any;
+  const salesPersonDirect = row.salesPerson as any;
+  const orderOwnerId = salesPersonFromData?._id || salesPersonDirect?._id || row.salesPersonId;
+  return orderOwnerId === userId;
 };

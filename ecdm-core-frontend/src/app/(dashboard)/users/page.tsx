@@ -230,34 +230,17 @@ export default function UsersPage() {
 
     const openTargetDialog = async (user: User) => {
         setSelectedUser(user);
-        setTargetAmount('');
         setTargetModal(true);
         setLoadingTarget(true);
 
         try {
-            const currentDate = new Date();
-            const month = currentDate.getMonth() + 1;
-            const year = currentDate.getFullYear();
-
-            // Fetch existing target for this user/month/year
-            const { data } = await api.get('/sales/targets', {
-                params: {
-                    salespersonId: user._id,
-                    month,
-                    year,
-                    limit: 1,
-                },
-            });
-
-            // If target exists, pre-fill the input
-            if (data.data?.data && data.data.data.length > 0) {
-                setTargetAmount(String(data.data.data[0].targetAmount));
-            } else {
-                setTargetAmount('');
-            }
+            const existingTarget = user.role === 'Marketing' || user.role === 'marketing'
+                ? user.targetBudget
+                : user.targetSales;
+            
+            setTargetAmount(existingTarget ? String(existingTarget) : '');
         } catch (err) {
-            console.error('Failed to fetch existing target:', err);
-            // Keep input empty if fetch fails
+            console.error('Failed to load target:', err);
             setTargetAmount('');
         } finally {
             setLoadingTarget(false);
@@ -270,22 +253,18 @@ export default function UsersPage() {
 
         setSettingTarget(true);
         try {
-            const currentDate = new Date();
-            const month = currentDate.getMonth() + 1;
-            const year = currentDate.getFullYear();
+            const targetValue = Number(targetAmount);
+            
+            const updateData = selectedUser.role === 'Marketing' || selectedUser.role === 'marketing'
+                ? { targetBudget: targetValue }
+                : { targetSales: targetValue };
 
-            await api.post('/sales/targets', {
-                salespersonId: selectedUser._id,
-                targetAmount: Number(targetAmount),
-                month,
-                year,
-            });
+            await api.put(`/auth/users/${selectedUser._id}`, updateData);
 
             toast.success(`Target set for ${selectedUser.firstName} ${selectedUser.lastName}`);
             setTargetModal(false);
             setSelectedUser(null);
             setTargetAmount('');
-            // Refresh table so the synced targetSales/targetBudget appears immediately
             fetchUsers();
         } catch (err: unknown) {
             const error = err as { response?: { data?: { message?: string } } };

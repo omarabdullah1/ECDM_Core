@@ -80,12 +80,16 @@ export default function EditFollowUpDialog({ followUp, onClose, onSuccess, onOpe
   const [showFeedbackPrompt, setShowFeedbackPrompt] = useState(false);
   const [completedStatus, setCompletedStatus] = useState(false);
 
-  const orderContext = (followUp.orderContext as OrderContext) || {};
+  const orderContext = (followUp.orderContext as Record<string, unknown>) || {};
   const customer = followUp.customer as Record<string, unknown> | undefined;
   const order = followUp.customerOrderId as Record<string, unknown> | undefined;
 
-  const getContextValue = (key: keyof OrderContext): string => {
-    return orderContext[key] || '-';
+  const getContextValue = (key: string): string => {
+    const raw = orderContext[key];
+    if (raw === null || raw === undefined) return '-';
+    if (typeof raw === 'string' && raw) return raw;
+    if (typeof raw === 'number') return String(raw);
+    return '-';
   };
 
   const form = useForm<FormSchema>({
@@ -148,9 +152,9 @@ export default function EditFollowUpDialog({ followUp, onClose, onSuccess, onOpe
     setShowFeedbackPrompt(false);
     if (createFeedback && onOpenFeedback && orderContext.orderId) {
       onOpenFeedback(
-        orderContext,
-        orderContext.orderId,
-        orderContext.customerId || String(customer?._id) || ''
+        orderContext as OrderContext,
+        String(orderContext.orderId),
+        String(orderContext.customerId) || String(customer?._id) || ''
       );
     }
     onSuccess();
@@ -193,55 +197,55 @@ export default function EditFollowUpDialog({ followUp, onClose, onSuccess, onOpe
                 <div>
                   <label className="text-[hsl(var(--muted-foreground))] text-xs mb-1 block">Customer Name</label>
                   <div className={readOnlyCls}>
-                    {getContextValue('customerName') || customer?.name || '-'}
+                    {String(getContextValue('customerName') || customer?.name || '-')}
                   </div>
                 </div>
                 <div>
                   <label className="text-[hsl(var(--muted-foreground))] text-xs mb-1 block">Phone Number</label>
                   <div className={readOnlyCls}>
-                    {getContextValue('customerPhone') || customer?.phone || '-'}
+                    {String(getContextValue('customerPhone') || customer?.phone || '-')}
                   </div>
                 </div>
                 <div>
                   <label className="text-[hsl(var(--muted-foreground))] text-xs mb-1 block">Customer ID</label>
                   <div className={`${readOnlyCls} font-mono text-xs`}>
-                    {getContextValue('customerId') || customer?.customerId || customer?._id || '-'}
+                    {String(getContextValue('customerId') || customer?.customerId || customer?._id || '-')}
                   </div>
                 </div>
                 <div>
                   <label className="text-[hsl(var(--muted-foreground))] text-xs mb-1 block">Engineer Name</label>
                   <div className={readOnlyCls}>
-                    {getContextValue('engineerName') || order?.engineerName || '-'}
+                    {String(getContextValue('engineerName') || order?.engineerName || '-')}
                   </div>
                 </div>
                 <div>
                   <label className="text-[hsl(var(--muted-foreground))] text-xs mb-1 block">Visit Date</label>
                   <div className={readOnlyCls}>
-                    {formatDate(getContextValue('actualVisitDate') || getContextValue('visitDate') || order?.actualVisitDate)}
+                    {formatDate(String(getContextValue('actualVisitDate') || getContextValue('visitDate') || order?.actualVisitDate))}
                   </div>
                 </div>
                 <div>
                   <label className="text-[hsl(var(--muted-foreground))] text-xs mb-1 block">Deal Status</label>
                   <div className={readOnlyCls}>
-                    {getContextValue('dealStatus') || order?.deal || '-'}
+                    {String(getContextValue('dealStatus') || order?.deal || '-')}
                   </div>
                 </div>
                 <div>
                   <label className="text-[hsl(var(--muted-foreground))] text-xs mb-1 block">Start Date</label>
                   <div className={readOnlyCls}>
-                    {formatDate(getContextValue('startDate') || order?.startDate)}
+                    {formatDate(String(getContextValue('startDate') || order?.startDate))}
                   </div>
                 </div>
                 <div>
                   <label className="text-[hsl(var(--muted-foreground))] text-xs mb-1 block">End Date</label>
                   <div className={readOnlyCls}>
-                    {formatDate(getContextValue('endDate') || order?.endDate)}
+                    {formatDate(String(getContextValue('endDate') || order?.endDate))}
                   </div>
                 </div>
                 <div className="col-span-2">
                   <label className="text-[hsl(var(--muted-foreground))] text-xs mb-1 block">Original Issue</label>
                   <div className={`${readOnlyCls} truncate`} title={String(order?.issue || '')}>
-                    {order?.issue || '-'}
+                    {String(order?.issue || '-')}
                   </div>
                 </div>
               </div>

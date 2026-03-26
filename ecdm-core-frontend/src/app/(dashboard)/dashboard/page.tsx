@@ -2,7 +2,7 @@
 
 import { useAuthStore } from '@/features/auth/useAuth';
 import api from '@/lib/axios';
-import { DollarSign, Loader2, Star, Target, TrendingUp, UserCheck, Users, Wrench } from 'lucide-react';
+import { Banknote, Clock, DollarSign, Loader2, Package, Star, Target, TrendingUp, UserCheck, Users, Wrench } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import {
     Bar,
@@ -20,10 +20,37 @@ import {
 
 const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#64748b'];
 
+const ChartWrapper = ({ children, height = '100%' }: { children: React.ReactNode; height?: string }) => (
+    <div style={{ width: '100%', height, minHeight: '200px' }}>
+        <ResponsiveContainer width="100%" height="100%">
+            {children}
+        </ResponsiveContainer>
+    </div>
+);
+
+interface DashboardSummary {
+  financialMetrics: {
+    realRevenueThisMonth: number;
+    projectedRevenueThisMonth: number;
+    totalInventoryValue: number;
+  };
+  activeWorkOrdersCount?: number;
+  pendingFollowUpsCount?: number;
+  lowStockAlerts?: {
+    count: number;
+    items: any[];
+  };
+  totalCompanySalesTarget?: number;
+  totalCompanyMarketingBudget?: number;
+}
+
 export default function MainDashboard() {
   const { user } = useAuthStore();
   
-  // Unified Dashboard State
+  const [summaryData, setSummaryData] = useState<DashboardSummary | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  // Legacy state for charts (kept for compatibility)
   const [dashData, setDashData] = useState({
     activeClients: 0,
     activeWorkOrders: 0,
@@ -37,7 +64,6 @@ export default function MainDashboard() {
     salesActual: 0,
     dealsClosed: 0,
     isLoading: true,
-    // Chart data
     marketingPieData: [] as any[],
     marketingBarData: [] as any[],
     salesPieData: [] as any[],
@@ -45,11 +71,25 @@ export default function MainDashboard() {
     trendData: [] as any[]
   });
 
-  // Supercharged Fetch & Aggregate
+  // Fetch Dashboard Summary (optimized backend aggregation)
+  useEffect(() => {
+    async function loadSummaryData() {
+      try {
+        const res = await api.get('/dashboard/summary');
+        setSummaryData(res.data.data);
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Error fetching dashboard summary:', error);
+        setIsLoading(false);
+      }
+    }
+    loadSummaryData();
+  }, []);
+
+  // Legacy Fetch & Aggregate (kept for charts)
   useEffect(() => {
     async function loadAllData() {
       try {
-        // DEBUG: Log axios configuration
         console.log('🔧 Axios BaseURL:', api.defaults.baseURL);
         console.log('🔧 Environment:', process.env.NODE_ENV);
         
@@ -65,38 +105,33 @@ export default function MainDashboard() {
 
         // 1. Fetch EVERYTHING from all modules (using axios with configured baseURL)
         const [usersRes, campaignsRes, ordersRes, leadsRes, woRes] = await Promise.all([
-          api.get('/users?limit=1000').catch(() => ({ data: [] })),
-          api.get('/marketing/campaigns?limit=1000').catch(() => ({ data: [] })),
-          api.get('/customer/orders?limit=1000').catch(() => ({ data: [] })),
-          api.get('/sales/leads?limit=1000').catch(() => ({ data: [] })),
-          api.get('/operations/work-orders?limit=1000').catch(() => ({ data: [] }))
+          api.get('/auth/users?limit=1000').catch(() => ({ data: { data: [] } })),
+          api.get('/marketing/campaigns?limit=1000').catch(() => ({ data: { data: { campaigns: [] } } })),
+          api.get('/customer/orders?limit=1000').catch(() => ({ data: { data: [] } })),
+          api.get('/sales/leads?limit=1000').catch(() => ({ data: { data: [] } })),
+          api.get('/operations/work-orders?limit=1000').catch(() => ({ data: { data: [] } }))
         ]);
 
-        // 2. Extract using universal extractor
-        const users = universalExtract(usersRes);
-        const campaigns = universalExtract(campaignsRes);
-        const orders = universalExtract(ordersRes);
-        const leads = universalExtract(leadsRes);
-        const workOrders = universalExtract(woRes);
+        // 2. Extract data with correct nesting for each endpoint
+        const extractPaginatedData = (res: any): any[] => {
+          if (Array.isArray(res?.data?.data?.data)) return res.data.data.data;
+          if (Array.isArray(res?.data?.data)) return res.data.data;
+          return [];
+        };
 
-        // 🔥 FORCE DEBUG LOGS - Pipeline Diagnostic
-        console.log("🟡 RAW CAMPAIGNS RES FULL STRUCTURE:", JSON.stringify(campaignsRes, null, 2));
-        console.log("🟡 campaignsRes.data:", campaignsRes.data);
-        console.log("🟡 campaignsRes.data.data:", campaignsRes.data?.data);
-        console.log("🟡 Is campaignsRes.data.data an array?", Array.isArray(campaignsRes.data?.data));
-        
-        console.log("DEBUG: Total Campaigns Found:", campaigns.length);
-        if (campaigns.length > 0) {
-          console.log("DEBUG: First Campaign Object Keys:", Object.keys(campaigns[0]));
-          console.log("DEBUG: First 3 Campaigns Revenue Check:", campaigns.slice(0, 3).map(c => ({
-            name: c.campaignName || c.name,
-            salesRevenue: c.salesRevenue,
-            adSpend: c.adSpend
-          })));
-        }
-        console.log("DEBUG: Raw campaignsRes structure:", campaignsRes);
+        const extractCampaigns = (res: any): any[] => {
+          if (Array.isArray(res?.data?.data?.campaigns)) return res.data.data.campaigns;
+          if (Array.isArray(res?.data?.data)) return res.data.data;
+          if (Array.isArray(res?.data?.data?.data)) return res.data.data.data;
+          return [];
+        };
 
-        // DEBUG: Log fetched data counts
+        const users = extractPaginatedData(usersRes);
+        const campaigns = extractCampaigns(campaignsRes);
+        const orders = extractPaginatedData(ordersRes);
+        const leads = extractPaginatedData(leadsRes);
+        const workOrders = extractPaginatedData(woRes);
+
         console.log('📊 Dashboard Data Fetched:', { 
           users: users.length, 
           orders: orders.length, 
@@ -104,12 +139,10 @@ export default function MainDashboard() {
           campaigns: campaigns.length, 
           workOrders: workOrders.length 
         });
-        
-        // DEBUG: Log sample campaign to verify field names
-        if (campaigns.length > 0) {
-          console.log('🔍 Sample Campaign:', campaigns[0]);
-          console.table(campaigns.slice(0, 2));
-        }
+
+        // Debug: Log raw response structure
+        console.log('🔍 Raw usersRes structure:', JSON.stringify(usersRes)?.slice(0, 500));
+        console.log('🔍 Extracted users first 2:', users.slice(0, 2));
 
         // 3. MONEY PARSER (for any currency strings)
         const parseMoney = (val: any): number => {
@@ -348,17 +381,17 @@ export default function MainDashboard() {
           { name: 'W4', impressions: finalImpressions, conversions: finalConversions }
         ];
 
-        // 9. UPDATE STATE (Atomic update)
+        // 9. UPDATE STATE - Use summaryData for targets with fallback to calculated values
         setDashData({
           activeClients: activeClientsCount,
           activeWorkOrders: activeWorkOrdersCount,
-          marketingBudget: totalAllocatedBudget,
+          marketingBudget: summaryData?.totalCompanyMarketingBudget || totalAllocatedBudget || 0,
           marketingSpent: finalMarketingSpent,
           marketingRevenue: avgRevenuePerCampaign,
           marketingImpressions: finalImpressions,
           marketingConversions: finalConversions,
           marketingRoas: globalRoas,
-          salesTarget: totalSalesTarget || 1000000,
+          salesTarget: summaryData?.totalCompanySalesTarget || totalSalesTarget || 0,
           salesActual: totalSalesActual,
           dealsClosed: dealsClosedCount,
           isLoading: false,
@@ -377,12 +410,48 @@ export default function MainDashboard() {
     loadAllData();
   }, []);
 
-  if (dashData.isLoading) return <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950"><Loader2 className="w-8 h-8 animate-spin text-blue-600" /></div>;
+  if (isLoading) return <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950"><Loader2 className="w-8 h-8 animate-spin text-blue-600" /></div>;
 
   return (
     <div className="p-4 md:p-8 bg-slate-50 dark:bg-slate-950 min-h-screen transition-colors duration-200 font-sans">
       
-      {/* 1. TOP GENERAL KPI ROW */}
+      {/* 1. FINANCIAL METRICS ROW (New) */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-sm border border-slate-200 dark:border-slate-800 flex justify-between items-start">
+          <div>
+            <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Real Revenue (This Month)</p>
+            <h3 className="text-3xl font-bold text-emerald-600 dark:text-emerald-400 mt-2">
+              EGP {summaryData?.financialMetrics?.realRevenueThisMonth?.toLocaleString() ?? 0}
+            </h3>
+            <p className="text-xs text-emerald-500 font-medium mt-2">Paid Invoices Only</p>
+          </div>
+          <div className="p-3 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-xl"><Banknote size={24} /></div>
+        </div>
+
+        <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-sm border border-slate-200 dark:border-slate-800 flex justify-between items-start">
+          <div>
+            <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Projected Revenue (This Month)</p>
+            <h3 className="text-3xl font-bold text-amber-600 dark:text-amber-400 mt-2">
+              EGP {summaryData?.financialMetrics?.projectedRevenueThisMonth?.toLocaleString() ?? 0}
+            </h3>
+            <p className="text-xs text-amber-500 font-medium mt-2">Sent + Overdue Invoices</p>
+          </div>
+          <div className="p-3 bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-xl"><Clock size={24} /></div>
+        </div>
+
+        <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-sm border border-slate-200 dark:border-slate-800 flex justify-between items-start">
+          <div>
+            <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Total Inventory Value</p>
+            <h3 className="text-3xl font-bold text-blue-600 dark:text-blue-400 mt-2">
+              EGP {summaryData?.financialMetrics?.totalInventoryValue?.toLocaleString() ?? 0}
+            </h3>
+            <p className="text-xs text-blue-500 font-medium mt-2">Stock × Price</p>
+          </div>
+          <div className="p-3 bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-xl"><Package size={24} /></div>
+        </div>
+      </div>
+
+      {/* 2. TOP GENERAL KPI ROW */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-sm border border-slate-200 dark:border-slate-800 flex justify-between items-start">
           <div>
@@ -396,7 +465,7 @@ export default function MainDashboard() {
         <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-sm border border-slate-200 dark:border-slate-800 flex justify-between items-start">
           <div>
             <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Active Work Orders</p>
-            <h3 className="text-3xl font-bold text-slate-900 dark:text-white mt-2">{dashData.activeWorkOrders}</h3>
+            <h3 className="text-3xl font-bold text-slate-900 dark:text-white mt-2">{summaryData?.activeWorkOrdersCount ?? dashData.activeWorkOrders}</h3>
             <p className="text-xs text-amber-500 font-medium mt-2">In Progress</p>
           </div>
           <div className="p-3 bg-purple-50 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400 rounded-xl"><Wrench size={24} /></div>
@@ -468,7 +537,7 @@ export default function MainDashboard() {
           
           <div className="xl:col-span-2 h-64 border border-slate-100 dark:border-slate-800 rounded-xl p-4 bg-white dark:bg-slate-900/50">
             <h4 className="text-sm font-bold text-slate-700 dark:text-slate-300 mb-4">Impressions vs Conversions</h4>
-            <ResponsiveContainer width="100%" height="100%">
+            <ChartWrapper>
               <LineChart data={dashData.trendData}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(150, 150, 150, 0.1)" />
                 <XAxis dataKey="name" stroke="rgba(150, 150, 150, 0.5)" fontSize={12} tickLine={false} axisLine={false} />
@@ -477,7 +546,7 @@ export default function MainDashboard() {
                 <Line type="monotone" dataKey="impressions" stroke="#3b82f6" strokeWidth={3} dot={false} name="Est. Impressions" />
                 <Line type="monotone" dataKey="conversions" stroke="#10b981" strokeWidth={3} dot={false} name="Actual Conversions" />
               </LineChart>
-            </ResponsiveContainer>
+            </ChartWrapper>
           </div>
         </div>
 
@@ -485,7 +554,7 @@ export default function MainDashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-0 border-t border-slate-100 dark:border-slate-800 pt-6 px-6 pb-6">
           <div className="h-64">
             <h4 className="text-sm font-bold text-slate-600 dark:text-slate-400 mb-4 text-center">Lead Sources Distribution</h4>
-            <ResponsiveContainer width="100%" height="100%">
+            <ChartWrapper>
               <PieChart>
                 <Pie data={dashData.marketingPieData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} dataKey="value" label>
                   {dashData.marketingPieData.map((entry: any, index: number) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
@@ -493,22 +562,22 @@ export default function MainDashboard() {
                 <RechartsTooltip contentStyle={{backgroundColor: '#1e293b', border: 'none', color: '#fff'}}/>
                 <Legend />
               </PieChart>
-            </ResponsiveContainer>
+            </ChartWrapper>
           </div>
           
           <div className="h-64">
             <h4 className="text-sm font-bold text-slate-600 dark:text-slate-400 mb-4 text-center">Campaign Performance</h4>
-            <ResponsiveContainer width="100%" height="100%">
+            <ChartWrapper>
               <BarChart data={dashData.marketingBarData}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(150, 150, 150, 0.1)" />
                 <XAxis dataKey="name" stroke="rgba(150, 150, 150, 0.5)" fontSize={10} tickLine={false} axisLine={false} angle={-15} textAnchor="end" height={50} />
                 <YAxis stroke="rgba(150, 150, 150, 0.5)" fontSize={11} tickLine={false} axisLine={false} />
-                <RechartsTooltip cursor={{fill: 'rgba(150, 150, 150, 0.05)'}} contentStyle={{backgroundColor: '#1e293b', border: 'none', color: '#fff'}}/>
+                <RechartsTooltip cursor={{fill: 'rgba(150, 150, 150, 0.05)'}} contentStyle={{borderRadius: '8px', backgroundColor: '#1e293b', border: 'none', color: '#fff'}}/>
                 <Legend iconSize={10} wrapperStyle={{fontSize: '12px'}} />
                 <Bar dataKey="Revenue" fill="#10b981" radius={[4, 4, 0, 0]} barSize={20} />
                 <Bar dataKey="Spend" fill="#ef4444" radius={[4, 4, 0, 0]} barSize={20} />
               </BarChart>
-            </ResponsiveContainer>
+            </ChartWrapper>
           </div>
         </div>
       </div>
@@ -549,7 +618,7 @@ export default function MainDashboard() {
           
           <div className="xl:col-span-2 h-64 border border-slate-100 dark:border-slate-800 rounded-xl p-4 bg-white dark:bg-slate-900/50 flex flex-col justify-center">
              <h4 className="text-sm font-bold text-slate-700 dark:text-slate-300 mb-4">Sales Achievement Breakdown</h4>
-             <ResponsiveContainer width="100%" height="100%">
+             <ChartWrapper>
                 <BarChart data={[{ name: 'Target vs Actual', Target: dashData.salesTarget, Actual: dashData.salesActual }]} layout="vertical" margin={{ top: 0, right: 30, left: 0, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="rgba(150, 150, 150, 0.1)" />
                   <XAxis type="number" hide />
@@ -559,7 +628,7 @@ export default function MainDashboard() {
                   <Bar dataKey="Target" fill="#64748b" radius={[0,4,4,0]} barSize={24} />
                   <Bar dataKey="Actual" fill="#2563eb" radius={[0,4,4,0]} barSize={24} />
                 </BarChart>
-              </ResponsiveContainer>
+              </ChartWrapper>
           </div>
         </div>
 
@@ -567,7 +636,7 @@ export default function MainDashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-0 border-t border-slate-100 dark:border-slate-800 pt-6 px-6 pb-6">
           <div className="h-64">
             <h4 className="text-sm font-bold text-slate-600 dark:text-slate-400 mb-4 text-center">Pipeline Status</h4>
-            <ResponsiveContainer width="100%" height="100%">
+            <ChartWrapper>
               <PieChart>
                 <Pie data={dashData.salesPieData} cx="50%" cy="50%" outerRadius={80} dataKey="value" label>
                   {dashData.salesPieData.map((entry: any, index: number) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
@@ -575,12 +644,12 @@ export default function MainDashboard() {
                 <RechartsTooltip contentStyle={{backgroundColor: '#1e293b', border: 'none', color: '#fff'}}/>
                 <Legend />
               </PieChart>
-            </ResponsiveContainer>
+            </ChartWrapper>
           </div>
 
           <div className="h-64">
             <h4 className="text-sm font-bold text-slate-600 dark:text-slate-400 mb-4 text-center">Top Performers (Deals Closed)</h4>
-            <ResponsiveContainer width="100%" height="100%">
+            <ChartWrapper>
               <BarChart data={dashData.salesBarData} layout="vertical" margin={{ left: 20 }}>
                 <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="rgba(150, 150, 150, 0.1)" />
                 <XAxis type="number" hide />
@@ -588,7 +657,7 @@ export default function MainDashboard() {
                 <RechartsTooltip cursor={{fill: 'rgba(150, 150, 150, 0.05)'}} contentStyle={{backgroundColor: '#1e293b', border: 'none', color: '#fff'}}/>
                 <Bar dataKey="Deals" fill="#10b981" radius={[0, 4, 4, 0]} barSize={20} />
               </BarChart>
-            </ResponsiveContainer>
+            </ChartWrapper>
           </div>
         </div>
       </div>

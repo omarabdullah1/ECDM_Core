@@ -160,7 +160,8 @@ export default function FollowUpPage() {
       setModal(false);
       fetch_();
     } catch (e: unknown) {
-      setError((e as { response?: { data?: { message?: string } }).response?.data?.message || 'Failed');
+      const error = e as { response?: { data?: { message?: string } } };
+      setError(error.response?.data?.message || 'Failed');
     }
     setSaving(false);
   };
