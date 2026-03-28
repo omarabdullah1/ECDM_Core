@@ -1,6 +1,8 @@
 import User from '../../auth/auth.model';
 import Attendance from '../models/attendance.model';
 import WorkOrder from '../../operations/models/work-order.model';
+import SalesOrder from '../../sales/models/sales-order.model';
+import SalesLead from '../../sales/models/sales-lead.model';
 import { AppError } from '../../../utils/apiError';
 import { Types } from 'mongoose';
 
@@ -138,6 +140,13 @@ export const get360Profile = async (id: string) => {
     // Calculate performance metrics
     const performanceStats = calculatePerformanceStats(workOrders);
 
+    // Calculate Sales KPIs if employee is in Sales role
+    let salesKPIs = null;
+    if (employee.role === 'Sales') {
+        const salesPersonName = `${employee.firstName} ${employee.lastName}`;
+        salesKPIs = await getSalesKPIs(realId, salesPersonName);
+    }
+
     return {
         employee,
         attendance: {
@@ -148,6 +157,100 @@ export const get360Profile = async (id: string) => {
             records: workOrders,
             stats: performanceStats,
         },
+        salesKPIs,
+    };
+};
+
+/**
+ * Get Sales KPIs for a salesperson
+ * 
+ * Business Logic:
+ * - Tasks Completed: Sales Orders with Accepted OR Not Potential in ANY of the three follow-up stages
+ * - Open Orders: Sales Orders where NONE of the three follow-up stages is 'Accepted' 
+ * - Active Leads: Sales Leads assigned to this user that are NOT Closed
+ * - Attendance Rate: Monthly present rate from attendance records
+ * - Target Sales: From User model's targetSales field
+ * - Achieved Amount: Sum of quotation.grandTotal for orders where ANY follow-up stage = 'Accepted'
+ */
+const getSalesKPIs = async (salespersonId: string, salesPersonName?: string) => {
+    const employee = await User.findById(salespersonId).select('targetSales firstName lastName email');
+
+    // Tasks Completed: ANY follow-up status is 'Accepted' (Won) OR 'Not Potential' in any stage
+    const tasksCompleted = await SalesOrder.countDocuments({
+        salesPerson: new Types.ObjectId(salespersonId),
+        $or: [
+            { quotationStatusFirstFollowUp: { $in: ['Accepted', 'Not Potential'] } },
+            { statusSecondFollowUp: { $in: ['Accepted', 'Not Potential'] } },
+            { finalStatusThirdFollowUp: { $in: ['Accepted', 'Not Potential'] } },
+        ],
+    });
+
+    // Open Orders: NONE of the three follow-up stages is 'Accepted' (Won)
+    const openOrders = await SalesOrder.countDocuments({
+        salesPerson: new Types.ObjectId(salespersonId),
+        quotationStatusFirstFollowUp: { $nin: ['Accepted'] },
+        statusSecondFollowUp: { $nin: ['Accepted'] },
+        finalStatusThirdFollowUp: { $nin: ['Accepted'] },
+    });
+
+    // Active Leads: Sales Leads assigned to this user that are NOT Closed
+    const leadFilter: Record<string, unknown> = {
+        status: { $ne: 'Closed' }
+    };
+    if (salesPersonName) {
+        leadFilter.salesPerson = salesPersonName;
+    }
+    const activeLeads = await SalesLead.countDocuments(leadFilter);
+
+    console.log(`[SalesKPIs] User ${salespersonId}: Tasks Completed = ${tasksCompleted}, Open Orders = ${openOrders}, Active Leads = ${activeLeads}`);
+
+    // Achieved Amount: Sum of quotation.grandTotal for won orders (ANY follow-up stage = 'Accepted')
+    const wonOrders = await SalesOrder.find({
+        salesPerson: new Types.ObjectId(salespersonId),
+        $or: [
+            { quotationStatusFirstFollowUp: 'Accepted' },
+            { statusSecondFollowUp: 'Accepted' },
+            { finalStatusThirdFollowUp: 'Accepted' },
+        ],
+    });
+
+    const achievedAmount = wonOrders.reduce((sum, order) => {
+        const amount = order.quotation?.grandTotal || 0;
+        console.log(`[SalesKPIs] Won Order ${order.salesOrderId}: grandTotal = ${amount}`);
+        return sum + amount;
+    }, 0);
+
+    console.log(`[SalesKPIs] User ${salespersonId}: Achieved Amount = ${achievedAmount}`);
+
+    // Get attendance rate for this month
+    const attendanceStats = await getAttendanceStats(salespersonId, employee?.employeeId);
+
+    // Get Sales Orders for the table display - include salesData for typeOfOrder fallback
+    const salesOrders = await SalesOrder.find({ salesPerson: new Types.ObjectId(salespersonId) })
+        .populate('customer', 'name')
+        .populate('salesData', 'typeOfOrder')
+        .sort({ createdAt: -1 })
+        .limit(50);
+
+    return {
+        tasksCompleted,
+        openOrders,
+        activeLeads,
+        targetSales: employee?.targetSales || 0,
+        achievedAmount,
+        attendanceRate: attendanceStats.monthly.presentRate,
+        salesOrders: salesOrders.map(order => ({
+            _id: order._id,
+            salesOrderId: order.salesOrderId,
+            customer: order.customer,
+            typeOfOrder: order.typeOfOrder,
+            salesDataTypeOfOrder: (order as any).salesData?.typeOfOrder,
+            quotationStatusFirstFollowUp: order.quotationStatusFirstFollowUp,
+            statusSecondFollowUp: order.statusSecondFollowUp,
+            finalStatusThirdFollowUp: order.finalStatusThirdFollowUp,
+            quotation: order.quotation,
+            createdAt: order.createdAt,
+        })),
     };
 };
 

@@ -88,6 +88,27 @@ interface PerformanceStats {
     punctualityRate: number;
 }
 
+interface SalesOrderRecord {
+    _id: string;
+    salesOrderId?: string;
+    customer?: { name: string };
+    typeOfOrder?: string;
+    salesDataTypeOfOrder?: string;
+    quotationStatusFirstFollowUp?: string;
+    statusSecondFollowUp?: string;
+    finalStatusThirdFollowUp?: string;
+    quotation?: { grandTotal: number };
+    createdAt: string;
+}
+
+interface SalesKPIs {
+    tasksCompleted: number;
+    openOrders: number;
+    targetSales: number;
+    achievedAmount: number;
+    salesOrders: SalesOrderRecord[];
+}
+
 interface ProfileData {
     employee: Employee;
     attendance: {
@@ -98,6 +119,7 @@ interface ProfileData {
         records: WorkOrderRecord[];
         stats: PerformanceStats;
     };
+    salesKPIs?: SalesKPIs | null;
 }
 
 type TabKey = 'info' | 'attendance' | 'tasks' | 'documents';
@@ -166,6 +188,7 @@ export default function EmployeeProfilePage() {
                     employee: profileData.employee || profileData.item?.employee || profileData,
                     attendance: profileData.attendance || profileData.item?.attendance || { records: [], stats: { monthly: { breakdown: {}, presentRate: 0 }, yearly: { breakdown: {}, presentRate: 0 } } },
                     workOrders: profileData.workOrders || profileData.item?.workOrders || { records: [], stats: { total: 0, completed: 0, completionRate: 0, onTime: 0, punctualityRate: 0 } },
+                    salesKPIs: profileData.salesKPIs || profileData.item?.salesKPIs || null,
                 };
 
                 console.log("MAPPED PROFILE:", mappedProfile); // Check what is actually set
@@ -310,20 +333,37 @@ export default function EmployeeProfilePage() {
                         </div>
                     </div>
 
-                    {/* Quick Stats */}
-                    <div className="flex-shrink-0 grid grid-cols-2 gap-3">
+                    {/* Quick Stats - Different for Sales role */}
+                    <div className="flex-shrink-0 grid grid-cols-3 gap-3">
                         <div className="rounded-xl bg-green-50 dark:bg-green-900/20 p-4 text-center">
                             <p className="text-2xl font-bold text-green-600 dark:text-green-400">
                                 {attendance?.stats?.monthly?.presentRate ?? 0}%
                             </p>
                             <p className="text-xs text-green-700 dark:text-green-300">Monthly Attendance</p>
                         </div>
-                        <div className="rounded-xl bg-blue-50 dark:bg-blue-900/20 p-4 text-center">
-                            <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                                {workOrders?.stats?.completionRate ?? 0}%
-                            </p>
-                            <p className="text-xs text-blue-700 dark:text-blue-300">Task Completion</p>
-                        </div>
+                        {employee.role === 'Sales' && profile.salesKPIs ? (
+                            <>
+                                <div className="rounded-xl bg-blue-50 dark:bg-blue-900/20 p-4 text-center">
+                                    <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                                        {profile.salesKPIs.openOrders ?? 0}
+                                    </p>
+                                    <p className="text-xs text-blue-700 dark:text-blue-300">Open Orders</p>
+                                </div>
+                                <div className="rounded-xl bg-purple-50 dark:bg-purple-900/20 p-4 text-center">
+                                    <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+                                        {profile.salesKPIs.tasksCompleted ?? 0}
+                                    </p>
+                                    <p className="text-xs text-purple-700 dark:text-purple-300">Tasks Completed</p>
+                                </div>
+                            </>
+                        ) : (
+                            <div className="rounded-xl bg-blue-50 dark:bg-blue-900/20 p-4 text-center">
+                                <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                                    {workOrders?.stats?.completionRate ?? 0}%
+                                </p>
+                                <p className="text-xs text-blue-700 dark:text-blue-300">Task Completion</p>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
@@ -513,45 +553,90 @@ export default function EmployeeProfilePage() {
                             </h2>
                         </div>
 
-                        {/* Performance Stats */}
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                            <div className="rounded-xl bg-indigo-50 dark:bg-indigo-900/20 p-4">
-                                <div className="flex items-center gap-2 mb-2">
-                                    <Briefcase className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
-                                    <p className="text-sm text-indigo-700 dark:text-indigo-300">Total Tasks</p>
+                        {/* Performance Stats - Different for Sales role */}
+                        {employee.role === 'Sales' && profile.salesKPIs ? (
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                                <div className="rounded-xl bg-blue-50 dark:bg-blue-900/20 p-4">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <Briefcase className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                                        <p className="text-sm text-blue-700 dark:text-blue-300">Open Orders</p>
+                                    </div>
+                                    <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                                        {profile.salesKPIs.openOrders ?? 0}
+                                    </p>
                                 </div>
-                                <p className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">
-                                    {workOrders?.stats?.total ?? 0}
-                                </p>
-                            </div>
-                            <div className="rounded-xl bg-green-50 dark:bg-green-900/20 p-4">
-                                <div className="flex items-center gap-2 mb-2">
-                                    <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
-                                    <p className="text-sm text-green-700 dark:text-green-300">Completed</p>
+                                <div className="rounded-xl bg-green-50 dark:bg-green-900/20 p-4">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
+                                        <p className="text-sm text-green-700 dark:text-green-300">Tasks Completed</p>
+                                    </div>
+                                    <p className="text-2xl font-bold text-green-600 dark:text-green-400">
+                                        {profile.salesKPIs.tasksCompleted ?? 0}
+                                    </p>
                                 </div>
-                                <p className="text-2xl font-bold text-green-600 dark:text-green-400">
-                                    {workOrders?.stats?.completed ?? 0}
-                                </p>
-                            </div>
-                            <div className="rounded-xl bg-purple-50 dark:bg-purple-900/20 p-4">
-                                <div className="flex items-center gap-2 mb-2">
-                                    <TrendingUp className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-                                    <p className="text-sm text-purple-700 dark:text-purple-300">Completion Rate</p>
+                                <div className="rounded-xl bg-purple-50 dark:bg-purple-900/20 p-4">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <Target className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                                        <p className="text-sm text-purple-700 dark:text-purple-300">Target Sales</p>
+                                    </div>
+                                    <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+                                        EGP {(profile.salesKPIs.targetSales ?? 0).toLocaleString()}
+                                    </p>
                                 </div>
-                                <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-                                    {workOrders?.stats?.completionRate ?? 0}%
-                                </p>
-                            </div>
-                            <div className="rounded-xl bg-amber-50 dark:bg-amber-900/20 p-4">
-                                <div className="flex items-center gap-2 mb-2">
-                                    <Award className="h-5 w-5 text-amber-600 dark:text-amber-400" />
-                                    <p className="text-sm text-amber-700 dark:text-amber-300">Punctuality</p>
+                                <div className="rounded-xl bg-amber-50 dark:bg-amber-900/20 p-4">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <TrendingUp className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                                        <p className="text-sm text-amber-700 dark:text-amber-300">Progress</p>
+                                    </div>
+                                    <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">
+                                        {(() => {
+                                            const achieved = profile.salesKPIs?.achievedAmount ?? salesPerformance?.achievedAmount ?? 0;
+                                            const target = profile.salesKPIs?.targetSales ?? salesPerformance?.targetAmount ?? 0;
+                                            return target > 0 ? Math.round((achieved / target) * 100) : 0;
+                                        })()}%
+                                    </p>
                                 </div>
-                                <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">
-                                    {workOrders?.stats?.punctualityRate ?? 0}%
-                                </p>
                             </div>
-                        </div>
+                        ) : (
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                                <div className="rounded-xl bg-indigo-50 dark:bg-indigo-900/20 p-4">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <Briefcase className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+                                        <p className="text-sm text-indigo-700 dark:text-indigo-300">Total Tasks</p>
+                                    </div>
+                                    <p className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">
+                                        {workOrders?.stats?.total ?? 0}
+                                    </p>
+                                </div>
+                                <div className="rounded-xl bg-green-50 dark:bg-green-900/20 p-4">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
+                                        <p className="text-sm text-green-700 dark:text-green-300">Completed</p>
+                                    </div>
+                                    <p className="text-2xl font-bold text-green-600 dark:text-green-400">
+                                        {workOrders?.stats?.completed ?? 0}
+                                    </p>
+                                </div>
+                                <div className="rounded-xl bg-purple-50 dark:bg-purple-900/20 p-4">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <TrendingUp className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                                        <p className="text-sm text-purple-700 dark:text-purple-300">Completion Rate</p>
+                                    </div>
+                                    <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+                                        {workOrders?.stats?.completionRate ?? 0}%
+                                    </p>
+                                </div>
+                                <div className="rounded-xl bg-amber-50 dark:bg-amber-900/20 p-4">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <Award className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                                        <p className="text-sm text-amber-700 dark:text-amber-300">Punctuality</p>
+                                    </div>
+                                    <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">
+                                        {workOrders?.stats?.punctualityRate ?? 0}%
+                                    </p>
+                                </div>
+                            </div>
+                        )}
 
                         {/* Sales Performance Widget - Only for Sales role */}
                         {employee.role === 'Sales' && (
@@ -559,7 +644,7 @@ export default function EmployeeProfilePage() {
                                 <div className="flex items-center gap-2 mb-4">
                                     <Target className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                                     <h3 className="text-lg font-bold text-blue-800 dark:text-blue-300">
-                                        Monthly Sales Target Progress
+                                        Sales Target Progress
                                     </h3>
                                 </div>
 
@@ -568,44 +653,52 @@ export default function EmployeeProfilePage() {
                                         <Loader2 className="w-5 h-5 animate-spin mr-2" />
                                         <span className="text-sm">Loading sales performance...</span>
                                     </div>
-                                ) : salesPerformance ? (
+                                ) : (
                                     <div className="space-y-4">
-                                        <div className="flex justify-between items-center">
-                                            <div>
-                                                <p className="text-sm text-gray-600 dark:text-gray-400">Achieved</p>
-                                                <p className="text-2xl font-bold text-green-600 dark:text-green-400">
-                                                    EGP {(salesPerformance.achievedAmount ?? 0).toLocaleString()}
-                                                </p>
-                                            </div>
-                                            <div className="text-right">
-                                                <p className="text-sm text-gray-600 dark:text-gray-400">Target</p>
-                                                <p className="text-2xl font-bold text-blue-800 dark:text-blue-300">
-                                                    EGP {(salesPerformance.targetAmount ?? 0).toLocaleString()}
-                                                </p>
-                                            </div>
-                                        </div>
-                                        
-                                        <div className="space-y-2">
-                                            <div className="flex justify-between text-sm font-semibold text-blue-700 dark:text-blue-400">
-                                                <span>Progress</span>
-                                                <span>{salesPerformance.progressPercentage ?? 0}%</span>
-                                            </div>
-                                            <Progress 
-                                                value={salesPerformance.progressPercentage ?? 0} 
-                                                max={100}
-                                                className="h-3 bg-blue-100 dark:bg-blue-900"
-                                                indicatorClassName="bg-blue-600 dark:bg-blue-400"
-                                            />
-                                        </div>
+                                        {(() => {
+                                            const achieved = profile.salesKPIs?.achievedAmount ?? salesPerformance?.achievedAmount ?? 0;
+                                            const target = profile.salesKPIs?.targetSales ?? salesPerformance?.targetAmount ?? 0;
+                                            const progress = target > 0 ? Math.round((achieved / target) * 100) : 0;
+                                            
+                                            return (
+                                                <>
+                                                    <div className="flex justify-between items-center">
+                                                        <div>
+                                                            <p className="text-sm text-gray-600 dark:text-gray-400">Achieved</p>
+                                                            <p className="text-2xl font-bold text-green-600 dark:text-green-400">
+                                                                EGP {achieved.toLocaleString()}
+                                                            </p>
+                                                        </div>
+                                                        <div className="text-right">
+                                                            <p className="text-sm text-gray-600 dark:text-gray-400">Target</p>
+                                                            <p className="text-2xl font-bold text-blue-800 dark:text-blue-300">
+                                                                EGP {target.toLocaleString()}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <div className="space-y-2">
+                                                        <div className="flex justify-between text-sm font-semibold text-blue-700 dark:text-blue-400">
+                                                            <span>Progress</span>
+                                                            <span title="Based on Accepted/Won orders only">{progress}%</span>
+                                                        </div>
+                                                        <Progress 
+                                                            value={progress} 
+                                                            max={100}
+                                                            className="h-3 bg-blue-100 dark:bg-blue-900"
+                                                            indicatorClassName="bg-blue-600 dark:bg-blue-400"
+                                                        />
+                                                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                                                            Based on Accepted/Won orders
+                                                        </p>
+                                                    </div>
+                                                </>
+                                            );
+                                        })()}
 
                                         <p className="text-xs text-center text-gray-500 dark:text-gray-400 mt-3 pt-3 border-t border-blue-200 dark:border-blue-800">
-                                            {new Date(salesPerformance.year ?? new Date().getFullYear(), (salesPerformance.month ?? 1) - 1).toLocaleString('default', { month: 'long', year: 'numeric' })} Performance
+                                            Current Performance
                                         </p>
-                                    </div>
-                                ) : (
-                                    <div className="py-6 text-center">
-                                        <p className="text-sm text-gray-600 dark:text-gray-400">No sales target set for this month</p>
-                                        <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">Contact management to set a target</p>
                                     </div>
                                 )}
                             </div>
@@ -657,78 +750,168 @@ export default function EmployeeProfilePage() {
                             </div>
                         )}
 
-                        {/* Work Orders Table */}
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-sm">
-                                <thead className="bg-[hsl(var(--muted))]/50">
-                                    <tr>
-                                        <th className="px-4 py-3 text-left font-medium">Customer</th>
-                                        <th className="px-4 py-3 text-left font-medium">Issue</th>
-                                        <th className="px-4 py-3 text-left font-medium">Type</th>
-                                        <th className="px-4 py-3 text-left font-medium">Date</th>
-                                        <th className="px-4 py-3 text-left font-medium">Punctuality</th>
-                                        <th className="px-4 py-3 text-left font-medium">Completed</th>
-                                        <th className="px-4 py-3 text-left font-medium">Rating</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-[hsl(var(--border))]">
-                                    {workOrders?.records?.length === 0 ? (
+                        {/* Sales Orders Table - Only for Sales role */}
+                        {employee.role === 'Sales' && profile.salesKPIs?.salesOrders ? (
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-sm">
+                                    <thead className="bg-[hsl(var(--muted))]/50">
                                         <tr>
-                                            <td colSpan={7} className="px-4 py-8 text-center text-[hsl(var(--muted-foreground))]">
-                                                No work orders found.
-                                            </td>
+                                            <th className="px-4 py-3 text-left font-medium">Customer</th>
+                                            <th className="px-4 py-3 text-left font-medium">Type</th>
+                                            <th className="px-4 py-3 text-left font-medium">Follow-up Status</th>
+                                            <th className="px-4 py-3 text-left font-medium">Total Amount</th>
+                                            <th className="px-4 py-3 text-left font-medium">Created</th>
                                         </tr>
-                                    ) : (
-                                        workOrders?.records?.slice(0, 20).map((wo) => (
-                                            <tr key={wo?._id ?? 'wo'} className="hover:bg-[hsl(var(--muted))]/30">
-                                                <td className="px-4 py-3 font-medium">
-                                                    {wo?.customerOrderId?.customerId?.name || '—'}
+                                    </thead>
+                                    <tbody className="divide-y divide-[hsl(var(--border))]">
+                                        {profile.salesKPIs.salesOrders.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={5} className="px-4 py-8 text-center text-[hsl(var(--muted-foreground))]">
+                                                    No sales orders found.
                                                 </td>
-                                                <td className="px-4 py-3 max-w-[200px] truncate">
-                                                    {wo?.customerOrderId?.issue || '—'}
-                                                </td>
-                                                <td className="px-4 py-3">
-                                                    {wo?.customerOrderId?.typeOfOrder || '—'}
-                                                </td>
-                                                <td className="px-4 py-3">
-                                                    {wo?.taskDate && !isNaN(new Date(wo.taskDate).getTime())
-                                                        ? new Date(wo.taskDate).toLocaleDateString('en-GB', {
-                                                            day: '2-digit',
-                                                            month: 'short',
-                                                            year: 'numeric',
-                                                        })
-                                                        : '—'
-                                                    }
-                                                </td>
-                                                <td className="px-4 py-3">
-                                                    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${
-                                                        wo?.punctuality === 'On Time' 
-                                                            ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                                                            : wo?.punctuality === 'Delayed'
-                                                                ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                                                                : 'bg-gray-100 text-gray-600'
-                                                    }`}>
-                                                        {wo?.punctuality || 'N/A'}
-                                                    </span>
-                                                </td>
-                                                <td className="px-4 py-3">
-                                                    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${
-                                                        wo?.taskCompleted === 'Yes' 
-                                                            ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                                                            : wo?.taskCompleted === 'No'
-                                                                ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                                                                : 'bg-gray-100 text-gray-600'
-                                                    }`}>
-                                                        {wo?.taskCompleted || 'N/A'}
-                                                    </span>
-                                                </td>
-                                                <td className="px-4 py-3">{wo?.rating || '—'}</td>
                                             </tr>
-                                        ))
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
+                                        ) : (
+                                            profile.salesKPIs.salesOrders.slice(0, 20).map((order) => {
+                                                // Determine current follow-up stage
+                                                const firstFollowUp = order.quotationStatusFirstFollowUp;
+                                                const secondFollowUp = order.statusSecondFollowUp;
+                                                const thirdFollowUp = order.finalStatusThirdFollowUp;
+                                                
+                                                let currentStage = 'New';
+                                                let stageClass = 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400';
+                                                
+                                                if (thirdFollowUp && thirdFollowUp !== '') {
+                                                    if (thirdFollowUp === 'Accepted') {
+                                                        currentStage = 'Won';
+                                                        stageClass = 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400';
+                                                    } else if (thirdFollowUp === 'Not Potential') {
+                                                        currentStage = 'Not Potential';
+                                                        stageClass = 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400';
+                                                    } else {
+                                                        currentStage = '3rd Follow-up';
+                                                        stageClass = 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400';
+                                                    }
+                                                } else if (secondFollowUp && secondFollowUp !== '') {
+                                                    currentStage = '2nd Follow-up';
+                                                    stageClass = 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400';
+                                                } else if (firstFollowUp && firstFollowUp !== '') {
+                                                    currentStage = '1st Follow-up';
+                                                    stageClass = 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400';
+                                                }
+                                                
+                                                // Type: check typeOfOrder first, then salesDataTypeOfOrder fallback
+                                                const orderType = order.typeOfOrder || order.salesDataTypeOfOrder || 'General supplies';
+                                                
+                                                // Total Amount: use quotation.grandTotal
+                                                const totalAmount = order.quotation?.grandTotal || 0;
+                                                
+                                                return (
+                                                    <tr key={order._id} className="hover:bg-[hsl(var(--muted))]/30">
+                                                        <td className="px-4 py-3 font-medium">
+                                                            {order.customer?.name || '—'}
+                                                        </td>
+                                                        <td className="px-4 py-3">
+                                                            {orderType}
+                                                        </td>
+                                                        <td className="px-4 py-3">
+                                                            <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${stageClass}`}>
+                                                                {currentStage}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-4 py-3 font-medium text-green-600 dark:text-green-400">
+                                                            EGP {totalAmount.toLocaleString()}
+                                                        </td>
+                                                        <td className="px-4 py-3">
+                                                            {order.createdAt && !isNaN(new Date(order.createdAt).getTime())
+                                                                ? new Date(order.createdAt).toLocaleDateString('en-GB', {
+                                                                    day: '2-digit',
+                                                                    month: 'short',
+                                                                    year: 'numeric',
+                                                                })
+                                                                : '—'
+                                                            }
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        ) : (
+                            /* Work Orders Table - For non-Sales roles */
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-sm">
+                                    <thead className="bg-[hsl(var(--muted))]/50">
+                                        <tr>
+                                            <th className="px-4 py-3 text-left font-medium">Customer</th>
+                                            <th className="px-4 py-3 text-left font-medium">Issue</th>
+                                            <th className="px-4 py-3 text-left font-medium">Type</th>
+                                            <th className="px-4 py-3 text-left font-medium">Date</th>
+                                            <th className="px-4 py-3 text-left font-medium">Punctuality</th>
+                                            <th className="px-4 py-3 text-left font-medium">Completed</th>
+                                            <th className="px-4 py-3 text-left font-medium">Rating</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-[hsl(var(--border))]">
+                                        {workOrders?.records?.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={7} className="px-4 py-8 text-center text-[hsl(var(--muted-foreground))]">
+                                                    No work orders found.
+                                                </td>
+                                            </tr>
+                                        ) : (
+                                            workOrders?.records?.slice(0, 20).map((wo) => (
+                                                <tr key={wo?._id ?? 'wo'} className="hover:bg-[hsl(var(--muted))]/30">
+                                                    <td className="px-4 py-3 font-medium">
+                                                        {wo?.customerOrderId?.customerId?.name || '—'}
+                                                    </td>
+                                                    <td className="px-4 py-3 max-w-[200px] truncate">
+                                                        {wo?.customerOrderId?.issue || '—'}
+                                                    </td>
+                                                    <td className="px-4 py-3">
+                                                        {wo?.customerOrderId?.typeOfOrder || '—'}
+                                                    </td>
+                                                    <td className="px-4 py-3">
+                                                        {wo?.taskDate && !isNaN(new Date(wo.taskDate).getTime())
+                                                            ? new Date(wo.taskDate).toLocaleDateString('en-GB', {
+                                                                day: '2-digit',
+                                                                month: 'short',
+                                                                year: 'numeric',
+                                                            })
+                                                            : '—'
+                                                        }
+                                                    </td>
+                                                    <td className="px-4 py-3">
+                                                        <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${
+                                                            wo?.punctuality === 'On Time' 
+                                                                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                                                                : wo?.punctuality === 'Delayed'
+                                                                    ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                                                                    : 'bg-gray-100 text-gray-600'
+                                                        }`}>
+                                                            {wo?.punctuality || 'N/A'}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-4 py-3">
+                                                        <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${
+                                                            wo?.taskCompleted === 'Yes' 
+                                                                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                                                                : wo?.taskCompleted === 'No'
+                                                                    ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                                                                    : 'bg-gray-100 text-gray-600'
+                                                        }`}>
+                                                            {wo?.taskCompleted || 'N/A'}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-4 py-3">{wo?.rating || '—'}</td>
+                                                </tr>
+                                            ))
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
                     </div>
                 )}
 

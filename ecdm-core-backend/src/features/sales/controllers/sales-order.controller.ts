@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import * as svc from '../services/sales-order.service';
+import { triggerAutomationIfAccepted } from '../services/sales-order.service';
 import { sendSuccess } from '../../../utils/apiResponse';
 import { interceptUpdate } from '../../../utils/makerChecker';
 import { ModuleName } from '../../shared/types/modification-request.types';
@@ -129,12 +130,15 @@ export const update = async (req: Request, res: Response, next: NextFunction): P
             res,
             ModuleName.SalesOrder,
             targetRecord,
-            req.body
+            req.body,
+            async (documentId: string) => {
+                await triggerAutomationIfAccepted(documentId);
+            }
         );
         
         // If intercepted, response was already sent (202 Accepted)
         if (intercepted) {
-            console.log('🔒 Non-admin update intercepted - sent to approval queue');
+            console.log('🔒 Non-admin update intercepted - automation triggered if applicable');
             console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
             return;
         }

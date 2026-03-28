@@ -90,15 +90,27 @@ export default function SalesReport() {
             return spId === repId;
           });
 
-          // B. Filter using EXACT backend logic (mimicking $or query from backend service)
+          // B.1 WON Orders: finalStatusThirdFollowUp = 'Accepted' (counts towards actual sales)
           const wonOrders = repOrders.filter((o: any) => {
-             const firstFollowUp = String(o?.quotationStatusFirstFollowUp || '').toLowerCase();
-             const secondFollowUp = String(o?.statusSecondFollowUp || '').toLowerCase();
-             const thirdFollowUp = String(o?.finalStatusThirdFollowUp || '').toLowerCase();
-             
-             return firstFollowUp === 'accepted' || 
-                    secondFollowUp === 'scheduled' || 
-                    thirdFollowUp === 'accepted';
+            const thirdFollowUp = String(o?.finalStatusThirdFollowUp || '').toLowerCase();
+            return thirdFollowUp === 'accepted';
+          });
+
+          // B.2 TASKS COMPLETED: finalStatusThirdFollowUp = 'Accepted' OR 'Not Potential'
+          const completedOrders = repOrders.filter((o: any) => {
+            const thirdFollowUp = String(o?.finalStatusThirdFollowUp || '').toLowerCase();
+            return thirdFollowUp === 'accepted' || thirdFollowUp === 'not potential';
+          });
+
+          // B.3 OPEN ORDERS: Orders in 1st, 2nd, or 3rd follow-up WITHOUT final decision
+          // Logic: Has progressed to follow-up AND finalStatusThirdFollowUp is empty
+          const openOrders = repOrders.filter((o: any) => {
+            const firstFollowUp = String(o?.quotationStatusFirstFollowUp || '').trim();
+            const secondFollowUp = String(o?.statusSecondFollowUp || '').trim();
+            const thirdFollowUp = String(o?.finalStatusThirdFollowUp || '').trim();
+            const hasFollowUp = firstFollowUp !== '' || secondFollowUp !== '' || o?.followUpThird;
+            const hasFinalDecision = thirdFollowUp === 'accepted' || thirdFollowUp === 'not potential';
+            return hasFollowUp && !hasFinalDecision;
           });
 
           // C. Sum using EXACT backend field: quotation.grandTotal
@@ -129,7 +141,9 @@ export default function SalesReport() {
             actualSales: actualSales,
             performanceScore: perfScore.toFixed(1),
             newClients: repOrders.length,
+            openOrders: openOrders.length,
             dealsClosed: wonOrders.length,
+            tasksCompleted: completedOrders.length,
             feedback: '4.5',
             status: repStatus,
             hrApproved: false,
@@ -197,6 +211,8 @@ export default function SalesReport() {
                 <th className="px-6 py-4">Actual Sales</th>
                 <th className="px-6 py-4">Perf. Score</th>
                 <th className="px-6 py-4">Clients (New)</th>
+                <th className="px-6 py-4">Open Orders</th>
+                <th className="px-6 py-4">Tasks Completed</th>
                 <th className="px-6 py-4">Deals Closed</th>
                 <th className="px-6 py-4">Feedback</th>
                 <th className="px-6 py-4">Status</th>
@@ -218,6 +234,8 @@ export default function SalesReport() {
                   </td>
                   <td className="px-6 py-4 font-bold text-slate-900 dark:text-white">{row.performanceScore}%</td>
                   <td className="px-6 py-4 text-slate-600 dark:text-slate-300">{row.newClients}</td>
+                  <td className="px-6 py-4 text-blue-600 dark:text-blue-400 font-medium">{row.openOrders}</td>
+                  <td className="px-6 py-4 text-green-600 dark:text-green-400 font-medium">{row.tasksCompleted}</td>
                   <td className="px-6 py-4 text-slate-600 dark:text-slate-300">{row.dealsClosed}</td>
                   <td className="px-6 py-4 text-amber-500 font-bold">{row.feedback} ★</td>
                   <td className="px-6 py-4">{getStatusBadge(row.status)}</td>
@@ -231,7 +249,7 @@ export default function SalesReport() {
               ))}
               {reportData.length === 0 && (
                 <tr>
-                  <td colSpan={12} className="px-6 py-8 text-center text-slate-500 dark:text-slate-400">
+                  <td colSpan={14} className="px-6 py-8 text-center text-slate-500 dark:text-slate-400">
                     No sales data available.
                   </td>
                 </tr>

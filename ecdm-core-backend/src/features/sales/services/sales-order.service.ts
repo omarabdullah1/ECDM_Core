@@ -1,4 +1,5 @@
 import { AppError } from '../../../utils/apiError';
+import { DealStatus } from '../../customer/types/customer-order.types';
 import CustomerOrder from '../../customer/models/customer-order.model';
 import Feedback from '../../customer/models/feedback.model';
 import FollowUp from '../../customer/models/follow-up.model';
@@ -59,9 +60,12 @@ export const update = async (id: string, data: UpdateSalesOrderInput): Promise<I
     console.log('🔄 Service: Processing sales order update...');
     console.log('Raw input data:', JSON.stringify(data, null, 2));
 
-    // Capture previous status for Campaign ROI tracking
-    const previousOrder = await SalesOrder.findById(id).select('finalStatus');
+    // Capture previous status for Campaign ROI tracking and automation triggers
+    const previousOrder = await SalesOrder.findById(id).select('finalStatus quotationStatusFirstFollowUp statusSecondFollowUp finalStatusThirdFollowUp');
     const previousFinalStatus = previousOrder?.finalStatus;
+    const previousFirstFollowUpStatus = previousOrder?.quotationStatusFirstFollowUp;
+    const previousSecondFollowUpStatus = previousOrder?.statusSecondFollowUp;
+    const previousThirdFollowUpStatus = previousOrder?.finalStatusThirdFollowUp;
 
     // ═════════════════════════════════════════════════════════════════════════
     // Type Conversion Layer - FormData sends everything as strings
@@ -148,16 +152,133 @@ export const update = async (id: string, data: UpdateSalesOrderInput): Promise<I
     if (!doc) throw new AppError('Sales order not found', 404);
 
     // ═════════════════════════════════════════════════════════════════════════
+    // ROLE-AGNOSTIC AUTOMATION TRIGGER
+    // When ANY of the three follow-up statuses changes to 'Accepted' or 'Scheduled', trigger automation
+    // This works for Admin, Manager, AND Sales roles
+    // ═════════════════════════════════════════════════════════════════════════
+    const newFirstFollowUpStatus = processedData.quotationStatusFirstFollowUp;
+    const newSecondFollowUpStatus = processedData.statusSecondFollowUp;
+    const newThirdFollowUpStatus = processedData.finalStatusThirdFollowUp;
+
+    const wasPositiveBefore = 
+        (previousFirstFollowUpStatus as any) === 'Accepted' || (previousFirstFollowUpStatus as any) === 'Scheduled' ||
+        (previousSecondFollowUpStatus as any) === 'Accepted' || (previousSecondFollowUpStatus as any) === 'Scheduled' ||
+        (previousThirdFollowUpStatus as any) === 'Accepted' || (previousThirdFollowUpStatus as any) === 'Scheduled';
+
+    const isPositiveNow = 
+        (newFirstFollowUpStatus as any) === 'Accepted' || (newFirstFollowUpStatus as any) === 'Scheduled' ||
+        (newSecondFollowUpStatus as any) === 'Accepted' || (newSecondFollowUpStatus as any) === 'Scheduled' ||
+        (newThirdFollowUpStatus as any) === 'Accepted' || (newThirdFollowUpStatus as any) === 'Scheduled';
+
+    const isPositiveTransition = !wasPositiveBefore && isPositiveNow;
+
+    let populatedOrder: any = null;
+    if (isPositiveTransition) {
+        console.log('🎯 AUTOMATION TRIGGER: Positive status detected in follow-ups');
+        console.log('   First:', newFirstFollowUpStatus, '| Second:', newSecondFollowUpStatus, '| Third:', newThirdFollowUpStatus);
+        console.log('   This works for Admin, Manager, AND Sales roles');
+
+        populatedOrder = await SalesOrder.findById(doc._id)
+            .populate('salesLead')
+            .populate('salesData')
+            .populate('salesPerson', '_id firstName lastName email')
+            .exec();
+
+        if (populatedOrder) {
+            const resolvedType = populatedOrder.typeOfOrder ||
+                (populatedOrder.salesLead as any)?.typeOfOrder ||
+                (populatedOrder.salesData as any)?.typeOfOrder || '';
+
+            let resolvedIssue = populatedOrder.issue ||
+                (populatedOrder.salesLead as any)?.issue ||
+                (populatedOrder.salesData as any)?.issue || '';
+
+            let finalCost = populatedOrder.quotation?.grandTotal || 0;
+
+            if (populatedOrder.quotation?.items?.length) {
+                const quotationItemsStr = populatedOrder.quotation.items.map((i: any) => `${i.quantity}x ${i.description}`).join(' | ');
+                resolvedIssue = `[Quotation] ${quotationItemsStr} — ${resolvedIssue}`;
+            }
+
+            const existingCustomerOrder = await CustomerOrder.findOne({ salesOrderId: populatedOrder._id });
+
+            if (existingCustomerOrder) {
+                console.log('   📦 Customer Order already exists, syncing:', existingCustomerOrder._id);
+                existingCustomerOrder.typeOfOrder = resolvedType;
+                existingCustomerOrder.issue = resolvedIssue;
+                existingCustomerOrder.deal = DealStatus.Pending;
+                existingCustomerOrder.cost = finalCost;
+                await existingCustomerOrder.save();
+            } else {
+                console.log('   ✨ Creating NEW Customer Order...');
+                const newCustomerOrder = await CustomerOrder.create({
+                    customerId: populatedOrder.customer,
+                    salesOrderId: populatedOrder._id,
+                    typeOfOrder: resolvedType,
+                    issue: resolvedIssue,
+                    cost: finalCost,
+                    deal: DealStatus.Pending,
+                    notes: 'Auto-generated from Sales Order - Positive follow-up status (Won).',
+                    scheduledVisitDate: populatedOrder.siteInspectionDate,
+                });
+
+                try {
+                    const followUpDate = new Date();
+                    followUpDate.setDate(followUpDate.getDate() + 3);
+                    await FollowUp.create({
+                        customerOrderId: newCustomerOrder._id,
+                        customer: newCustomerOrder.customerId,
+                        status: FollowUpStatus.Pending,
+                        followUpDate,
+                        notes: 'Auto-generated from Sales Order conversion.',
+                    });
+                    console.log('   ✅ Follow-up record auto-created');
+                } catch (error) {
+                    console.error('   ⚠️ Failed to auto-create Follow-up:', error);
+                }
+
+                try {
+                    await Feedback.create({
+                        customerId: newCustomerOrder.customerId,
+                        customerOrderId: newCustomerOrder._id,
+                        solvedIssue: '',
+                        ratingOperation: '',
+                        followUp: '',
+                        ratingCustomerService: '',
+                        notes: '',
+                    });
+                    console.log('   ✅ Feedback record auto-created');
+                } catch (error) {
+                    console.error('   ⚠️ Failed to auto-create Feedback:', error);
+                }
+
+                try {
+                    await WorkOrder.create({
+                        customerOrderId: newCustomerOrder._id,
+                    });
+                    console.log('   ✅ Work Order auto-created');
+                } catch (error) {
+                    console.error('   ⚠️ Failed to auto-create Work Order:', error);
+                }
+            }
+
+            console.log('   📊 Target Progress: Automatically calculated from accepted orders');
+        }
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
     // CONTINUOUS SYNC: Sequential Cascading Trigger (Customer Order → Work Order)
     // ═════════════════════════════════════════════════════════════════════════
     console.log('🔍 Starting sequential cascading sync...');
     console.log('📋 Sales Order ID:', doc._id);
 
-    // STEP 1: Force fully populated fetch of the Sales Order
-    const populatedOrder = await SalesOrder.findById(doc._id)
-        .populate('salesLead')
-        .populate('salesData')
-        .exec();
+    // Reuse populatedOrder if already fetched for Accepted trigger
+    if (!populatedOrder) {
+        populatedOrder = await SalesOrder.findById(doc._id)
+            .populate('salesLead')
+            .populate('salesData')
+            .exec();
+    }
 
     if (!populatedOrder) {
         console.warn('⚠️ Could not populate sales order for cascading sync');
@@ -322,6 +443,130 @@ export const update = async (id: string, data: UpdateSalesOrderInput): Promise<I
 export const remove = async (id: string): Promise<void> => {
     const doc = await SalesOrder.findByIdAndDelete(id);
     if (!doc) throw new AppError('Sales order not found', 404);
+};
+
+/**
+ * Trigger automation for Sales Order conversion.
+ * Called by controller after maker-checker intercept saves the document directly.
+ * This ensures automation runs regardless of whether update came via service or interceptor.
+ * 
+ * Logic: If ANY of the three follow-up statuses is 'Accepted' or 'Scheduled', trigger automation.
+ */
+export const triggerAutomationIfAccepted = async (salesOrderId: string): Promise<void> => {
+    console.log('🔄 triggerAutomationIfAccepted: Checking for Accepted/Scheduled status...');
+
+    const order = await SalesOrder.findById(salesOrderId);
+    if (!order) {
+        console.warn('   ⚠️ Sales order not found:', salesOrderId);
+        return;
+    }
+
+    const isPositive = 
+        (order.quotationStatusFirstFollowUp as any) === 'Accepted' ||
+        (order.quotationStatusFirstFollowUp as any) === 'Scheduled' ||
+        (order.statusSecondFollowUp as any) === 'Accepted' ||
+        (order.statusSecondFollowUp as any) === 'Scheduled' ||
+        (order.finalStatusThirdFollowUp as any) === 'Accepted' ||
+        (order.finalStatusThirdFollowUp as any) === 'Scheduled';
+
+    if (isPositive) {
+        console.log('   🎯 Positive status detected - triggering automation...');
+        console.log('      - First Follow-Up:', order.quotationStatusFirstFollowUp);
+        console.log('      - Second Follow-Up:', order.statusSecondFollowUp);
+        console.log('      - Third Follow-Up:', order.finalStatusThirdFollowUp);
+
+        const populatedOrder = await SalesOrder.findById(salesOrderId)
+            .populate('salesLead')
+            .populate('salesData')
+            .populate('salesPerson', '_id firstName lastName email')
+            .exec();
+
+        if (!populatedOrder) {
+            console.warn('   ⚠️ Could not populate sales order');
+            return;
+        }
+
+        const resolvedType = populatedOrder.typeOfOrder ||
+            (populatedOrder.salesLead as any)?.typeOfOrder ||
+            (populatedOrder.salesData as any)?.typeOfOrder || '';
+
+        let resolvedIssue = populatedOrder.issue ||
+            (populatedOrder.salesLead as any)?.issue ||
+            (populatedOrder.salesData as any)?.issue || '';
+
+        let finalCost = populatedOrder.quotation?.grandTotal || 0;
+
+        if (populatedOrder.quotation?.items?.length) {
+            const quotationItemsStr = populatedOrder.quotation.items.map((i: any) => `${i.quantity}x ${i.description}`).join(' | ');
+            resolvedIssue = `[Quotation] ${quotationItemsStr} — ${resolvedIssue}`;
+        }
+
+        const existingCustomerOrder = await CustomerOrder.findOne({ salesOrderId: populatedOrder._id });
+
+        if (existingCustomerOrder) {
+            console.log('   📦 Customer Order already exists, syncing:', existingCustomerOrder._id);
+            existingCustomerOrder.typeOfOrder = resolvedType;
+            existingCustomerOrder.issue = resolvedIssue;
+            existingCustomerOrder.deal = DealStatus.Pending;
+            existingCustomerOrder.cost = finalCost;
+            await existingCustomerOrder.save();
+        } else {
+            console.log('   ✨ Creating NEW Customer Order...');
+            const newCustomerOrder = await CustomerOrder.create({
+                customerId: populatedOrder.customer,
+                salesOrderId: populatedOrder._id,
+                typeOfOrder: resolvedType,
+                issue: resolvedIssue,
+                cost: finalCost,
+                deal: DealStatus.Pending,
+                notes: 'Auto-generated from Sales Order - Third follow-up Accepted (Won).',
+                scheduledVisitDate: populatedOrder.siteInspectionDate,
+            });
+
+            try {
+                const followUpDate = new Date();
+                followUpDate.setDate(followUpDate.getDate() + 3);
+                await FollowUp.create({
+                    customerOrderId: newCustomerOrder._id,
+                    customer: newCustomerOrder.customerId,
+                    status: FollowUpStatus.Pending,
+                    followUpDate,
+                    notes: 'Auto-generated from Sales Order conversion.',
+                });
+                console.log('   ✅ Follow-up record auto-created');
+            } catch (error) {
+                console.error('   ⚠️ Failed to auto-create Follow-up:', error);
+            }
+
+            try {
+                await Feedback.create({
+                    customerId: newCustomerOrder.customerId,
+                    customerOrderId: newCustomerOrder._id,
+                    solvedIssue: '',
+                    ratingOperation: '',
+                    followUp: '',
+                    ratingCustomerService: '',
+                    notes: '',
+                });
+                console.log('   ✅ Feedback record auto-created');
+            } catch (error) {
+                console.error('   ⚠️ Failed to auto-create Feedback:', error);
+            }
+
+            try {
+                await WorkOrder.create({
+                    customerOrderId: newCustomerOrder._id,
+                });
+                console.log('   ✅ Work Order auto-created');
+            } catch (error) {
+                console.error('   ⚠️ Failed to auto-create Work Order:', error);
+            }
+        }
+
+        console.log('   📊 Target Progress: Automatically calculated from accepted orders');
+    } else {
+        console.log('   ⏭️  Status is not Accepted, skipping automation');
+    }
 };
 
 /**

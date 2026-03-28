@@ -65,6 +65,7 @@ export const remove = async (req: Request, res: Response, next: NextFunction) =>
 /**
  * Calculate performance for a salesperson
  * Query params: salespersonId (required), month (optional), year (optional)
+ * Supports both MongoDB _id and employeeId (e.g., EMP-1042)
  */
 export const getPerformance = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
@@ -78,6 +79,8 @@ export const getPerformance = async (req: Request, res: Response, next: NextFunc
             return;
         }
 
+        console.log('[SalesTarget] getPerformance called with salespersonId:', salespersonId);
+
         const performance = await service.calculatePerformance(
             salespersonId as string,
             month ? Number(month) : undefined,
@@ -85,7 +88,8 @@ export const getPerformance = async (req: Request, res: Response, next: NextFunc
         );
 
         sendSuccess(res, performance, 'Performance calculated successfully');
-    } catch (error) {
+    } catch (error: any) {
+        console.error('[SalesTarget] getPerformance error:', error.message);
         next(error);
     }
 };

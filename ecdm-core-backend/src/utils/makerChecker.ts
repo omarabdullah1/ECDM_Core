@@ -65,7 +65,8 @@ export const interceptUpdate = async (
     res: Response,
     moduleName: ModuleName,
     originalDocument: mongoose.Document,
-    proposedData: Record<string, unknown>
+    proposedData: Record<string, unknown>,
+    onDirectSave?: (documentId: string) => Promise<void>
 ): Promise<boolean> => {
     const userRole = req.user?.role;
 
@@ -170,6 +171,16 @@ export const interceptUpdate = async (
             Object.assign(originalDocument, directUpdates);
             updatedDocument = await originalDocument.save();
             console.log(`✅ Direct updates applied: ${Object.keys(directUpdates).join(', ')}`);
+
+            // Trigger post-save callback for automation (if provided)
+            if (onDirectSave) {
+                console.log('🔥 Calling post-save callback for automation...');
+                try {
+                    await onDirectSave(updatedDocument._id.toString());
+                } catch (callbackError) {
+                    console.error('⚠️ Post-save callback error:', callbackError);
+                }
+            }
         }
 
         // Create modification request for changes needing approval (if any)

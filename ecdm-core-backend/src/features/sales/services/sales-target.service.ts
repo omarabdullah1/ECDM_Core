@@ -5,6 +5,7 @@ import { CreateSalesTargetInput, UpdateSalesTargetInput } from '../validation/sa
 import { ISalesTargetDocument } from '../types/sales-target.types';
 import { AppError } from '../../../utils/apiError';
 import { QuotationStatus, SecondFollowUpStatus, ThirdFollowUpStatus } from '../types/sales-order.types';
+import { Types } from 'mongoose';
 
 /**
  * Create or update (upsert) a sales target for a given salesperson/month/year.
@@ -115,49 +116,90 @@ export const remove = async (id: string): Promise<void> => {
 /**
  * Calculate performance for a salesperson for a specific month/year
  * Returns target amount, achieved amount, and progress percentage
+ * 
+ * Business Logic:
+ * - Won orders: ANY of the three follow-up statuses = 'Accepted' (counts towards achieved amount)
+ * - Not Potential: finalStatusThirdFollowUp = 'Not Potential' (task completed but no revenue)
+ * - Open orders: Any order in follow-up without Accepted status (not counted as completed)
  */
 export const calculatePerformance = async (salespersonId: string, month?: number, year?: number) => {
-    const currentDate = new Date();
-    const targetMonth = month || currentDate.getMonth() + 1;
-    const targetYear = year || currentDate.getFullYear();
+    try {
+        const currentDate = new Date();
+        const targetMonth = month || currentDate.getMonth() + 1;
+        const targetYear = year || currentDate.getFullYear();
 
-    // 1. Get the target for this month/year
-    const targetDoc = await SalesTarget.findOne({
-        salespersonId,
-        month: targetMonth,
-        year: targetYear,
-    });
+        console.log('[SalesTargetService] calculatePerformance called:', { salespersonId, targetMonth, targetYear });
 
-    const targetAmount = targetDoc ? targetDoc.targetAmount : 0;
+        // 1. Resolve salespersonId to MongoDB ObjectId (handle both _id and employeeId)
+        const isObjectId = Types.ObjectId.isValid(salespersonId);
+        let userObjectId: Types.ObjectId;
+        
+        if (isObjectId) {
+            userObjectId = new Types.ObjectId(salespersonId);
+            console.log('[SalesTargetService] Using as ObjectId:', userObjectId);
+        } else {
+            console.log('[SalesTargetService] Looking up user by employeeId:', salespersonId);
+            const user = await User.findOne({ employeeId: salespersonId });
+            if (!user) {
+                console.log('[SalesTargetService] User not found, returning zeros');
+                return {
+                    targetAmount: 0,
+                    achievedAmount: 0,
+                    progressPercentage: 0,
+                    month: targetMonth,
+                    year: targetYear,
+                };
+            }
+            userObjectId = user._id as Types.ObjectId;
+            console.log('[SalesTargetService] Found user:', userObjectId);
+        }
 
-    // 2. Calculate achieved amount from Sales Orders
-    // An order counts if any of the 3 follow-up statuses equals 'Accepted', 'Scheduled', or (not 'NotPotential')
-    const wonOrders = await SalesOrder.find({
-        salesPerson: salespersonId, // Note: using salesPerson field once it's added to the model
-        $or: [
-            { quotationStatusFirstFollowUp: QuotationStatus.Accepted },
-            { statusSecondFollowUp: SecondFollowUpStatus.Scheduled },
-            { 
-                finalStatusThirdFollowUp: ThirdFollowUpStatus.Accepted,
-            },
-        ],
-    });
+        // 2. Get the target for this month/year
+        console.log('[SalesTargetService] Looking up SalesTarget:', { salespersonId: userObjectId, month: targetMonth, year: targetYear });
+        const targetDoc = await SalesTarget.findOne({
+            salespersonId: userObjectId,
+            month: targetMonth,
+            year: targetYear,
+        });
 
-    // Sum up the quotation grandTotal values
-    const achievedAmount = wonOrders.reduce((sum, order) => {
-        const quotationValue = order.quotation?.grandTotal || 0;
-        return sum + quotationValue;
-    }, 0);
+        const targetAmount = targetDoc ? targetDoc.targetAmount : 0;
+        console.log('[SalesTargetService] Target found:', targetDoc ? targetDoc.targetAmount : 'none (using 0)');
 
-    const progressPercentage = targetAmount > 0 
-        ? Math.min(Math.round((achievedAmount / targetAmount) * 100), 100) 
-        : 0;
+        // 3. Calculate achieved amount from Sales Orders
+        // An order is considered "Won" if ANY of the three follow-up statuses is 'Accepted'
+        console.log('[SalesTargetService] Looking up won orders for:', userObjectId);
+        const wonOrders = await SalesOrder.find({
+            salesPerson: userObjectId,
+            $or: [
+                { quotationStatusFirstFollowUp: ThirdFollowUpStatus.Accepted },
+                { statusSecondFollowUp: ThirdFollowUpStatus.Accepted },
+                { finalStatusThirdFollowUp: ThirdFollowUpStatus.Accepted },
+            ]
+        });
 
-    return {
-        targetAmount,
-        achievedAmount,
-        progressPercentage,
-        month: targetMonth,
-        year: targetYear,
-    };
+        console.log('[SalesTargetService] Won orders count:', wonOrders.length);
+
+        // Sum up the quotation grandTotal values for Won orders
+        const achievedAmount = wonOrders.reduce((sum, order) => {
+            const quotationValue = order.quotation?.grandTotal || 0;
+            return sum + quotationValue;
+        }, 0);
+
+        const progressPercentage = targetAmount > 0 
+            ? Math.min(Math.round((achievedAmount / targetAmount) * 100), 100) 
+            : 0;
+
+        console.log('[SalesTargetService] Calculated:', { targetAmount, achievedAmount, progressPercentage });
+
+        return {
+            targetAmount,
+            achievedAmount,
+            progressPercentage,
+            month: targetMonth,
+            year: targetYear,
+        };
+    } catch (error: any) {
+        console.error('[SalesTargetService] calculatePerformance error:', error.message, error.stack);
+        throw error;
+    }
 };

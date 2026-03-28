@@ -10,6 +10,26 @@ import {
 } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 
+interface SalesKPIs {
+    tasksCompleted: number;
+    openOrders: number;
+    activeLeads: number;
+    targetSales: number;
+    achievedAmount: number;
+    attendanceRate: number;
+}
+
+interface Profile360 {
+    salesKPIs: SalesKPIs | null;
+    attendance: {
+        stats: {
+            monthly: {
+                presentRate: number;
+            };
+        };
+    };
+}
+
 /* ── Stats Widget ─────────────────────────────────────────────── */
 const StatCard = ({ icon: Icon, label, value, color }: {
     icon: React.ComponentType<{ size?: number; className?: string }>;
@@ -72,15 +92,8 @@ export default function ProfilePage() {
     });
     const [saving, setSaving] = useState(false);
 
-    // Sales Performance State
-    const [performance, setPerformance] = useState<{
-        targetAmount: number;
-        achievedAmount: number;
-        progressPercentage: number;
-        month: number;
-        year: number;
-    } | null>(null);
-    const [loadingPerformance, setLoadingPerformance] = useState(false);
+    const [profile360, setProfile360] = useState<Profile360 | null>(null);
+    const [loadingProfile, setLoadingProfile] = useState(false);
 
     useEffect(() => {
         if (user) {
@@ -91,33 +104,34 @@ export default function ProfilePage() {
                 address: (user as unknown as Record<string, string>).address ?? '',
             });
 
-            // Fetch performance data for Sales role
-            if (user.role === 'Sales' || user.role === 'Manager' || user.role === 'SuperAdmin') {
-                // Immediately invoke fetch with the current user ID
-                const fetchPerformanceData = async () => {
-                    if (!user._id) {
-                        console.warn('User ID is undefined, cannot fetch performance');
-                        return;
-                    }
-                    
-                    setLoadingPerformance(true);
+            if (user.role === 'Sales' && user._id) {
+                const fetchProfile360 = async () => {
+                    setLoadingProfile(true);
                     try {
-                        const { data } = await api.get('/sales/targets/performance', {
-                            params: { salespersonId: user._id },
-                        });
-                        setPerformance(data.data);
+                        const response = await api.get(`/hr/users/${user._id}/profile`);
+                        const profileData = response.data?.data || response.data;
+                        const mappedProfile: Profile360 = {
+                            salesKPIs: profileData.salesKPIs || null,
+                            attendance: profileData.attendance || { stats: { monthly: { presentRate: 0 } } },
+                        };
+                        setProfile360(mappedProfile);
                     } catch (err) {
-                        console.error('Failed to fetch performance:', err);
-                        // Don't show error toast - just fail silently if no target set
+                        console.error('Failed to fetch profile data:', err);
                     } finally {
-                        setLoadingPerformance(false);
+                        setLoadingProfile(false);
                     }
                 };
-
-                fetchPerformanceData();
+                fetchProfile360();
             }
         }
     }, [user]);
+
+    const salesKPIs = profile360?.salesKPIs;
+    const attendanceRate = salesKPIs?.attendanceRate ?? profile360?.attendance?.stats?.monthly?.presentRate ?? 0;
+
+    const progressPercentage = salesKPIs && salesKPIs.targetSales > 0
+        ? Math.round((salesKPIs.achievedAmount / salesKPIs.targetSales) * 100)
+        : 0;
 
     const handleSave = async () => {
         setSaving(true);
@@ -191,10 +205,33 @@ export default function ProfilePage() {
                     <div className="rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-4 space-y-3">
                         <h3 className="text-xs font-semibold uppercase tracking-wide text-[hsl(var(--muted-foreground))]">My Activity</h3>
                         <div className="space-y-2">
-                            <StatCard icon={CheckCircle2} label="Tasks Completed" value="—" color="bg-green-500" />
-                            <StatCard icon={TrendingUp} label="Active Leads" value="—" color="bg-blue-500" />
-                            <StatCard icon={ClipboardList} label="Open Orders" value="—" color="bg-amber-500" />
-                            <StatCard icon={Calendar} label="Attendance Rate" value="—" color="bg-purple-500" />
+                            {loadingProfile ? (
+                                <>
+                                    <div className="flex items-center gap-3 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] p-3 opacity-50">
+                                        <div className="h-9 w-9 rounded-lg bg-gray-300 animate-pulse" />
+                                        <div><div className="h-3 w-20 bg-gray-300 rounded animate-pulse mb-1" /><div className="h-5 w-12 bg-gray-300 rounded animate-pulse" /></div>
+                                    </div>
+                                    <div className="flex items-center gap-3 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] p-3 opacity-50">
+                                        <div className="h-9 w-9 rounded-lg bg-gray-300 animate-pulse" />
+                                        <div><div className="h-3 w-20 bg-gray-300 rounded animate-pulse mb-1" /><div className="h-5 w-12 bg-gray-300 rounded animate-pulse" /></div>
+                                    </div>
+                                    <div className="flex items-center gap-3 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] p-3 opacity-50">
+                                        <div className="h-9 w-9 rounded-lg bg-gray-300 animate-pulse" />
+                                        <div><div className="h-3 w-20 bg-gray-300 rounded animate-pulse mb-1" /><div className="h-5 w-12 bg-gray-300 rounded animate-pulse" /></div>
+                                    </div>
+                                    <div className="flex items-center gap-3 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] p-3 opacity-50">
+                                        <div className="h-9 w-9 rounded-lg bg-gray-300 animate-pulse" />
+                                        <div><div className="h-3 w-20 bg-gray-300 rounded animate-pulse mb-1" /><div className="h-5 w-12 bg-gray-300 rounded animate-pulse" /></div>
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    <StatCard icon={CheckCircle2} label="Tasks Completed" value={salesKPIs?.tasksCompleted ?? 0} color="bg-green-500" />
+                                    <StatCard icon={TrendingUp} label="Active Leads" value={salesKPIs?.activeLeads ?? 0} color="bg-blue-500" />
+                                    <StatCard icon={ClipboardList} label="Open Orders" value={salesKPIs?.openOrders ?? 0} color="bg-amber-500" />
+                                    <StatCard icon={Calendar} label="Attendance Rate" value={`${attendanceRate}%`} color="bg-purple-500" />
+                                </>
+                            )}
                             
                             {/* TARGET BUDGET CARD (For Marketing / Admins) */}
                             {(user?.role === 'Marketing' || user?.role === 'Admin' || user?.role === 'SuperAdmin') && (
@@ -228,30 +265,30 @@ export default function ProfilePage() {
                                 </h3>
                             </div>
 
-                            {loadingPerformance ? (
+                            {loadingProfile ? (
                                 <div className="flex items-center justify-center py-6 text-[hsl(var(--muted-foreground))]">
                                     <Loader2 className="w-4 h-4 animate-spin mr-2" />
                                     <span className="text-xs">Loading...</span>
                                 </div>
-                            ) : performance ? (
+                            ) : salesKPIs ? (
                                 <div className="space-y-3">
                                     <div className="flex justify-between items-center">
                                         <span className="text-xs text-[hsl(var(--muted-foreground))]">Monthly Target</span>
-                                        <span className="text-sm font-bold">${performance.targetAmount.toLocaleString()}</span>
+                                        <span className="text-sm font-bold">${(salesKPIs.targetSales || 0).toLocaleString()}</span>
                                     </div>
                                     <div className="flex justify-between items-center">
                                         <span className="text-xs text-[hsl(var(--muted-foreground))]">Achieved</span>
                                         <span className="text-sm font-bold text-green-600 dark:text-green-400">
-                                            ${performance.achievedAmount.toLocaleString()}
+                                            ${(salesKPIs.achievedAmount || 0).toLocaleString()}
                                         </span>
                                     </div>
                                     <div className="space-y-1.5">
                                         <div className="flex justify-between text-xs text-[hsl(var(--muted-foreground))]">
                                             <span>Progress</span>
-                                            <span className="font-semibold">{performance.progressPercentage}%</span>
+                                            <span className="font-semibold">{progressPercentage}%</span>
                                         </div>
                                         <Progress 
-                                            value={performance.progressPercentage} 
+                                            value={progressPercentage} 
                                             max={100}
                                             className="h-2 bg-blue-100 dark:bg-blue-900"
                                             indicatorClassName="bg-blue-600 dark:bg-blue-400"
