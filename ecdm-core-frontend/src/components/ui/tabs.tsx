@@ -48,7 +48,7 @@ export function TabsList({
   return (
     <div
       className={cn(
-        'inline-flex h-10 items-center justify-center rounded-lg bg-[hsl(var(--muted))] p-1 text-[hsl(var(--muted-foreground))]',
+        'inline-flex h-9 items-center justify-center rounded-md bg-[hsl(var(--secondary))]/50 p-1 text-[hsl(var(--muted-foreground))]',
         className
       )}
     >
@@ -74,10 +74,10 @@ export function TabsTrigger({
       type="button"
       onClick={() => onValueChange(value)}
       className={cn(
-        'inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50',
+        'inline-flex h-7 items-center justify-center whitespace-nowrap rounded-sm px-4 text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[hsl(var(--primary))]/10 disabled:pointer-events-none disabled:opacity-50',
         isActive
           ? 'bg-[hsl(var(--background))] text-[hsl(var(--foreground))] shadow-sm'
-          : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]',
+          : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--secondary))]/50',
         className
       )}
     >
@@ -102,7 +102,7 @@ export function TabsContent({
   return (
     <div
       className={cn(
-        'mt-2 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+        'mt-4 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[hsl(var(--primary))]/10 rounded-md',
         className
       )}
     >

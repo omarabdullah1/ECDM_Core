@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import api from '@/lib/axios';
 import { Wrench, X, Trash2, Plus } from 'lucide-react';
 import DataTable from '@/components/ui/DataTable';
+import { PageHeader } from '@/components/layout/PageHeader';
 import { columns, WorkOrder } from './columns';
 import toast from 'react-hot-toast';
 
@@ -131,7 +132,7 @@ export default function WorkOrderPage() {
   const PUNCTUALITIES = ['Same time', 'Late'];
   const TASK_COMPLETED = ['Yes', 'No'];
   const SPARE_PARTS_AVAILABILITY = ['Available', 'Not Available', 'Requested'];
-  const iCls = 'w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-4 py-3 text-sm placeholder:text-[hsl(var(--muted-foreground))] focus:border-[hsl(var(--primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/20 transition-all';
+  const iCls = 'flex h-9 w-full rounded-md border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] px-3 py-1 text-sm shadow-sm transition-all placeholder:text-[hsl(var(--muted-foreground))] focus-visible:outline-none focus-visible:border-[hsl(var(--primary))]/50 focus-visible:ring-[3px] focus-visible:ring-[hsl(var(--primary))]/10';
 
   const fetch_ = useCallback(async () => {
     setLoading(true);
@@ -139,7 +140,7 @@ export default function WorkOrderPage() {
       const p: Record<string, string | number> = { page, limit: lim };
       if (fPunctuality) p.punctuality = fPunctuality;
       if (fTaskCompleted) p.taskCompleted = fTaskCompleted;
-      const { data } = await api.get('/operations/work-order', { params: p });
+      const { data } = await api.get('/operations/work-orders', { params: p });
       setRows(data.data.data);
       setTotal(data.data.pagination.total);
     } catch (error) {
@@ -228,7 +229,7 @@ export default function WorkOrderPage() {
 
     try {
       if (editing) {
-        await api.put(`/operations/work-order/${editing._id}`, pl);
+        await api.put(`/operations/work-orders/${editing._id}`, pl);
         toast.success('Work order updated successfully');
       }
       setModal(false);
@@ -245,7 +246,7 @@ export default function WorkOrderPage() {
   const del = async () => {
     if (!delId) return;
     try {
-      await api.delete(`/operations/work-order/${delId}`);
+      await api.delete(`/operations/work-orders/${delId}`);
       toast.success('Work order deleted successfully');
       fetch_();
     } catch (error) {
@@ -259,27 +260,23 @@ export default function WorkOrderPage() {
     setForm((p) => ({ ...p, [f]: e.target.value }));
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Wrench className="h-7 w-7 text-[hsl(var(--primary))]" />
-          <h1 className="text-2xl font-bold">Work Orders</h1>
-        </div>
-        <span className="text-sm text-[hsl(var(--muted-foreground))]">
-          Work orders are auto-created when a site inspection is scheduled
-        </span>
-      </div>
+      <PageHeader
+        title="Work Orders"
+        icon={Wrench}
+        description="Work orders are auto-created when a site inspection is scheduled"
+      />
 
       {/* Filters */}
-      <div className="flex gap-3 flex-wrap">
+      <div className="flex gap-3 flex-wrap animate-in-slide stagger-2">
         <select
           value={fPunctuality}
           onChange={(e) => {
             setFPunct(e.target.value);
             setPage(1);
           }}
-          className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2 text-sm"
+          className="h-9 rounded-md border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] px-3 py-1 text-sm shadow-sm transition-all focus-visible:outline-none focus-visible:border-[hsl(var(--primary))]/50 focus-visible:ring-[3px] focus-visible:ring-[hsl(var(--primary))]/10"
         >
           <option value="">All Punctuality</option>
           {PUNCTUALITIES.map((s) => (
@@ -294,7 +291,7 @@ export default function WorkOrderPage() {
             setFTaskCompleted(e.target.value);
             setPage(1);
           }}
-          className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2 text-sm"
+          className="h-9 rounded-md border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] px-3 py-1 text-sm shadow-sm transition-all focus-visible:outline-none focus-visible:border-[hsl(var(--primary))]/50 focus-visible:ring-[3px] focus-visible:ring-[hsl(var(--primary))]/10"
         >
           <option value="">Task Completed</option>
           {TASK_COMPLETED.map((s) => (
@@ -317,7 +314,7 @@ export default function WorkOrderPage() {
           totalItems={total}
           itemsPerPage={lim}
           onPageChange={setPage}
-          bulkDeleteEndpoint="/operations/work-order/bulk-delete"
+          bulkDeleteEndpoint="/operations/work-orders/bulk-delete"
           onBulkDeleteSuccess={fetch_}
           meta={{
             onEdit: openE,
@@ -352,8 +349,8 @@ export default function WorkOrderPage() {
 
       {/* Edit Modal */}
       {modal && editing && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6 shadow-2xl">
+        <div className="fixed inset-0 z-[100] flex overflow-y-auto bg-black/60 backdrop-blur-sm p-4 sm:p-6 animate-in fade-in transition-all">
+          <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border border-[hsl(var(--border))] modern-glass-card m-auto relative premium-shadow animate-in-slide p-6 shadow-2xl">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-lg font-bold">Edit Work Order</h2>
               <button onClick={() => setModal(false)}>
@@ -519,7 +516,7 @@ export default function WorkOrderPage() {
 
               {/* Dynamic Parts Used Section */}
               <div className="border border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-4 space-y-4">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-in-slide stagger-1">
                   <label className="block text-sm font-medium">Parts Used</label>
                   <button
                     type="button"
@@ -646,7 +643,7 @@ export default function WorkOrderPage() {
                 <button
                   type="submit"
                   disabled={saving}
-                  className="flex-1 rounded-xl bg-[hsl(var(--primary))] py-2.5 text-sm font-semibold text-[hsl(var(--primary-foreground))] disabled:opacity-60"
+                  className="flex-1 flex-1 rounded-md bg-[hsl(var(--primary))] py-2 text-sm font-medium text-[hsl(var(--primary-foreground))] shadow-sm hover:opacity-90 transition-all focus-visible:outline-none disabled:opacity-60"
                 >
                   {saving ? 'Saving…' : 'Save Changes'}
                 </button>
@@ -656,7 +653,7 @@ export default function WorkOrderPage() {
                     setModal(false);
                     setPartsUsed([]);
                   }}
-                  className="flex-1 rounded-xl border border-[hsl(var(--border))] py-2.5 text-sm"
+                  className="flex-1 flex-1 rounded-md border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] py-2 text-sm font-medium shadow-sm transition-all hover:bg-[hsl(var(--accent))] focus-visible:outline-none"
                 >
                   Cancel
                 </button>
@@ -668,19 +665,19 @@ export default function WorkOrderPage() {
 
       {/* Delete Confirmation Modal */}
       {delId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6 shadow-2xl max-w-sm w-full">
+        <div className="fixed inset-0 z-[100] flex overflow-y-auto bg-black/60 backdrop-blur-sm p-4 sm:p-6 animate-in fade-in transition-all">
+          <div className="rounded-md border border-[hsl(var(--border))]/50 modern-glass-card premium-shadow animate-in-slide m-auto relative p-6 shadow-lg sm:max-w-md w-full">
             <p className="mb-4 font-semibold">Delete this work order?</p>
             <div className="flex gap-3">
               <button
                 onClick={del}
-                className="flex-1 rounded-xl bg-destructive py-2 text-sm font-semibold text-white"
+                className="flex-1 rounded-md bg-[hsl(var(--destructive))] py-2 text-sm font-medium text-[hsl(var(--destructive-foreground))] shadow-sm transition-all hover:opacity-90 focus-visible:outline-none"
               >
                 Delete
               </button>
               <button
                 onClick={() => setDelId(null)}
-                className="flex-1 rounded-xl border py-2 text-sm"
+                className="flex-1 rounded-md border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] py-2 text-sm font-medium shadow-sm transition-all hover:bg-[hsl(var(--accent))] focus-visible:outline-none"
               >
                 Cancel
               </button>

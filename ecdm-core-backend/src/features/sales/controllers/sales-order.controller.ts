@@ -7,9 +7,32 @@ import { ModuleName } from '../../shared/types/modification-request.types';
 import SalesOrder from '../models/sales-order.model';
 import { logAction } from '../../../utils/auditLogger';
 import { AuditAction } from '../../shared/types/audit-log.types';
+import User from '../../auth/auth.model';
+import { AppError } from '../../../utils/apiError';
 
 export const create = async (req: Request, res: Response, next: NextFunction) => {
     try {
+        const userRole = req.user?.role;
+        const isAdmin = userRole === 'SuperAdmin' || userRole === 'Manager' || userRole === 'Admin';
+        
+        // ═══════════════════════════════════════════════════════════════════
+        // DISCOUNT LIMIT VALIDATION
+        // ═══════════════════════════════════════════════════════════════════
+        const quotation = req.body.quotation;
+        if (quotation && quotation.discount !== undefined && quotation.subTotal !== undefined) {
+            const subTotal = Number(quotation.subTotal) || 0;
+            const discount = Number(quotation.discount) || 0;
+            
+            if (subTotal > 0) {
+                const appliedPercentage = (discount / subTotal) * 100;
+                const user = await User.findById(req.user!.userId);
+                
+                if (user && !isAdmin && appliedPercentage > (user.maxDiscountPercentage || 0)) {
+                    throw new AppError(`Exceeded maximum allowed discount percentage of ${user.maxDiscountPercentage || 0}%`, 400);
+                }
+            }
+        }
+
         const order = await svc.create(req.body);
         
         // Log the sales order creation
@@ -118,6 +141,24 @@ export const update = async (req: Request, res: Response, next: NextFunction): P
             console.log('✅ Quotation-only update - allowing collaborative access');
         } else {
             console.log('✅ Ownership validated - User can proceed');
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // DISCOUNT LIMIT VALIDATION
+        // ═══════════════════════════════════════════════════════════════════
+        const quotation = req.body.quotation;
+        if (quotation && quotation.discount !== undefined && quotation.subTotal !== undefined) {
+            const subTotal = Number(quotation.subTotal) || 0;
+            const discount = Number(quotation.discount) || 0;
+            
+            if (subTotal > 0) {
+                const appliedPercentage = (discount / subTotal) * 100;
+                const user = await User.findById(req.user!.userId);
+                
+                if (user && !isAdmin && appliedPercentage > (user.maxDiscountPercentage || 0)) {
+                    throw new AppError(`Exceeded maximum allowed discount percentage of ${user.maxDiscountPercentage || 0}%`, 400);
+                }
+            }
         }
         
         // ═══════════════════════════════════════════════════════════════════

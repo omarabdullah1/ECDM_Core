@@ -308,10 +308,10 @@ export default function ProjectDetailPage({ params }: PageProps) {
     const inProgressTasks = tasks.filter(t => t.status === 'In Progress');
     const doneTasks = tasks.filter(t => t.status === 'Done');
 
-    const iCls = 'w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-4 py-3 text-sm placeholder:text-[hsl(var(--muted-foreground))] focus:border-[hsl(var(--primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/20 transition-all';
+    const iCls = 'flex h-9 w-full rounded-md border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] px-3 py-1 text-sm shadow-sm transition-all placeholder:text-[hsl(var(--muted-foreground))] focus-visible:outline-none focus-visible:border-[hsl(var(--primary))]/50 focus-visible:ring-[3px] focus-visible:ring-[hsl(var(--primary))]/10';
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 pb-8">
             {/* Header */}
             <div className="flex items-start justify-between">
                 <div className="flex items-start gap-3">

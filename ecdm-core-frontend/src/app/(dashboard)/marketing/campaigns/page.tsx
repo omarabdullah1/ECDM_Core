@@ -2,8 +2,10 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import api from '@/lib/axios';
-import { TrendingUp, Plus, X, Upload, RefreshCw, Sheet, Database, Save, Loader2, Check } from 'lucide-react';
+import { TrendingUp, Plus, X, Upload, RefreshCw, Sheet, Database, Save, Loader2, Check, AlertTriangle } from 'lucide-react';
 import { DataTable } from '@/components/ui/DataTable';
+import { PageHeader } from '@/components/layout/PageHeader';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter } from '@/components/ui/dialog';
 import { Pagination } from '@/components/shared/Pagination';
 import { getColumns, type Campaign } from './columns';
 import toast from 'react-hot-toast';
@@ -11,7 +13,7 @@ import toast from 'react-hot-toast';
 const CAMPAIGN_STATUSES = ['Previous', 'Current', 'Future', ''];
 const NEXT_STEPS = ['Analyse', 'Pause', 'Stop', 'Continue', ''];
 
-const iCls = 'w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-4 py-3 text-sm placeholder:text-[hsl(var(--muted-foreground))] focus:border-[hsl(var(--primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/20 transition-all';
+const iCls = 'flex h-9 w-full rounded-md border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] px-3 py-1 text-sm shadow-sm transition-all placeholder:text-[hsl(var(--muted-foreground))] focus-visible:outline-none focus-visible:border-[hsl(var(--primary))]/50 focus-visible:ring-[3px] focus-visible:ring-[hsl(var(--primary))]/10';
 const labelCls = 'text-xs font-semibold text-[hsl(var(--muted-foreground))] uppercase tracking-wide mb-1.5 block';
 
 interface SheetSyncForm {
@@ -306,35 +308,35 @@ export default function CampaignResultsPage() {
     });
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 pb-8">
             {/* Header */}
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                    <TrendingUp className="h-7 w-7 text-[hsl(var(--primary))]" />
-                    <h1 className="text-2xl font-bold">Campaign Results</h1>
-                </div>
-                <div className="flex items-center gap-2">
-                    <button
-                        type="button"
-                        onClick={openSyncModal}
-                        className="flex items-center gap-2 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-4 py-2 text-sm font-medium hover:bg-[hsl(var(--muted))] transition-colors"
-                    >
-                        <Sheet className="h-4 w-4 text-green-600" />
-                        Sync Sheet
-                    </button>
-                    <button
-                        type="button"
-                        onClick={openAdd}
-                        className="flex items-center gap-2 rounded-xl bg-[hsl(var(--primary))] px-4 py-2 text-sm font-semibold text-[hsl(var(--primary-foreground))] hover:opacity-90 transition-opacity"
-                    >
-                        <Plus className="h-4 w-4" />
-                        Add Campaign
-                    </button>
-                </div>
-            </div>
+            <PageHeader 
+                title="Campaign Results"
+                icon={TrendingUp}
+                actions={
+                    <>
+                        <button
+                            type="button"
+                            onClick={openSyncModal}
+                            className="flex items-center gap-2 rounded-md border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] px-4 py-2 text-sm font-medium shadow-sm hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--accent-foreground))] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[hsl(var(--primary))]/10 transition-all"
+                        >
+                            <Sheet className="h-4 w-4 text-green-600" />
+                            Sync Sheet
+                        </button>
+                        <button
+                            type="button"
+                            onClick={openAdd}
+                            className="flex items-center gap-2 rounded-md bg-[hsl(var(--primary))] px-4 py-2 text-sm font-medium text-[hsl(var(--primary-foreground))] shadow-sm hover:opacity-90 border-0 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[hsl(var(--primary))]/10 transition-all"
+                        >
+                            <Plus className="h-4 w-4" />
+                            Add Campaign
+                        </button>
+                    </>
+                }
+            />
 
             <div className="flex gap-3 flex-wrap items-center">
-                <select value={fStatus} onChange={e => setFStatus(e.target.value)} className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2 text-sm">
+                <select value={fStatus} onChange={e => setFStatus(e.target.value)} className="h-9 rounded-md border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] px-3 py-1 text-sm shadow-sm transition-all focus-visible:outline-none focus-visible:border-[hsl(var(--primary))]/50 focus-visible:ring-[3px] focus-visible:ring-[hsl(var(--primary))]/10">
                     <option value="">All Statuses</option>
                     {CAMPAIGN_STATUSES.filter(s => s !== '').map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
@@ -346,7 +348,8 @@ export default function CampaignResultsPage() {
                     data={currentRows}
                     columns={columns}
                     loading={loading}
-                    emptyMessage="No campaigns found."
+                    onRowClick={openEdit}
+                    emptyMessage="No campaign results found."
                     defaultVisibility={{
                         notes: false,
                     }}
@@ -363,18 +366,14 @@ export default function CampaignResultsPage() {
                 />
             )}
 
-            {/* Add/Edit Dialog */}
-            {showModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 overflow-y-auto">
-                    <div className="w-full max-w-2xl rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] shadow-2xl my-8">
-                        <div className="flex items-center justify-between border-b border-[hsl(var(--border))] px-6 py-4">
-                            <h2 className="text-xl font-bold">{editing ? 'Edit Campaign' : 'Add Campaign'}</h2>
-                            <button onClick={() => setShowModal(false)} className="p-2 hover:bg-[hsl(var(--muted))] rounded-lg transition-colors">
-                                <X className="h-5 w-5" />
-                            </button>
-                        </div>
-
-                        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+            {/* Add/Edit Campaign Dialog */}
+            <Dialog open={showModal} onOpenChange={setShowModal}>
+                <DialogContent className="sm:max-w-2xl">
+                    <DialogHeader>
+                        <DialogTitle>{editing ? 'Edit Campaign' : 'Add Campaign'}</DialogTitle>
+                    </DialogHeader>
+                    <DialogBody>
+                        <form id="campaign-form" onSubmit={handleSubmit} className="space-y-4">
                             <div>
                                 <label className={labelCls}>Campaign Name *</label>
                                 <input
@@ -559,47 +558,48 @@ export default function CampaignResultsPage() {
                                     rows={3}
                                 />
                             </div>
-
-                            <div className="flex justify-end gap-3 pt-4 border-t border-[hsl(var(--border))]">
-                                <button
-                                    type="button"
-                                    onClick={() => setShowModal(false)}
-                                    className="px-4 py-2 rounded-xl border border-[hsl(var(--border))] hover:bg-[hsl(var(--muted))] transition-colors"
-                                    disabled={saving}
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    type="submit"
-                                    className="px-4 py-2 rounded-xl bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] hover:opacity-90 transition-opacity disabled:opacity-50"
-                                    disabled={saving}
-                                >
-                                    {saving ? 'Saving...' : editing ? 'Update' : 'Create'}
-                                </button>
-                            </div>
                         </form>
-                    </div>
-                </div>
-            )}
-
-            {/* Google Sheets Sync Modal */}
-            {syncModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-                    <div className="w-full max-w-2xl max-h-[85vh] overflow-y-auto rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6 shadow-2xl">
-                        <div className="flex items-center justify-between mb-6">
-                            <div className="flex items-center gap-3">
-                                <Sheet className="h-6 w-6 text-green-600" />
-                                <h2 className="text-lg font-bold">
-                                    {syncStep === 'config' && 'Connect Google Sheet'}
-                                    {syncStep === 'done' && 'Sync Complete'}
-                                </h2>
-                            </div>
-                            <button onClick={closeSyncModal}><X className="h-5 w-5" /></button>
+                    </DialogBody>
+                    <DialogFooter>
+                        <div className="flex gap-3 w-full">
+                            <button
+                                type="button"
+                                onClick={() => setShowModal(false)}
+                                className="flex-1 rounded-xl border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] py-3 text-sm font-semibold hover:bg-[hsl(var(--muted))]/50 transition-colors"
+                                disabled={saving}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="submit"
+                                form="campaign-form"
+                                className="flex-1 rounded-xl bg-[hsl(var(--primary))] py-3 text-sm font-semibold text-[hsl(var(--primary-foreground))] hover:opacity-90 transition-opacity disabled:opacity-50"
+                                disabled={saving}
+                            >
+                                {saving ? 'Saving...' : editing ? 'Update Campaign' : 'Create Campaign'}
+                            </button>
                         </div>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
+            {/* Google Sheets Sync Dialog */}
+            <Dialog open={syncModal} onOpenChange={setSyncModal}>
+                <DialogContent className="sm:max-w-2xl">
+                    <DialogHeader>
+                        <div className="flex items-center gap-3">
+                            <Sheet className="h-6 w-6 text-green-600" />
+                            <DialogTitle>
+                                {syncStep === 'config' && 'Connect Google Sheet'}
+                                {syncStep === 'done' && 'Sync Complete'}
+                            </DialogTitle>
+                        </div>
+                    </DialogHeader>
+
+                    <DialogBody>
                         {/* Step 1: Configuration */}
                         {syncStep === 'config' && (
-                            <form onSubmit={handleSync(onSyncSubmit)} className="space-y-4">
+                            <form id="sync-form" onSubmit={handleSync(onSyncSubmit)} className="space-y-4">
                                 {/* Saved Connections Dropdown */}
                                 <div>
                                     <label className="block text-sm font-medium mb-1.5 flex items-center gap-2">
@@ -703,96 +703,111 @@ export default function CampaignResultsPage() {
                                         )}
                                     </>
                                 )}
-
-                                <div className="flex gap-3 pt-2">
-                                    <button type="submit" disabled={syncing} className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-green-600 py-2.5 text-sm font-semibold text-white disabled:opacity-60 hover:bg-green-700 transition-colors">
-                                        {syncing ? (
-                                            <><Loader2 className="h-4 w-4 animate-spin" />Syncing…</>
-                                        ) : (
-                                            <><Sheet className="h-4 w-4" />Sync Sheet</>
-                                        )}
-                                    </button>
-                                    <button type="button" onClick={closeSyncModal} className="flex-1 rounded-xl border border-[hsl(var(--border))] py-2.5 text-sm">Cancel</button>
-                                </div>
                             </form>
                         )}
 
                         {/* Step 2: Done */}
                         {syncStep === 'done' && syncResult && (
-                            <div className="space-y-4">
-                                <div className={`rounded-xl p-6 text-center ${syncResult.errors.length > 0 ? 'bg-amber-500/10' : 'bg-green-500/10'}`}>
-                                    <Check className={`h-12 w-12 mx-auto mb-3 ${syncResult.errors.length > 0 ? 'text-amber-600' : 'text-green-600'}`} />
-                                    <p className="text-lg font-bold mb-4">Sync Completed</p>
-                                    <div className="grid grid-cols-3 gap-3 max-w-md mx-auto">
-                                        <div>
-                                            <p className="text-2xl font-bold text-green-600">{syncResult.created}</p>
-                                            <p className="text-xs text-[hsl(var(--muted-foreground))]">Created</p>
+                            <div className="space-y-4 text-center">
+                                <div className={`rounded-full mx-auto flex h-16 w-16 items-center justify-center ${syncResult.errors.length > 0 ? 'bg-amber-500/10' : 'bg-green-500/10'}`}>
+                                    {syncResult.errors.length > 0 ? <AlertTriangle className="h-8 w-8 text-amber-600" /> : <Check className="h-8 w-8 text-green-600" />}
+                                </div>
+                                <div>
+                                    <h3 className="text-lg font-bold">Sync Completed</h3>
+                                    <div className="mt-4 grid grid-cols-3 gap-3">
+                                        <div className="rounded-xl border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] p-3">
+                                            <p className="text-xl font-bold text-green-600">{syncResult.created}</p>
+                                            <p className="text-[10px] uppercase font-bold text-[hsl(var(--muted-foreground))]">Created</p>
                                         </div>
-                                        <div>
-                                            <p className="text-2xl font-bold text-blue-600">{syncResult.updated}</p>
-                                            <p className="text-xs text-[hsl(var(--muted-foreground))]">Updated</p>
+                                        <div className="rounded-xl border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] p-3">
+                                            <p className="text-xl font-bold text-blue-600">{syncResult.updated}</p>
+                                            <p className="text-[10px] uppercase font-bold text-[hsl(var(--muted-foreground))]">Updated</p>
                                         </div>
-                                        <div>
-                                            <p className="text-2xl font-bold text-[hsl(var(--muted-foreground))]">{syncResult.synced}</p>
-                                            <p className="text-xs text-[hsl(var(--muted-foreground))]">Total</p>
+                                        <div className="rounded-xl border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] p-3">
+                                            <p className="text-xl font-bold text-[hsl(var(--muted-foreground))]">{syncResult.synced}</p>
+                                            <p className="text-[10px] uppercase font-bold text-[hsl(var(--muted-foreground))]">Total</p>
                                         </div>
                                     </div>
                                 </div>
 
                                 {syncResult.errors.length > 0 && (
-                                    <div className="rounded-xl bg-red-500/10 border border-red-500/20 p-4">
+                                    <div className="mt-4 rounded-xl bg-red-500/10 border border-red-500/20 p-4 text-left">
                                         <p className="text-sm font-medium text-red-600 mb-2">Errors ({syncResult.errors.length})</p>
-                                        <div className="space-y-1">
+                                        <div className="space-y-1 max-h-32 overflow-y-auto">
                                             {syncResult.errors.map((error, i) => (
-                                                <p key={i} className="text-xs text-red-600">{error}</p>
+                                                <p key={i} className="text-xs text-red-600">• {error}</p>
                                             ))}
                                         </div>
                                     </div>
                                 )}
-
+                            </div>
+                        )}
+                    </DialogBody>
+                    <DialogFooter>
+                        <div className="flex gap-3 w-full">
+                            {syncStep === 'config' && (
+                                <>
+                                    <button
+                                        type="button"
+                                        onClick={closeSyncModal}
+                                        className="flex-1 rounded-xl border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] py-3 text-sm font-semibold hover:bg-[hsl(var(--muted))]/50 transition-colors"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        form="sync-form"
+                                        disabled={syncing}
+                                        className="flex-1 rounded-xl bg-green-600 py-3 text-sm font-semibold text-white disabled:opacity-60 hover:bg-green-700 transition-colors"
+                                    >
+                                        {syncing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Sheet className="h-4 w-4 mr-2" />}
+                                        {syncing ? 'Syncing…' : 'Sync Sheet'}
+                                    </button>
+                                </>
+                            )}
+                            {syncStep === 'done' && (
                                 <button
                                     type="button"
                                     onClick={closeSyncModal}
-                                    className="w-full rounded-xl bg-[hsl(var(--primary))] py-2.5 text-sm font-semibold text-[hsl(var(--primary-foreground))] hover:opacity-90 transition-opacity"
+                                    className="w-full rounded-xl bg-[hsl(var(--primary))] py-3 text-sm font-semibold text-[hsl(var(--primary-foreground))] hover:opacity-90 transition-opacity"
                                 >
-                                    Close
+                                    Done
                                 </button>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            )}
-
-            {/* Delete Confirmation */}
-            {delId && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-                    <div className="w-full max-w-md rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] shadow-2xl p-6">
-                        <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-lg font-bold">Confirm Delete</h3>
-                            <button onClick={() => setDelId(null)} className="p-2 hover:bg-[hsl(var(--muted))] rounded-lg transition-colors">
-                                <X className="h-5 w-5" />
-                            </button>
+                            )}
                         </div>
-                        <p className="text-sm text-[hsl(var(--muted-foreground))] mb-6">
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Delete Confirmation Dialog */}
+            <Dialog open={!!delId} onOpenChange={(open) => !open && setDelId(null)}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Confirm Delete</DialogTitle>
+                    </DialogHeader>
+                    <DialogBody>
+                        <p className="text-[hsl(var(--muted-foreground))]">
                             Are you sure you want to delete this campaign? This action cannot be undone.
                         </p>
-                        <div className="flex justify-end gap-3">
+                    </DialogBody>
+                    <DialogFooter>
+                        <div className="flex gap-3 w-full">
                             <button
                                 onClick={() => setDelId(null)}
-                                className="px-4 py-2 rounded-xl border border-[hsl(var(--border))] hover:bg-[hsl(var(--muted))] transition-colors"
+                                className="flex-1 rounded-xl border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] py-3 text-sm font-semibold hover:bg-[hsl(var(--muted))]/50 transition-colors"
                             >
                                 Cancel
                             </button>
                             <button
                                 onClick={handleDelete}
-                                className="px-4 py-2 rounded-xl bg-red-500 text-white hover:bg-red-600 transition-colors"
+                                className="flex-1 rounded-xl bg-red-500 py-3 text-sm font-semibold text-white hover:bg-red-600 transition-colors"
                             >
-                                Delete
+                                Delete Campaign
                             </button>
                         </div>
-                    </div>
-                </div>
-            )}
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

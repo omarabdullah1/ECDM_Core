@@ -98,7 +98,7 @@ export default function EditPriceListDialog({ item, onClose, onSuccess }: EditPr
 
     return (
         <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto overflow-x-hidden p-6 outline-none">
+            <DialogContent className="p-6 outline-none">
 
                 <DialogHeader className="flex flex-row items-center justify-between border-b border-[hsl(var(--border))] pb-4 mb-4 space-y-0">
                     <div>

@@ -3,6 +3,8 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import api from '@/lib/axios';
 import { FileText, Plus, X, Upload } from 'lucide-react';
 import { DataTable } from '@/components/ui/DataTable';
+import { PageHeader } from '@/components/layout/PageHeader';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter } from '@/components/ui/dialog';
 import { Pagination } from '@/components/shared/Pagination';
 import { getColumns, type ContentTracker } from './columns';
 import toast from 'react-hot-toast';
@@ -10,7 +12,7 @@ import toast from 'react-hot-toast';
 const CONTENT_TYPES = ['Email', 'Social media', 'TV', 'Blog post', 'All', ''];
 const CONTENT_STATUSES = ['New', 'In progress', 'Under review', 'Published', 'Suspended', 'Paused', ''];
 
-const iCls = 'w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-4 py-3 text-sm placeholder:text-[hsl(var(--muted-foreground))] focus:border-[hsl(var(--primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/20 transition-all';
+const iCls = 'flex h-9 w-full rounded-md border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] px-3 py-1 text-sm shadow-sm transition-all placeholder:text-[hsl(var(--muted-foreground))] focus-visible:outline-none focus-visible:border-[hsl(var(--primary))]/50 focus-visible:ring-[3px] focus-visible:ring-[hsl(var(--primary))]/10';
 const labelCls = 'text-xs font-semibold text-[hsl(var(--muted-foreground))] uppercase tracking-wide mb-1.5 block';
 
 export default function ContentTrackerPage() {
@@ -189,28 +191,28 @@ export default function ContentTrackerPage() {
     });
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 pb-8">
             {/* Header */}
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                    <FileText className="h-7 w-7 text-[hsl(var(--primary))]" />
-                    <h1 className="text-2xl font-bold">Content Tracker</h1>
-                </div>
-                <button
-                    onClick={openAdd}
-                    className="flex items-center gap-2 rounded-xl bg-[hsl(var(--primary))] px-4 py-2 text-sm font-semibold text-[hsl(var(--primary-foreground))] hover:opacity-90 transition-opacity"
-                >
-                    <Plus className="h-4 w-4" />
-                    Add Content
-                </button>
-            </div>
+            <PageHeader 
+                title="Content Tracker"
+                icon={FileText}
+                actions={
+                    <button
+                        onClick={openAdd}
+                        className="flex items-center gap-2 rounded-md bg-[hsl(var(--primary))] px-4 py-2 text-sm font-medium text-[hsl(var(--primary-foreground))] shadow-sm hover:opacity-90 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[hsl(var(--primary))]/10 transition-all"
+                    >
+                        <Plus className="h-4 w-4" />
+                        Add Content
+                    </button>
+                }
+            />
 
             <div className="flex gap-3 flex-wrap items-center">
-                <select value={fType} onChange={e => setFType(e.target.value)} className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2 text-sm">
+                <select value={fType} onChange={e => setFType(e.target.value)} className="h-9 rounded-md border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] px-3 py-1 text-sm shadow-sm transition-all focus-visible:outline-none focus-visible:border-[hsl(var(--primary))]/50 focus-visible:ring-[3px] focus-visible:ring-[hsl(var(--primary))]/10">
                     <option value="">All Types</option>
                     {CONTENT_TYPES.filter(t => t !== '' && t !== 'All').map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
-                <select value={fStatus} onChange={e => setFStatus(e.target.value)} className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2 text-sm">
+                <select value={fStatus} onChange={e => setFStatus(e.target.value)} className="h-9 rounded-md border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] px-3 py-1 text-sm shadow-sm transition-all focus-visible:outline-none focus-visible:border-[hsl(var(--primary))]/50 focus-visible:ring-[3px] focus-visible:ring-[hsl(var(--primary))]/10">
                     <option value="">All Statuses</option>
                     {CONTENT_STATUSES.filter(s => s !== '' && s !== 'All').map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
@@ -222,6 +224,7 @@ export default function ContentTrackerPage() {
                     data={paginatedRows}
                     columns={columns}
                     loading={loading}
+                    onRowClick={openEdit}
                     emptyMessage="No content trackers found."
                     defaultVisibility={{
                         details: false,
@@ -238,18 +241,14 @@ export default function ContentTrackerPage() {
                 )}
             </div>
 
-            {/* Add/Edit Dialog */}
-            {showModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 overflow-y-auto">
-                    <div className="w-full max-w-2xl rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] shadow-2xl my-8">
-                        <div className="flex items-center justify-between border-b border-[hsl(var(--border))] px-6 py-4">
-                            <h2 className="text-xl font-bold">{editing ? 'Edit Content' : 'Add Content'}</h2>
-                            <button onClick={() => setShowModal(false)} className="p-2 hover:bg-[hsl(var(--muted))] rounded-lg transition-colors">
-                                <X className="h-5 w-5" />
-                            </button>
-                        </div>
-
-                        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+            {/* Add/Edit Content Dialog */}
+            <Dialog open={showModal} onOpenChange={setShowModal}>
+                <DialogContent className="sm:max-w-2xl">
+                    <DialogHeader>
+                        <DialogTitle>{editing ? 'Edit Content' : 'Add Content'}</DialogTitle>
+                    </DialogHeader>
+                    <DialogBody>
+                        <form id="content-form" onSubmit={handleSubmit} className="space-y-4">
                             <div>
                                 <label className={labelCls}>Content Title *</label>
                                 <input
@@ -365,59 +364,60 @@ export default function ContentTrackerPage() {
                                     rows={3}
                                 />
                             </div>
-
-                            <div className="flex justify-end gap-3 pt-4 border-t border-[hsl(var(--border))]">
-                                <button
-                                    type="button"
-                                    onClick={() => setShowModal(false)}
-                                    className="px-4 py-2 rounded-xl border border-[hsl(var(--border))] hover:bg-[hsl(var(--muted))] transition-colors"
-                                    disabled={saving}
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    type="submit"
-                                    className="px-4 py-2 rounded-xl bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] hover:opacity-90 transition-opacity disabled:opacity-50"
-                                    disabled={saving}
-                                >
-                                    {saving ? 'Saving...' : editing ? 'Update' : 'Create'}
-                                </button>
-                            </div>
                         </form>
-                    </div>
-                </div>
-            )}
-
-            {/* Delete Confirmation */}
-            {delId && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-                    <div className="w-full max-w-md rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] shadow-2xl p-6">
-                        <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-lg font-bold">Confirm Delete</h3>
-                            <button onClick={() => setDelId(null)} className="p-2 hover:bg-[hsl(var(--muted))] rounded-lg transition-colors">
-                                <X className="h-5 w-5" />
+                    </DialogBody>
+                    <DialogFooter>
+                        <div className="flex gap-3 w-full">
+                            <button
+                                type="button"
+                                onClick={() => setShowModal(false)}
+                                className="flex-1 rounded-xl border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] py-3 text-sm font-semibold hover:bg-[hsl(var(--muted))]/50 transition-colors"
+                                disabled={saving}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="submit"
+                                form="content-form"
+                                className="flex-1 rounded-xl bg-[hsl(var(--primary))] py-3 text-sm font-semibold text-[hsl(var(--primary-foreground))] hover:opacity-90 transition-opacity disabled:opacity-50"
+                                disabled={saving}
+                            >
+                                {saving ? 'Saving...' : editing ? 'Update Content' : 'Create Content'}
                             </button>
                         </div>
-                        <p className="text-sm text-[hsl(var(--muted-foreground))] mb-6">
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Delete Confirmation Dialog */}
+            <Dialog open={!!delId} onOpenChange={(open) => !open && setDelId(null)}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Confirm Delete</DialogTitle>
+                    </DialogHeader>
+                    <DialogBody>
+                        <p className="text-[hsl(var(--muted-foreground))]">
                             Are you sure you want to delete this content? This action cannot be undone.
                         </p>
-                        <div className="flex justify-end gap-3">
+                    </DialogBody>
+                    <DialogFooter>
+                        <div className="flex gap-3 w-full">
                             <button
                                 onClick={() => setDelId(null)}
-                                className="px-4 py-2 rounded-xl border border-[hsl(var(--border))] hover:bg-[hsl(var(--muted))] transition-colors"
+                                className="flex-1 rounded-xl border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] py-3 text-sm font-semibold hover:bg-[hsl(var(--muted))]/50 transition-colors"
                             >
                                 Cancel
                             </button>
                             <button
                                 onClick={handleDelete}
-                                className="px-4 py-2 rounded-xl bg-red-500 text-white hover:bg-red-600 transition-colors"
+                                className="flex-1 rounded-xl bg-red-500 py-3 text-sm font-semibold text-white hover:bg-red-600 transition-colors"
                             >
-                                Delete
+                                Delete Content
                             </button>
                         </div>
-                    </div>
-                </div>
-            )}
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

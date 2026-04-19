@@ -3,6 +3,10 @@ import { useState } from 'react';
 import { X, Loader2, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '@/lib/axios';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogBody } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
 
 /**
  * Edit Customer Dialog - Admin Only
@@ -41,7 +45,6 @@ const CUSTOMER_TYPES = [
 const SECTORS = ['B2B', 'B2C', 'B2G', 'Hybrid', 'Other'];
 
 // Styling constants
-const iCls = 'w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-4 py-3 text-sm placeholder:text-[hsl(var(--muted-foreground))] focus:border-[hsl(var(--primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/20 transition-all';
 const labelCls = 'text-xs font-semibold text-[hsl(var(--muted-foreground))] uppercase tracking-wide mb-1.5 block';
 
 export default function EditCustomerDialog({ customer, onClose, onSuccess }: EditCustomerDialogProps) {
@@ -106,6 +109,7 @@ export default function EditCustomerDialog({ customer, onClose, onSuccess }: Edi
       await api.put(`/shared/customers/${customer._id}`, formData);
       toast.success('Customer updated successfully');
       onSuccess();
+      onClose();
     } catch (error: any) {
       const errorMsg = error?.response?.data?.message || error?.response?.data?.error || 'Failed to update customer';
       toast.error(errorMsg);
@@ -116,200 +120,193 @@ export default function EditCustomerDialog({ customer, onClose, onSuccess }: Edi
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="w-full max-w-3xl rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] shadow-2xl max-h-[90vh] overflow-y-auto">
-        {/* Header */}
-        <div className="sticky top-0 z-10 bg-[hsl(var(--card))] border-b border-[hsl(var(--border))] px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-xl font-bold">Edit Customer</h2>
-              <p className="text-sm text-[hsl(var(--muted-foreground))] mt-1">
-                Update customer information (Admin only)
-              </p>
-            </div>
-            <button 
-              onClick={onClose} 
-              className="p-2 hover:bg-[hsl(var(--muted))] rounded-lg transition-colors"
-              disabled={saving}
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
-        </div>
+    <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-2xl">
+        <DialogHeader className="bg-white/50 backdrop-blur-md sticky top-0 z-10">
+          <DialogTitle className="text-2xl font-bold tracking-tight text-gray-900">Edit Customer</DialogTitle>
+          <p className="text-sm text-[hsl(var(--muted-foreground))] mt-1 font-medium">
+            Update vital customer metadata (System-wide Admin Access)
+          </p>
+        </DialogHeader>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          {/* Row 1: Customer ID + Name */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className={labelCls}>
-                Customer ID <span className="text-red-500">*</span>
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={formData.customerId}
-                  onChange={(e) => handleChange('customerId', e.target.value)}
-                  className={iCls}
-                  placeholder="e.g., CUS-1001"
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={handleGenerateId}
-                  disabled={generatingId || saving}
-                  className="px-3 py-3 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--secondary))] hover:bg-[hsl(var(--secondary))]/80 transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
-                  title="Generate next available ID"
-                >
-                  <RefreshCw className={`h-4 w-4 ${generatingId ? 'animate-spin' : ''}`} />
-                </button>
+        <DialogBody className="bg-gray-50/30">
+          <form id="edit-customer-form" onSubmit={handleSubmit} className="space-y-6 animate-fade-in">
+            {/* Row 1: Customer ID + Name */}
+            <div className="grid grid-cols-2 gap-6 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+              <div className="space-y-1.5">
+                <label className={labelCls}>
+                  Customer ID <span className="text-red-500">*</span>
+                </label>
+                <div className="flex gap-2">
+                  <Input
+                    type="text"
+                    value={formData.customerId}
+                    onChange={(e) => handleChange('customerId', e.target.value)}
+                    placeholder="e.g., CUS-1001"
+                    required
+                    className="h-10 border-gray-100 bg-gray-50/50"
+                  />
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={handleGenerateId}
+                    disabled={generatingId || saving}
+                    title="Generate next available ID"
+                    className="shrink-0 h-10 w-10 p-0 rounded-lg"
+                  >
+                    <RefreshCw className={`h-4 w-4 ${generatingId ? 'animate-spin' : ''}`} />
+                  </Button>
+                </div>
               </div>
-              <p className="text-xs text-[hsl(var(--muted-foreground))] mt-1">
-                Must be unique across all customers
-              </p>
+              <div className="space-y-1.5">
+                <label className={labelCls}>
+                  Name <span className="text-red-500">*</span>
+                </label>
+                <Input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => handleChange('name', e.target.value)}
+                  placeholder="Full name"
+                  required
+                  className="h-10 border-gray-100 bg-gray-50/50"
+                />
+              </div>
             </div>
-            <div>
-              <label className={labelCls}>
-                Name <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={formData.name}
-                onChange={(e) => handleChange('name', e.target.value)}
-                className={iCls}
-                placeholder="Full name"
-                required
-              />
-            </div>
-          </div>
 
-          {/* Row 2: Phone + Email */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className={labelCls}>
-                Phone <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={formData.phone}
-                onChange={(e) => handleChange('phone', e.target.value)}
-                className={iCls}
-                placeholder="+1234567890"
-                required
-              />
-              <p className="text-xs text-[hsl(var(--muted-foreground))] mt-1">
-                Primary unique identifier
-              </p>
-            </div>
-            <div>
-              <label className={labelCls}>Email</label>
-              <input
-                type="email"
-                value={formData.email}
-                onChange={(e) => handleChange('email', e.target.value)}
-                className={iCls}
-                placeholder="email@example.com"
-              />
-            </div>
-          </div>
+            <div className="space-y-6 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+              <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Contact & Classification</h4>
+              
+              {/* Row 2: Phone + Email */}
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-1.5">
+                  <label className={labelCls}>
+                    Phone <span className="text-red-500">*</span>
+                  </label>
+                  <Input
+                    type="text"
+                    value={formData.phone}
+                    onChange={(e) => handleChange('phone', e.target.value)}
+                    placeholder="+1234567890"
+                    required
+                    className="h-10 border-gray-100 bg-gray-50/50"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className={labelCls}>Email</label>
+                  <Input
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => handleChange('email', e.target.value)}
+                    placeholder="email@example.com"
+                    className="h-10 border-gray-100 bg-gray-50/50"
+                  />
+                </div>
+              </div>
 
-          {/* Row 3: Type + Sector */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className={labelCls}>Type / Source</label>
-              <select
-                value={formData.type}
-                onChange={(e) => handleChange('type', e.target.value)}
-                className={iCls}
-              >
-                {CUSTOMER_TYPES.map(type => (
-                  <option key={type} value={type}>{type}</option>
-                ))}
-              </select>
+              {/* Row 3: Type + Sector */}
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-1.5">
+                  <label className={labelCls}>Type / Source</label>
+                  <Select
+                    value={formData.type}
+                    onChange={(e) => handleChange('type', e.target.value)}
+                    className="h-10 border-gray-100 bg-gray-50/50"
+                  >
+                    {CUSTOMER_TYPES.map(type => (
+                      <option key={type} value={type}>{type}</option>
+                    ))}
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className={labelCls}>Sector</label>
+                  <Select
+                    value={formData.sector}
+                    onChange={(e) => handleChange('sector', e.target.value)}
+                    className="h-10 border-gray-100 bg-gray-50/50"
+                  >
+                    {SECTORS.map(sector => (
+                      <option key={sector} value={sector}>{sector}</option>
+                    ))}
+                  </Select>
+                </div>
+              </div>
             </div>
-            <div>
-              <label className={labelCls}>Sector</label>
-              <select
-                value={formData.sector}
-                onChange={(e) => handleChange('sector', e.target.value)}
-                className={iCls}
-              >
-                {SECTORS.map(sector => (
-                  <option key={sector} value={sector}>{sector}</option>
-                ))}
-              </select>
+
+            <div className="space-y-6 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+              <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Location & Logistics</h4>
+              
+              {/* Row 4: Company + Region */}
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-1.5">
+                  <label className={labelCls}>Company</label>
+                  <Input
+                    type="text"
+                    value={formData.company}
+                    onChange={(e) => handleChange('company', e.target.value)}
+                    placeholder="Company name"
+                    className="h-10 border-gray-100 bg-gray-50/50"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className={labelCls}>Region</label>
+                  <Input
+                    type="text"
+                    value={formData.region}
+                    onChange={(e) => handleChange('region', e.target.value)}
+                    placeholder="Region/Location"
+                    className="h-10 border-gray-100 bg-gray-50/50"
+                  />
+                </div>
+              </div>
+
+              {/* Row 5: Address */}
+              <div className="space-y-1.5">
+                <label className={labelCls}>Address</label>
+                <Input
+                  type="text"
+                  value={formData.address}
+                  onChange={(e) => handleChange('address', e.target.value)}
+                  placeholder="Full address"
+                  className="h-10 border-gray-100 bg-gray-50/50"
+                />
+              </div>
+
+              {/* Row 6: Notes */}
+              <div className="space-y-1.5">
+                <label className={labelCls}>Notes</label>
+                <textarea
+                  value={formData.notes}
+                  onChange={(e) => handleChange('notes', e.target.value)}
+                  className="flex min-h-[100px] w-full rounded-xl border border-gray-100 bg-gray-50/50 px-4 py-3 text-sm shadow-inner transition-all focus-visible:outline-none focus:ring-2 focus:ring-primary/10 focus:border-primary disabled:cursor-not-allowed disabled:opacity-50 font-medium resize-none"
+                  placeholder="Additional notes about this customer..."
+                  rows={3}
+                />
+              </div>
             </div>
-          </div>
+          </form>
+        </DialogBody>
 
-          {/* Row 4: Company + Region */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className={labelCls}>Company</label>
-              <input
-                type="text"
-                value={formData.company}
-                onChange={(e) => handleChange('company', e.target.value)}
-                className={iCls}
-                placeholder="Company name"
-              />
-            </div>
-            <div>
-              <label className={labelCls}>Region</label>
-              <input
-                type="text"
-                value={formData.region}
-                onChange={(e) => handleChange('region', e.target.value)}
-                className={iCls}
-                placeholder="Region/Location"
-              />
-            </div>
-          </div>
-
-          {/* Row 5: Address */}
-          <div>
-            <label className={labelCls}>Address</label>
-            <input
-              type="text"
-              value={formData.address}
-              onChange={(e) => handleChange('address', e.target.value)}
-              className={iCls}
-              placeholder="Full address"
-            />
-          </div>
-
-          {/* Row 6: Notes */}
-          <div>
-            <label className={labelCls}>Notes</label>
-            <textarea
-              value={formData.notes}
-              onChange={(e) => handleChange('notes', e.target.value)}
-              className={iCls}
-              placeholder="Additional notes..."
-              rows={3}
-            />
-          </div>
-
-          {/* Actions */}
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-[hsl(var(--border))]">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={saving}
-              className="px-5 py-2.5 rounded-xl border border-[hsl(var(--border))] text-sm font-medium hover:bg-[hsl(var(--muted))] transition-colors disabled:opacity-50"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="px-5 py-2.5 rounded-xl bg-[hsl(var(--primary))] text-white text-sm font-medium hover:bg-[hsl(var(--primary))]/90 transition-colors flex items-center gap-2 disabled:opacity-50"
-            >
-              {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-              {saving ? 'Saving...' : 'Save Changes'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <DialogFooter className="bg-white/50 backdrop-blur-md border-t border-[hsl(var(--border))]/30">
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={onClose}
+            disabled={saving}
+            className="px-6 rounded-xl hover:bg-gray-100 transition-colors"
+          >
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            form="edit-customer-form"
+            disabled={saving}
+            className="px-8 rounded-xl bg-[hsl(var(--primary))] hover:opacity-90 transition-all shadow-md active:scale-95"
+          >
+            {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+            {saving ? 'Saving...' : 'Save Changes'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

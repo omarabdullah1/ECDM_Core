@@ -44,6 +44,7 @@ const en: Translations = {
     customerFollowUp: 'Follow-Up',
     customerFeedback: 'Feedback',
     finance: 'Finance',
+    invoices: 'Invoices',
     orderFinance: 'Order Finance',
     generalExpenses: 'General Expenses',
     salaries: 'Salaries',

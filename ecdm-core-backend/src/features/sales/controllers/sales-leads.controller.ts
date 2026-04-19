@@ -55,11 +55,32 @@ export const patch = async (req: Request, res: Response, next: NextFunction) => 
         }
         
         // ═══════════════════════════════════════════════════════════════════
+        // ROLE-BASED ACCESS CONTROL (RBAC) & OWNERSHIP
+        // ═══════════════════════════════════════════════════════════════════
+        const isAdmin = req.user?.role === 'Admin' || req.user?.role === 'SuperAdmin';
+        const isOwner = targetRecord.salesPerson && userInfo && (
+            userInfo.email === targetRecord.salesPerson || 
+            userInfo.name === targetRecord.salesPerson
+        );
+
+        // If the lead is already assigned to someone else and user is not an admin, deny update
+        if (targetRecord.salesPerson && !isOwner && !isAdmin) {
+            console.log('❌ Forbidden update attempt by non-owner:', userInfo?.email || userInfo?.name);
+            sendSuccess(res, null, 'You do not have permission to modify this lead. It belongs to another salesperson.', 403);
+            return;
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
         // HANDLE CUSTOMER SSOT UPDATES (address, region)
         // These fields are stored in Customer, not SalesLead
         // ═══════════════════════════════════════════════════════════════════
         const { address, region, ...salesLeadData } = req.body;
         
+        // Prevent manual override of salesPerson field for non-admins
+        if (!isAdmin && salesLeadData.salesPerson) {
+            delete salesLeadData.salesPerson;
+        }
+
         if (address !== undefined || region !== undefined) {
             const Customer = require('../../shared/models/contact.model').default;
             const customerUpdate: Record<string, unknown> = {};
@@ -99,51 +120,74 @@ export const patch = async (req: Request, res: Response, next: NextFunction) => 
         // early and never calls svc.update() where the auto-creation logic lives.
         // This trigger ensures SalesOrder is created for both Admin and Sales users.
         // ═══════════════════════════════════════════════════════════════════
-        if (intercepted && salesLeadData.order === 'Yes') {
+        if (intercepted && salesLeadData.order) {
             try {
-                // Re-fetch the updated document to get latest state
+                const SalesOrder = require('../models/sales-order.model').default;
+                const { OrderStatus, ThirdFollowUpStatus } = require('../types/sales-order.types');
                 const updatedLead = await SalesLead.findById(req.params.id);
                 
-                if (updatedLead && updatedLead.order === 'Yes') {
-                    // Check if SalesOrder already exists
-                    const SalesOrder = require('../models/sales-order.model').default;
+                if (updatedLead) {
+                    // Map salesPerson to User ObjectId (used by both Yes/No paths)
+                    let salesPersonId = null;
+                    if (updatedLead.salesPerson) {
+                        const user = await User.findOne({
+                            $or: [
+                                { email: { $regex: new RegExp(`^${updatedLead.salesPerson.trim()}$`, 'i') } },
+                                { $expr: { $eq: [{ $concat: ['$firstName', ' ', '$lastName'] }, updatedLead.salesPerson.trim()] } }
+                            ]
+                        }).select('_id');
+                        if (user) salesPersonId = user._id;
+                    }
+                    const targetCustomerId = updatedLead.customerId?._id || updatedLead.customerId;
                     const existingOrder = await SalesOrder.findOne({ salesLead: updatedLead._id });
-                    
-                    if (!existingOrder) {
-                        console.log(`📦 Auto-creating SalesOrder for Lead ${updatedLead._id} (non-admin update)`);
-                        
-                        // Map salesPerson to User ObjectId
-                        let salesPersonId = null;
-                        if (updatedLead.salesPerson) {
-                            const user = await User.findOne({
-                                $or: [
-                                    { email: updatedLead.salesPerson },
-                                    { $expr: { $eq: [{ $concat: ['$firstName', ' ', '$lastName'] }, updatedLead.salesPerson] } }
-                                ]
-                            }).select('_id');
-                            if (user) salesPersonId = user._id;
+
+                    // ── Case: Yes → Create or Restore Sales Order ──────────────────
+                    if (salesLeadData.order === 'Yes') {
+                        if (existingOrder) {
+                            console.log(`🔄 Restoring SalesOrder to Pending for Lead ${updatedLead._id}`);
+                            existingOrder.orderStatus = OrderStatus.Pending;
+                            existingOrder.finalStatusThirdFollowUp = '';
+                            await existingOrder.save();
+                        } else {
+                            console.log(`📦 Auto-creating SalesOrder for Lead ${updatedLead._id} (non-admin)`);
+                            await SalesOrder.create({
+                                salesLead: updatedLead._id,
+                                customer: targetCustomerId,
+                                salesPerson: salesPersonId,
+                                orderStatus: OrderStatus.Pending,
+                                issueDescription: updatedLead.issue || 'Order created from Sales Lead',
+                                typeOfOrder: '',
+                                salesPlatform: '',
+                            });
+                            console.log('   ✅ SalesOrder auto-created successfully');
                         }
-                        
-                        // Extract customer ID safely
-                        const targetCustomerId = updatedLead.customerId?._id || updatedLead.customerId;
-                        const { OrderStatus } = require('../types/sales-order.types');
-                        
-                        await SalesOrder.create({
-                            salesLead: updatedLead._id,
-                            customer: targetCustomerId,
-                            salesPerson: salesPersonId,
-                            orderStatus: OrderStatus.Pending,
-                            issueDescription: updatedLead.issue || 'Order created from Sales Lead',
-                            typeOfOrder: '',
-                            salesPlatform: '',
-                        });
-                        
-                        console.log(`   ✅ SalesOrder auto-created successfully`);
+                    }
+                    
+                    // ── Case: No → Archive to Non-Potential ────────────────────────
+                    else if (salesLeadData.order === 'No') {
+                        if (existingOrder) {
+                            console.log(`📦 Archiving SalesOrder as Not Potential for Lead ${updatedLead._id} (non-admin)`);
+                            existingOrder.orderStatus = OrderStatus.Canceled;
+                            existingOrder.finalStatusThirdFollowUp = ThirdFollowUpStatus.NotPotential;
+                            await existingOrder.save();
+                        } else {
+                            console.log(`✨ Creating Archived SalesOrder for Lead ${updatedLead._id} (non-admin)`);
+                            await SalesOrder.create({
+                                salesLead: updatedLead._id,
+                                customer: targetCustomerId,
+                                salesPerson: salesPersonId,
+                                orderStatus: OrderStatus.Canceled,
+                                finalStatusThirdFollowUp: ThirdFollowUpStatus.NotPotential,
+                                issueDescription: updatedLead.issue || 'Lead marked as not potential',
+                                typeOfOrder: '',
+                                salesPlatform: '',
+                            });
+                            console.log('   ✅ Archived SalesOrder created successfully');
+                        }
                     }
                 }
             } catch (createError) {
-                console.error('❌ FATAL ERROR auto-creating Sales Order (non-admin path):', createError);
-                // Don't block the response - it was already sent by interceptUpdate
+                console.error('❌ Error handling Sales Order sync (non-admin path):', createError);
             }
         }
         

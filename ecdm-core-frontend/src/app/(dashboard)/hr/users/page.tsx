@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
+import { PageHeader } from '@/components/layout/PageHeader';
 import api from '@/lib/axios';
 import Link from 'next/link';
 import {
@@ -209,18 +210,13 @@ export default function EmployeesPage() {
     );
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 pb-8">
             {/* Header */}
-            <div className="flex items-center gap-3">
-                <Users className="h-8 w-8 text-[hsl(var(--primary))]" />
-                <div>
-                    <h1 className="text-2xl font-bold">Employees</h1>
-                    <p className="text-sm text-[hsl(var(--muted-foreground))]">
-                        {filteredEmployees.length} employee{filteredEmployees.length !== 1 ? 's' : ''} found
-                        {(search || filterRole || filterStatus) && ` (filtered from ${rows.length} total)`}
-                    </p>
-                </div>
-            </div>
+            <PageHeader
+                title="Employees"
+                icon={Users}
+                description={`${filteredEmployees.length} employee${filteredEmployees.length !== 1 ? 's' : ''} found${(search || filterRole || filterStatus) ? ` (filtered from ${rows.length} total)` : ''}`}
+            />
 
             {/* Filters */}
             <div className="flex flex-wrap items-center gap-3 p-4 rounded-xl bg-[hsl(var(--card))] border border-[hsl(var(--border))]">

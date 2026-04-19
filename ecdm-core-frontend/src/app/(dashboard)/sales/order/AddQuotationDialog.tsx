@@ -1,10 +1,21 @@
 'use client';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogBody, 
+  DialogFooter 
+} from '@/components/ui/dialog';
 import api from '@/lib/axios';
-import { FileText, Plus, Save, Trash2, X } from 'lucide-react';
+import { FileText, Plus, Save, Trash2, X, AlertCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { SalesOrder } from './columns';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
+import { useAuthStore } from '@/features/auth/useAuth';
 
 /**
  * Add Quotation Dialog - Dynamic Quotation Builder
@@ -29,13 +40,16 @@ interface QuotationItem {
   quantity: number;
   unitPrice: number;
   total: number;
+  priceListId?: string;
+  dataSheetUrl?: string;
 }
 
 interface PriceListEntry {
   id: string;
-  label: string; // "{sparePartsId} - {itemName}"
+  label: string; // "{sparePartsId} — {itemName}"
   price: number;
   category: string;
+  dataSheetUrl?: string;
 }
 
 interface AddQuotationDialogProps {
@@ -48,7 +62,7 @@ interface AddQuotationDialogProps {
 // Styling
 // ─────────────────────────────────────────────────────────────────────────────
 
-const iCls = 'w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-4 py-3 text-sm placeholder:text-[hsl(var(--muted-foreground))] focus:border-[hsl(var(--primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/20 transition-all disabled:opacity-60 disabled:cursor-not-allowed';
+const iCls = 'flex h-9 w-full rounded-md border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] px-3 py-1 text-sm shadow-sm transition-all placeholder:text-[hsl(var(--muted-foreground))] focus-visible:outline-none focus-visible:border-[hsl(var(--primary))]/50 focus-visible:ring-[3px] focus-visible:ring-[hsl(var(--primary))]/10';
 const labelCls = 'text-xs font-semibold text-[hsl(var(--muted-foreground))] uppercase tracking-wide mb-1.5 block';
 const btnPrimary = 'px-5 py-2.5 bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] rounded-xl hover:opacity-90 transition-all font-medium text-sm flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed';
 const btnSecondary = 'px-5 py-2.5 bg-[hsl(var(--secondary))] text-[hsl(var(--secondary-foreground))] rounded-xl hover:opacity-80 transition-all font-medium text-sm flex items-center gap-2';
@@ -59,6 +73,7 @@ const btnDanger = 'p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transi
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function AddQuotationDialog({ order, onClose, onSuccess }: AddQuotationDialogProps) {
+  const { user } = useAuthStore();
   const [items, setItems] = useState<QuotationItem[]>([
     { description: '', quantity: 1, unitPrice: 0, total: 0 }
   ]);
@@ -78,17 +93,34 @@ export default function AddQuotationDialog({ order, onClose, onSuccess }: AddQuo
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const raw: any[] = data?.data?.data || data?.data || [];
 
-        const entries: PriceListEntry[] = raw.map((item) => ({
-          id: item._id,
-          label: `${item.sparePartsId || item._id.slice(-6)} — ${item.itemName}`,
-          price: item.unitPrice || 0,
-          category: item.category || 'Uncategorised',
-        }));
+        const entries: PriceListEntry[] = raw.map((item) => {
+          const id = item?._id || '';
+          const itemId = item?.sparePartsId || (typeof id === 'string' ? id.slice(-6) : 'ID');
+          
+          return {
+            id: id,
+            label: `${itemId} — ${item?.itemName || 'Unnamed Item'}`,
+            price: Number(item?.unitPrice || 0),
+            category: item?.category || 'Uncategorised',
+            dataSheetUrl: item?.dataSheetUrl || '',
+          };
+        });
 
         setPriceListEntries(entries);
-      } catch (err) {
-        console.error('❌ Failed to fetch price list:', err);
-        toast.error('Failed to load price list');
+      } catch (err: any) {
+        console.error('❌ Failed to fetch price list - Detailed Error:', {
+          message: err.message,
+          response: err.response?.data,
+          status: err.response?.status,
+          config: {
+            url: err.config?.url,
+            method: err.config?.method,
+            baseURL: err.config?.baseURL
+          }
+        });
+        
+        const errorMsg = err.response?.data?.message || err.message || 'Failed to load price list';
+        toast.error(`Price List Error: ${errorMsg}`);
       } finally {
         setLoadingPriceList(false);
       }
@@ -101,6 +133,12 @@ export default function AddQuotationDialog({ order, onClose, onSuccess }: AddQuo
 
   const subTotal = items.reduce((sum, item) => sum + item.total, 0);
   const grandTotal = Math.max(0, subTotal - discount);
+
+  // Discount Limit Logic
+  const maxDiscountPercentage = user?.maxDiscountPercentage || 0;
+  const isAdmin = ['SuperAdmin', 'Manager', 'Admin'].includes(user?.role || '');
+  const appliedDiscountPercentage = subTotal > 0 ? (discount / subTotal) * 100 : 0;
+  const isDiscountExceeded = !isAdmin && appliedDiscountPercentage > maxDiscountPercentage;
 
   // Group price list by category for <optgroup> rendering
   const grouped = priceListEntries.reduce<Record<string, PriceListEntry[]>>((acc, entry) => {
@@ -128,12 +166,18 @@ export default function AddQuotationDialog({ order, onClose, onSuccess }: AddQuo
     if (field === 'description') {
       updated[index].description = value as string;
 
-      // Auto-fill unit price when a price-list item is selected
+      // Auto-fill unit price and datasheet when a price-list item is selected
       if (value && value !== '' && value !== '__custom__') {
         const match = priceListEntries.find((e) => e.label === value);
         if (match) {
           updated[index].unitPrice = match.price;
           updated[index].total = updated[index].quantity * match.price;
+          updated[index].priceListId = match.id;
+          updated[index].dataSheetUrl = match.dataSheetUrl;
+        } else {
+          // Reset if no match (custom entry)
+          updated[index].priceListId = undefined;
+          updated[index].dataSheetUrl = undefined;
         }
       }
     } else if (field === 'quantity' || field === 'unitPrice') {
@@ -177,6 +221,8 @@ export default function AddQuotationDialog({ order, onClose, onSuccess }: AddQuo
             quantity: Number(i.quantity),
             unitPrice: Number(i.unitPrice),
             total: Number(i.quantity) * Number(i.unitPrice),
+            priceListId: i.priceListId,
+            dataSheetUrl: i.dataSheetUrl,
           })),
           subTotal: calculatedSubTotal,
           discount: Number(discount || 0),
@@ -209,209 +255,175 @@ export default function AddQuotationDialog({ order, onClose, onSuccess }: AddQuo
 
   return (
     <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto overflow-x-hidden p-6 outline-none">
-
-        {/* Header */}
-        <DialogHeader className="flex flex-row items-center justify-between border-b border-[hsl(var(--border))] pb-4 mb-4 space-y-0">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-[hsl(var(--primary))]/10 rounded-lg">
-              <FileText className="w-5 h-5 text-[hsl(var(--primary))]" />
-            </div>
-            <div>
-              <DialogTitle className="text-xl font-bold text-[hsl(var(--foreground))]">
-                Create Quotation
-              </DialogTitle>
-              <p className="text-sm text-[hsl(var(--muted-foreground))]">
-                {order.salesOrderId || `Order #${order._id.slice(-6).toUpperCase()}`}
-                {' | '}
-                {order.customer?.name || order.customerId?.name || 'Customer'}
-              </p>
-            </div>
-          </div>
-
-        </DialogHeader>
-
-        {/* Form */}
-        <form onSubmit={handleSaveQuotation} className="flex flex-col gap-6">
-
-          {/* Items Table */}
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <label className={labelCls}>Quotation Items</label>
-              <button
-                type="button"
-                onClick={handleAddItem}
-                className="px-3 py-1.5 bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] rounded-lg hover:opacity-90 transition-all text-sm flex items-center gap-1.5"
-              >
-                <Plus className="w-4 h-4" />
-                Add Item
-              </button>
-            </div>
-
-            <div className="border border-[hsl(var(--border))] rounded-xl overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-[hsl(var(--muted))]/50">
-                    <tr>
-                      <th className="px-3 py-3 text-left text-xs font-semibold text-[hsl(var(--muted-foreground))] uppercase tracking-wide w-12">#</th>
-                      <th className="px-3 py-3 text-left text-xs font-semibold text-[hsl(var(--muted-foreground))] uppercase tracking-wide">Description</th>
-                      <th className="px-3 py-3 text-left text-xs font-semibold text-[hsl(var(--muted-foreground))] uppercase tracking-wide w-24">Qty</th>
-                      <th className="px-3 py-3 text-left text-xs font-semibold text-[hsl(var(--muted-foreground))] uppercase tracking-wide w-32">Unit Price</th>
-                      <th className="px-3 py-3 text-right text-xs font-semibold text-[hsl(var(--muted-foreground))] uppercase tracking-wide w-32">Total</th>
-                      <th className="px-3 py-3 text-center text-xs font-semibold text-[hsl(var(--muted-foreground))] uppercase tracking-wide w-16">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[hsl(var(--border))]">
-                    {items.map((item, index) => (
-                      <tr key={index} className="hover:bg-[hsl(var(--muted))]/20 transition-colors">
-
-                        <td className="px-3 py-3 text-sm text-[hsl(var(--muted-foreground))]">
-                          {index + 1}
-                        </td>
-
-                        {/* Description (Price List Dropdown) */}
-                        <td className="px-3 py-3">
-                          <select
-                            value={item.description}
-                            onChange={(e) => handleItemChange(index, 'description', e.target.value)}
-                            className="w-full px-3 py-2 border border-[hsl(var(--border))] rounded-lg text-sm focus:border-[hsl(var(--primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/20 bg-[hsl(var(--background))]"
-                            required
-                            disabled={loadingPriceList}
-                          >
-                            <option value="">
-                              {loadingPriceList ? 'Loading price list...' : 'Select item from Price List'}
-                            </option>
-
-                            {/* Items grouped by category */}
-                            {Object.entries(grouped).map(([cat, entries]) => (
-                              <optgroup key={cat} label={`═══ ${cat} ═══`}>
-                                {entries.map((e) => (
-                                  <option key={e.id} value={e.label}>
-                                    {e.label} — ${e.price.toFixed(2)}
-                                  </option>
-                                ))}
-                              </optgroup>
-                            ))}
-
-
-                          </select>
-
-
-                        </td>
-
-                        {/* Quantity */}
-                        <td className="px-3 py-3">
-                          <input
-                            type="number"
-                            value={item.quantity}
-                            onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
-                            min="1"
-                            step="1"
-                            className="w-full px-3 py-2 border border-[hsl(var(--border))] rounded-lg text-sm focus:border-[hsl(var(--primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/20"
-                            required
-                          />
-                        </td>
-
-                        {/* Unit Price (auto-filled or editable) */}
-                        <td className="px-3 py-3">
-                          <input
-                            type="number"
-                            value={item.unitPrice}
-                            onChange={(e) => handleItemChange(index, 'unitPrice', e.target.value)}
-                            min="0"
-                            step="0.01"
-                            placeholder="0.00"
-                            className="w-full px-3 py-2 border border-[hsl(var(--border))] rounded-lg text-sm focus:border-[hsl(var(--primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/20"
-                            required
-                          />
-                        </td>
-
-                        {/* Row total */}
-                        <td className="px-3 py-3 text-right text-sm font-semibold text-[hsl(var(--foreground))]">
-                          ${item.total.toFixed(2)}
-                        </td>
-
-                        {/* Remove */}
-                        <td className="px-3 py-3 text-center">
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveItem(index)}
-                            className={btnDanger}
-                            title="Remove item"
-                            disabled={items.length === 1}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+      <DialogContent className="sm:max-w-2xl">
+        <DialogHeader>
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-[hsl(var(--primary))]/10 rounded-lg">
+                <FileText className="w-5 h-5 text-[hsl(var(--primary))]" />
+              </div>
+              <div>
+                <DialogTitle>Create Quotation</DialogTitle>
+                <p className="text-[11px] text-[hsl(var(--muted-foreground))] font-medium mt-0.5">
+                  {order.salesOrderId || (typeof order._id === 'string' ? `Order #${order._id.slice(-6).toUpperCase()}` : 'New Order')} • {order.customer?.name || order.customerId?.name || 'Customer'}
+                </p>
               </div>
             </div>
-          </div>
+        </DialogHeader>
 
-          {/* Notes + Totals */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <DialogBody>
+          <form id="add-quotation-form" onSubmit={handleSaveQuotation} className="space-y-6">
+            {/* Items Table Container */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <label className={labelCls}>Quotation Items</label>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleAddItem}
+                  className="h-8 gap-1.5"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  Add Item
+                </Button>
+              </div>
 
-            <div>
-              <label className={labelCls}>Notes (Optional)</label>
-              <textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Additional notes or terms..."
-                rows={5}
-                className={iCls}
-              />
+              <div className="border border-gray-100 rounded-xl overflow-hidden shadow-sm">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead className="bg-gray-50/80 border-b border-gray-100">
+                      <tr>
+                        <th className="px-3 py-2.5 text-left font-bold text-gray-500 uppercase tracking-tighter w-10">#</th>
+                        <th className="px-3 py-2.5 text-left font-bold text-gray-500 uppercase tracking-tighter">Description</th>
+                        <th className="px-3 py-2.5 text-left font-bold text-gray-500 uppercase tracking-tighter w-16">Qty</th>
+                        <th className="px-3 py-2.5 text-left font-bold text-gray-500 uppercase tracking-tighter w-24">Unit Price</th>
+                        <th className="px-3 py-2.5 text-right font-bold text-gray-500 uppercase tracking-tighter w-24">Total</th>
+                        <th className="px-3 py-2.5 text-center font-bold text-gray-500 uppercase tracking-tighter w-12"></th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {items.map((item, index) => (
+                        <tr key={index} className="hover:bg-gray-50/50 transition-colors">
+                          <td className="px-3 py-2 text-gray-400">{index + 1}</td>
+                          <td className="px-3 py-2">
+                            <Select
+                              value={item.description}
+                              onChange={(e) => handleItemChange(index, 'description', e.target.value)}
+                              className="h-8 py-0"
+                              disabled={loadingPriceList}
+                            >
+                              <option value="">{loadingPriceList ? 'Loading...' : 'Select item...'}</option>
+                              {Object.entries(grouped).map(([cat, entries]) => (
+                                <optgroup key={cat} label={cat}>
+                                  {entries.map((e) => (
+                                    <option key={e.id} value={e.label}>
+                                      {e.label} — ${e.price.toFixed(2)}
+                                    </option>
+                                  ))}
+                                </optgroup>
+                              ))}
+                            </Select>
+                          </td>
+                          <td className="px-3 py-2">
+                            <Input
+                              type="number"
+                              value={item.quantity}
+                              onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
+                              min="1"
+                              className="h-8 px-2 py-0 text-center"
+                            />
+                          </td>
+                          <td className="px-3 py-2">
+                            <Input
+                              type="number"
+                              value={item.unitPrice}
+                              onChange={(e) => handleItemChange(index, 'unitPrice', e.target.value)}
+                              min="0"
+                              step="0.01"
+                              className="h-8 px-2 py-0"
+                            />
+                          </td>
+                          <td className="px-3 py-2 text-right font-bold text-gray-900">
+                            ${item.total.toFixed(2)}
+                          </td>
+                          <td className="px-3 py-2 text-center">
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveItem(index)}
+                              className="p-1 text-red-300 hover:text-red-500 transition-colors disabled:opacity-30"
+                              disabled={items.length === 1}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
 
-            <div className="space-y-4">
-              <div>
-                <label className={labelCls}>Discount ($)</label>
-                <input
-                  type="number"
-                  value={discount}
-                  onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
-                  min="0"
-                  step="0.01"
-                  placeholder="0.00"
-                  className={iCls}
+            {/* Notes + Totals Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+              <div className="space-y-1.5">
+                <label className={labelCls}>Notes (Optional)</label>
+                <textarea
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Terms or conditions..."
+                  rows={4}
+                  className="flex min-h-[80px] w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm shadow-sm transition-all focus-visible:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
                 />
               </div>
 
-              <div className="bg-[hsl(var(--muted))]/30 rounded-xl p-4 space-y-3">
+              {/* Totals Section */}
+              <div className="space-y-3 pt-4 border-t border-gray-100 md:border-t-0 md:pt-0">
                 <div className="flex justify-between items-center text-sm">
-                  <span className="text-[hsl(var(--muted-foreground))]">Subtotal:</span>
+                  <span className="text-gray-500">Subtotal:</span>
                   <span className="font-semibold">${subTotal.toFixed(2)}</span>
                 </div>
-                {discount > 0 && (
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-[hsl(var(--muted-foreground))]">Discount:</span>
-                    <span className="font-semibold text-red-600">-${discount.toFixed(2)}</span>
+                
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-gray-500">Discount:</span>
+                  <div className="flex items-center gap-2 w-32">
+                    <span className="text-gray-400">$</span>
+                    <Input 
+                      type="number" 
+                      value={discount} 
+                      onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
+                      className="h-8 text-right font-medium"
+                      min="0"
+                    />
+                  </div>
+                </div>
+
+                {isDiscountExceeded && (
+                  <div className="flex items-center gap-2 p-2 rounded-lg bg-red-50 border border-red-100 text-red-600 text-[10px] font-medium animate-in fade-in slide-in-from-top-1">
+                    <AlertCircle className="h-3 w-3 flex-shrink-0" />
+                    <span>Discount exceeds your authorized limit of {maxDiscountPercentage}% ({appliedDiscountPercentage.toFixed(1)}% applied)</span>
                   </div>
                 )}
-                <div className="pt-3 border-t border-[hsl(var(--border))]">
-                  <div className="flex justify-between items-center">
-                    <span className="text-base font-bold">Grand Total:</span>
-                    <span className="text-xl font-bold text-[hsl(var(--primary))]">${grandTotal.toFixed(2)}</span>
-                  </div>
+                
+                <div className="flex justify-between items-center pt-3 border-t border-gray-100 mt-2">
+                  <span className="text-base font-bold text-gray-900">Grand Total:</span>
+                  <span className="text-xl font-bold text-[hsl(var(--primary))]">${grandTotal.toFixed(2)}</span>
                 </div>
               </div>
             </div>
-          </div>
-        </form>
+          </form>
+        </DialogBody>
 
-        {/* Footer */}
-        <div className="flex items-center justify-end gap-3 pt-4 border-t border-[hsl(var(--border))] mt-2">
+        <DialogFooter className="mt-2">
           <button type="button" onClick={onClose} className={btnSecondary} disabled={saving}>
             <X className="w-4 h-4" />
             Cancel
           </button>
-          <button type="button" onClick={handleSaveQuotation} className={btnPrimary} disabled={saving}>
+          <button type="button" onClick={handleSaveQuotation} className={btnPrimary} disabled={saving || isDiscountExceeded}>
             <Save className="w-4 h-4" />
             {saving ? 'Saving...' : 'Save Quotation'}
           </button>
-        </div>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

@@ -2,7 +2,8 @@
 import { useState } from 'react';
 import { X, Upload, AlertCircle, CheckCircle, FileSpreadsheet } from 'lucide-react';
 import api from '@/lib/axios';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 
 interface AnalyzedLead {
     rowIndex: number;
@@ -131,200 +132,135 @@ export default function ImportDataDialog({ isOpen, onClose, onSuccess }: ImportD
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-            <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto overflow-x-hidden p-6 outline-none">
-                {/* Header */}
-                <DialogHeader className="flex flex-row items-center justify-between mb-6 space-y-0">
+            <DialogContent className="sm:max-w-2xl">
+                <DialogHeader>
                     <div className="flex items-center gap-3">
-                        <FileSpreadsheet className="h-6 w-6 text-[hsl(var(--primary))]" />
-                        <DialogTitle className="text-lg font-bold">Import Sales Data from Excel</DialogTitle>
+                        <FileSpreadsheet className="h-5 w-5 text-[hsl(var(--primary))]" />
+                        <DialogTitle>Import Sales Data</DialogTitle>
                     </div>
-                    <button type="button" onClick={handleClose} className="hover:opacity-70">
-                        <X className="h-5 w-5" />
-                    </button>
                 </DialogHeader>
 
-                {/* Upload State */}
-                {state === 'upload' && (
-                    <div className="space-y-4">
-                        <div className="border-2 border-dashed border-[hsl(var(--border))] rounded-xl p-8 text-center">
-                            <Upload className="h-12 w-12 mx-auto mb-4 text-[hsl(var(--muted-foreground))]" />
-                            <p className="text-sm text-[hsl(var(--muted-foreground))] mb-4">
-                                Upload your Excel file (.xlsx, .xls) or CSV file
-                            </p>
-                            <input
-                                type="file"
-                                accept=".xlsx,.xls,.csv"
-                                onChange={handleFileSelect}
-                                className="hidden"
-                                id="file-upload"
-                            />
-                            <label
-                                htmlFor="file-upload"
-                                className="inline-flex items-center gap-2 rounded-xl bg-[hsl(var(--primary))] px-4 py-2 text-sm font-semibold text-[hsl(var(--primary-foreground))] hover:opacity-90 cursor-pointer"
-                            >
-                                Select File
-                            </label>
-                            {selectedFile && (
-                                <p className="mt-3 text-sm font-medium text-[hsl(var(--foreground))]">
-                                    Selected: {selectedFile.name}
-                                </p>
-                            )}
-                        </div>
-
-                        <div className="bg-[hsl(var(--muted))]/30 rounded-xl p-4">
-                            <h3 className="text-sm font-semibold mb-2">Required Fields:</h3>
-                            <ul className="text-sm text-[hsl(var(--muted-foreground))] space-y-1">
-                                <li>• <strong>Name</strong> (mandatory)</li>
-                                <li>• <strong>Phone</strong> (mandatory)</li>
-                                <li>• <strong>Address</strong> (mandatory)</li>
-                                <li>• <strong>Region</strong> (mandatory)</li>
-                                <li>• Date, Sector, Status, Type Of Order, Sales platform, Order, Notes (optional)</li>
-                            </ul>
-                        </div>
-
-                        {error && (
-                            <div className="flex items-start gap-2 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 rounded-xl p-3">
-                                <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
-                                <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
-                            </div>
-                        )}
-
-                        <div className="flex gap-3">
-                            <button
-                                onClick={handleAnalyze}
-                                disabled={!selectedFile}
-                                className="flex-1 rounded-xl bg-[hsl(var(--primary))] py-2.5 text-sm font-semibold text-[hsl(var(--primary-foreground))] disabled:opacity-40 disabled:cursor-not-allowed"
-                            >
-                                Analyze File
-                            </button>
-                            <button
-                                onClick={handleClose}
-                                className="flex-1 rounded-xl border border-[hsl(var(--border))] py-2.5 text-sm"
-                            >
-                                Cancel
-                            </button>
-                        </div>
-                    </div>
-                )}
-
-                {/* Analyzing State */}
-                {state === 'analyzing' && (
-                    <div className="py-12 text-center">
-                        <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-[hsl(var(--primary))] border-r-transparent mb-4"></div>
-                        <p className="text-sm text-[hsl(var(--muted-foreground))]">Analyzing file...</p>
-                    </div>
-                )}
-
-                {/* Review State */}
-                {state === 'review' && analysisResult && (
-                    <div className="space-y-4">
-                        <div className="grid grid-cols-3 gap-4">
-                            <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900 rounded-xl p-4">
-                                <p className="text-2xl font-bold text-green-600 dark:text-green-400">
-                                    {analysisResult.summary.newLeads}
-                                </p>
-                                <p className="text-xs text-green-700 dark:text-green-300">Valid / New</p>
-                            </div>
-                            <div className="bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-200 dark:border-yellow-900 rounded-xl p-4">
-                                <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">
-                                    {analysisResult.summary.skipped}
-                                </p>
-                                <p className="text-xs text-yellow-700 dark:text-yellow-300">Already Exists</p>
-                            </div>
-                            <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 rounded-xl p-4">
-                                <p className="text-2xl font-bold text-red-600 dark:text-red-400">
-                                    {analysisResult.summary.errors}
-                                </p>
-                                <p className="text-xs text-red-700 dark:text-red-300">Errors</p>
-                            </div>
-                        </div>
-
-                        {analysisResult.errors.length > 0 && (
-                            <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 rounded-xl p-4 max-h-48 overflow-y-auto">
-                                <h3 className="text-sm font-semibold text-red-700 dark:text-red-300 mb-2">
-                                    Errors (Missing Mandatory Fields):
-                                </h3>
-                                <ul className="text-sm text-red-600 dark:text-red-400 space-y-1">
-                                    {analysisResult.errors.slice(0, 10).map((err, idx) => (
-                                        <li key={idx}>
-                                            Row {err.rowIndex}: {err.error}
-                                        </li>
-                                    ))}
-                                    {analysisResult.errors.length > 10 && (
-                                        <li className="italic">... and {analysisResult.errors.length - 10} more</li>
+                <DialogBody>
+                    <div className="space-y-6">
+                        {/* Upload State */}
+                        {state === 'upload' && (
+                            <div className="space-y-6">
+                                <div className="border-2 border-dashed border-gray-100 rounded-2xl p-10 text-center bg-gray-50/30 hover:bg-gray-50/50 transition-colors">
+                                    <Upload className="h-10 w-10 mx-auto mb-4 text-gray-300" />
+                                    <p className="text-sm font-medium text-gray-500 mb-6">
+                                        Drop your Excel file (.xlsx) or CSV here
+                                    </p>
+                                    <input type="file" accept=".xlsx,.xls,.csv" onChange={handleFileSelect} className="hidden" id="file-upload" />
+                                    <label
+                                        htmlFor="file-upload"
+                                        className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-white hover:opacity-90 cursor-pointer shadow-lg shadow-primary/20 transition-all"
+                                    >
+                                        Select File
+                                    </label>
+                                    {selectedFile && (
+                                        <div className="mt-4 inline-flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-100 rounded-lg shadow-sm animate-in fade-in zoom-in-95">
+                                            <FileSpreadsheet className="h-4 w-4 text-primary" />
+                                            <span className="text-xs font-bold text-gray-700">{selectedFile.name}</span>
+                                        </div>
                                     )}
-                                </ul>
+                                </div>
+
+                                <div className="bg-primary/5 rounded-2xl p-5 border border-primary/10">
+                                    <h3 className="text-[10px] font-bold text-primary uppercase tracking-[0.1em] mb-3">Required Schema:</h3>
+                                    <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-[11px] font-medium text-gray-600">
+                                        <div className="flex items-center gap-2"><div className="h-1 w-1 rounded-full bg-primary" /> Name (mandatory)</div>
+                                        <div className="flex items-center gap-2"><div className="h-1 w-1 rounded-full bg-primary" /> Phone (mandatory)</div>
+                                        <div className="flex items-center gap-2"><div className="h-1 w-1 rounded-full bg-primary" /> Address (mandatory)</div>
+                                        <div className="flex items-center gap-2"><div className="h-1 w-1 rounded-full bg-primary" /> Region (mandatory)</div>
+                                    </div>
+                                    <p className="mt-4 text-[10px] text-primary/60 italic font-medium">Optional: Sector, Status, Order, Notes, Sales platform</p>
+                                </div>
+
+                                {error && (
+                                    <div className="flex items-center gap-2 p-3 rounded-xl bg-red-50 border border-red-100 text-red-600 text-[11px] font-bold">
+                                        <AlertCircle className="h-4 w-4" />
+                                        {error}
+                                    </div>
+                                )}
                             </div>
                         )}
 
-                        {error && (
-                            <div className="flex items-start gap-2 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 rounded-xl p-3">
-                                <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
-                                <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+                        {/* Analyzing/Committing States */}
+                        {(state === 'analyzing' || state === 'committing') && (
+                            <div className="py-16 text-center">
+                                <div className="inline-block h-10 w-10 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent mb-6"></div>
+                                <p className="text-sm font-bold text-gray-500 uppercase tracking-widest">{state === 'analyzing' ? 'Analyzing Dataset...' : 'Importing Records...'}</p>
                             </div>
                         )}
 
-                        <div className="flex gap-3">
-                            <button
-                                onClick={handleCommit}
-                                disabled={analysisResult.summary.newLeads === 0}
-                                className="flex-1 rounded-xl bg-[hsl(var(--primary))] py-2.5 text-sm font-semibold text-[hsl(var(--primary-foreground))] disabled:opacity-40 disabled:cursor-not-allowed"
-                            >
-                                Import {analysisResult.summary.newLeads} Valid Records
-                            </button>
-                            <button
-                                onClick={handleClose}
-                                className="flex-1 rounded-xl border border-[hsl(var(--border))] py-2.5 text-sm"
-                            >
-                                Cancel
-                            </button>
-                        </div>
-                    </div>
-                )}
+                        {/* Review State */}
+                        {state === 'review' && analysisResult && (
+                            <div className="space-y-6">
+                                <div className="grid grid-cols-3 gap-4">
+                                    <div className="bg-green-50 border border-green-100 rounded-2xl p-4 text-center">
+                                        <p className="text-2xl font-black text-green-600 leading-none">{analysisResult.summary.newLeads}</p>
+                                        <p className="text-[10px] font-bold text-green-600/70 uppercase tracking-tighter mt-1">Ready to Import</p>
+                                    </div>
+                                    <div className="bg-amber-50 border border-amber-100 rounded-2xl p-4 text-center">
+                                        <p className="text-2xl font-black text-amber-600 leading-none">{analysisResult.summary.skipped}</p>
+                                        <p className="text-[10px] font-bold text-amber-600/70 uppercase tracking-tighter mt-1">Duplicates</p>
+                                    </div>
+                                    <div className="bg-red-50 border border-red-100 rounded-2xl p-4 text-center">
+                                        <p className="text-2xl font-black text-red-600 leading-none">{analysisResult.summary.errors}</p>
+                                        <p className="text-[10px] font-bold text-red-600/70 uppercase tracking-tighter mt-1">Invalid Rows</p>
+                                    </div>
+                                </div>
 
-                {/* Committing State */}
-                {state === 'committing' && (
-                    <div className="py-12 text-center">
-                        <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-[hsl(var(--primary))] border-r-transparent mb-4"></div>
-                        <p className="text-sm text-[hsl(var(--muted-foreground))]">Importing data...</p>
-                    </div>
-                )}
-
-                {/* Success State */}
-                {state === 'success' && commitResult && (
-                    <div className="space-y-4">
-                        <div className="flex flex-col items-center py-8">
-                            <CheckCircle className="h-16 w-16 text-green-500 mb-4" />
-                            <h3 className="text-xl font-bold mb-2">Import Successful!</h3>
-                            <p className="text-sm text-[hsl(var(--muted-foreground))]">
-                                Successfully imported {commitResult.created} records
-                            </p>
-                        </div>
-
-                        {commitResult.errors.length > 0 && (
-                            <div className="bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-200 dark:border-yellow-900 rounded-xl p-4">
-                                <h3 className="text-sm font-semibold text-yellow-700 dark:text-yellow-300 mb-2">
-                                    Some records failed:
-                                </h3>
-                                <ul className="text-sm text-yellow-600 dark:text-yellow-400 space-y-1">
-                                    {commitResult.errors.slice(0, 5).map((err, idx) => (
-                                        <li key={idx}>{err}</li>
-                                    ))}
-                                    {commitResult.errors.length > 5 && (
-                                        <li className="italic">... and {commitResult.errors.length - 5} more</li>
-                                    )}
-                                </ul>
+                                {analysisResult.errors.length > 0 && (
+                                    <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
+                                        <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Validation Errors:</h3>
+                                        <div className="max-h-40 overflow-y-auto space-y-1 pr-2 custom-scrollbar border-t border-gray-100 pt-3">
+                                            {analysisResult.errors.map((err, idx) => (
+                                                <div key={idx} className="text-[11px] font-medium text-red-500 flex items-center gap-2">
+                                                    <span className="opacity-50 font-mono">Row {err.rowIndex}:</span>
+                                                    {err.error}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         )}
 
-                        <button
-                            onClick={handleClose}
-                            className="w-full rounded-xl bg-[hsl(var(--primary))] py-2.5 text-sm font-semibold text-[hsl(var(--primary-foreground))]"
-                        >
-                            Done
-                        </button>
+                        {/* Success State */}
+                        {state === 'success' && commitResult && (
+                            <div className="py-10 text-center space-y-6">
+                                <div className="inline-flex items-center justify-center h-20 w-20 rounded-full bg-green-50 animate-in zoom-in-95 duration-500">
+                                    <CheckCircle className="h-10 w-10 text-green-500" />
+                                </div>
+                                <div>
+                                    <h3 className="text-xl font-black text-gray-900 leading-tight">Import Complete</h3>
+                                    <p className="text-sm font-medium text-gray-500 mt-1">Successfully added {commitResult.created} new records to the system.</p>
+                                </div>
+                            </div>
+                        )}
                     </div>
-                )}
+                </DialogBody>
+
+                <DialogFooter>
+                    {state === 'upload' && (
+                        <>
+                            <Button variant="ghost" onClick={handleClose}>Cancel</Button>
+                            <Button onClick={handleAnalyze} disabled={!selectedFile}>Analyze File</Button>
+                        </>
+                    )}
+                    {state === 'review' && analysisResult && (
+                        <>
+                            <Button variant="ghost" onClick={() => setState('upload')}>Back</Button>
+                            <Button onClick={handleCommit} disabled={analysisResult.summary.newLeads === 0}>
+                                Import {analysisResult.summary.newLeads} Valid Leads
+                            </Button>
+                        </>
+                    )}
+                    {state === 'success' && (
+                        <Button onClick={handleClose} className="w-full">Done</Button>
+                    )}
+                </DialogFooter>
             </DialogContent>
         </Dialog>
     );

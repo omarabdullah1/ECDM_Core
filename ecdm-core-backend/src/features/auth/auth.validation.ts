@@ -25,6 +25,7 @@ export const createUserSchema = z.object({
     isActive: z.boolean().optional().default(true),
     targetBudget: z.number().optional().default(0),
     targetSales: z.number().optional().default(0),
+    maxDiscountPercentage: z.number().min(0).max(100).optional().default(0),
 });
 
 // Schema for updating user
@@ -38,6 +39,7 @@ export const updateUserSchema = z.object({
     isActive: z.boolean().optional(),
     targetBudget: z.number().optional(),
     targetSales: z.number().optional(),
+    maxDiscountPercentage: z.number().min(0).max(100).optional(),
 });
 
 export type RegisterInput = z.infer<typeof registerSchema>;

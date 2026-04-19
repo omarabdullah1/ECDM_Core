@@ -13,7 +13,8 @@ export interface Translations {
     contentTracker: string; campaignResults: string;
     sales: string; salesLeads: string; salesData: string; salesFollowUps: string; salesOrders: string;
     customer: string; customersList: string; customerOrders: string; customerFollowUp: string; customerFeedback: string;
-    finance: string; orderFinance: string; generalExpenses: string; salaries: string;
+    finance: string; invoices: string; orderFinance: string; generalExpenses: string; salaries: string;
+
     operations: string; workOrder: string; priceList: string; reportOperation: string;
     hr: string; hrEmployees: string; hrAttendance: string;
     rnd: string; personalBoard: string; rndProjects: string; myPerformance: string;

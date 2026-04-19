@@ -55,7 +55,7 @@ export interface SalesOrderForPDF {
  * @param order - The sales order containing quotation data
  * @param action - Whether to 'view' the PDF in a new tab or 'download' it
  */
-export const generateQuotationPDF = (order: SalesOrderForPDF, action: 'view' | 'download' = 'view') => {
+export const generateQuotationPDF = (order: SalesOrderForPDF, action: 'view' | 'download' | 'blob' = 'view'): void | Blob => {
   const doc = new jsPDF();
   
   // Get customer data (handle both possible field names)
@@ -95,7 +95,8 @@ export const generateQuotationPDF = (order: SalesOrderForPDF, action: 'view' | '
     ? format(new Date(order.quotation.createdAt), 'dd/MM/yyyy')
     : format(new Date(), 'dd/MM/yyyy');
   doc.text(`Date: ${quotationDate}`, 150, 28);
-  doc.text(`Ref: ${order.salesOrderId || order._id.slice(-6).toUpperCase()}`, 150, 34);
+  const orderId = order.salesOrderId || (typeof order._id === 'string' ? order._id.slice(-6).toUpperCase() : 'N/A');
+  doc.text(`Ref: ${orderId}`, 150, 34);
   
   // ═══════════════════════════════════════════════════════════════════════════
   // 3. CUSTOMER INFORMATION
@@ -135,7 +136,7 @@ export const generateQuotationPDF = (order: SalesOrderForPDF, action: 'view' | '
     `$${item.unitPrice.toFixed(2)}`,
     `$${item.total.toFixed(2)}`
   ]);
-
+ 
   autoTable(doc, {
     startY: 85,
     head: [['#', 'Description', 'Qty', 'Unit Price', 'Total']],
@@ -163,7 +164,7 @@ export const generateQuotationPDF = (order: SalesOrderForPDF, action: 'view' | '
       cellPadding: 4
     }
   });
-
+ 
   // ═══════════════════════════════════════════════════════════════════════════
   // 5. TOTALS SECTION
   // ═══════════════════════════════════════════════════════════════════════════
@@ -233,9 +234,13 @@ export const generateQuotationPDF = (order: SalesOrderForPDF, action: 'view' | '
     
     // Clean up the blob URL after opening (with a delay to ensure it loads)
     setTimeout(() => URL.revokeObjectURL(blobUrl), 100);
-  } else {
+  } else if (action === 'download') {
     // Download the PDF file
-    const fileName = `Quotation_${order.salesOrderId || order._id.slice(-6).toUpperCase()}.pdf`;
+    const orderId = order.salesOrderId || (typeof order._id === 'string' ? order._id.slice(-6).toUpperCase() : 'N/A');
+    const fileName = `Quotation_${orderId}.pdf`;
     doc.save(fileName);
+  } else if (action === 'blob') {
+    // Return the blob for bundling
+    return doc.output('blob');
   }
 };

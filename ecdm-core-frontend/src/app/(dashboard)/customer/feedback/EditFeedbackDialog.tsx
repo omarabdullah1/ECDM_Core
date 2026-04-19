@@ -6,7 +6,8 @@ import { z } from 'zod';
 import { X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '@/lib/axios';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 
 const formSchema = z.object({
   solvedIssue: z.enum(['Yes', 'No', '']).optional(),
@@ -72,7 +73,7 @@ interface EditFeedbackDialogProps {
   onSuccess: () => void;
 }
 
-const iCls = 'w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-4 py-3 text-sm placeholder:text-[hsl(var(--muted-foreground))] focus:border-[hsl(var(--primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/20 transition-all disabled:opacity-60 disabled:cursor-not-allowed';
+const iCls = 'flex h-9 w-full rounded-md border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] px-3 py-1 text-sm shadow-sm transition-all placeholder:text-[hsl(var(--muted-foreground))] focus-visible:outline-none focus-visible:border-[hsl(var(--primary))]/50 focus-visible:ring-[3px] focus-visible:ring-[hsl(var(--primary))]/10';
 const labelCls = 'text-xs font-semibold text-[hsl(var(--muted-foreground))] uppercase tracking-wide mb-1.5 block';
 const readOnlyCls = 'text-sm px-3 py-2 bg-[hsl(var(--background))] rounded-md border border-[hsl(var(--border))] font-medium';
 
@@ -155,165 +156,115 @@ export default function EditFeedbackDialog({ feedback, isNew, prefillData, onClo
 
   return (
     <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto overflow-x-hidden p-6 outline-none">
-        <DialogHeader className="flex flex-row items-center justify-between border-b border-[hsl(var(--border))] pb-4 mb-4 space-y-0">
-          <div>
-            <DialogTitle className="text-xl font-bold">
-              {isNew ? 'Create Feedback' : 'Edit Feedback'}
-            </DialogTitle>
-            {!isNew && feedback && (
-              <p className="text-xs text-[hsl(var(--muted-foreground))] mt-0.5">
-                Feedback ID: {feedback._id}
-              </p>
-            )}
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-2 hover:bg-[hsl(var(--muted))] rounded-lg transition-colors"
-          >
-            <X className="h-5 w-5" />
-          </button>
+      <DialogContent className="sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>
+            {isNew ? 'Create Feedback' : 'Edit Feedback'}
+          </DialogTitle>
+          {!isNew && feedback && (
+            <p className="text-[11px] text-[hsl(var(--muted-foreground))] font-medium mt-0.5">
+              Feedback ID: {feedback._id}
+            </p>
+          )}
         </DialogHeader>
 
-        <form onSubmit={form.handleSubmit(onSubmit, onError)} className="space-y-6">
-          <div className="mb-6 space-y-4 rounded-lg bg-[hsl(var(--muted))]/50 p-4 border border-[hsl(var(--border))]">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">
-              Section A: Order Context (Read-Only - Single Source of Truth)
-            </h3>
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <label className="text-[hsl(var(--muted-foreground))] text-xs mb-1 block">Customer Name</label>
-                <div className={readOnlyCls}>
-                  {getContextValue('customerName') || customer?.name || '-'}
-                </div>
+        <DialogBody>
+          <form id="edit-feedback-form" onSubmit={form.handleSubmit(onSubmit, onError)} className="space-y-6">
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 pb-2 border-b border-gray-100">
+                <div className="h-1 w-1 rounded-full bg-gray-400"></div>
+                <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                  Section A: Order Context (Read-Only)
+                </h3>
               </div>
-              <div>
-                <label className="text-[hsl(var(--muted-foreground))] text-xs mb-1 block">Phone Number</label>
-                <div className={readOnlyCls}>
-                  {getContextValue('customerPhone') || customer?.phone || '-'}
+
+              <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50/50 rounded-xl border border-gray-100">
+                <div>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter mb-1 block">Customer Name</label>
+                  <div className={readOnlyCls}>{getContextValue('customerName') || customer?.name || '-'}</div>
                 </div>
-              </div>
-              <div>
-                <label className="text-[hsl(var(--muted-foreground))] text-xs mb-1 block">Customer ID</label>
-                <div className={`${readOnlyCls} font-mono text-xs`}>
-                  {getContextValue('customerId') || customer?.customerId || customer?._id || '-'}
+                <div>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter mb-1 block">Phone Number</label>
+                  <div className={readOnlyCls}>{getContextValue('customerPhone') || customer?.phone || '-'}</div>
                 </div>
-              </div>
-              <div>
-                <label className="text-[hsl(var(--muted-foreground))] text-xs mb-1 block">Order ID</label>
-                <div className={`${readOnlyCls} font-mono text-xs`}>
-                  {getContextValue('orderId') || order?._id || '-'}
+                <div>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter mb-1 block">Customer ID</label>
+                  <div className={`${readOnlyCls} font-mono text-xs text-gray-400`}>{getContextValue('customerId') || customer?.customerId || customer?._id || '-'}</div>
                 </div>
-              </div>
-              <div>
-                <label className="text-[hsl(var(--muted-foreground))] text-xs mb-1 block">Engineer Name</label>
-                <div className={readOnlyCls}>
-                  {getContextValue('engineerName') || '-'}
+                <div>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter mb-1 block">Engineer Name</label>
+                  <div className={readOnlyCls}>{getContextValue('engineerName') || '-'}</div>
                 </div>
-              </div>
-              <div>
-                <label className="text-[hsl(var(--muted-foreground))] text-xs mb-1 block">Visit Date</label>
-                <div className={readOnlyCls}>
-                  {formatDate(getContextValue('actualVisitDate') || getContextValue('visitDate'))}
+                <div>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter mb-1 block">Actual Visit Date</label>
+                  <div className={readOnlyCls}>{formatDate(getContextValue('actualVisitDate') || getContextValue('visitDate'))}</div>
                 </div>
-              </div>
-              <div>
-                <label className="text-[hsl(var(--muted-foreground))] text-xs mb-1 block">Start Date</label>
-                <div className={readOnlyCls}>
-                  {formatDate(getContextValue('startDate'))}
-                </div>
-              </div>
-              <div>
-                <label className="text-[hsl(var(--muted-foreground))] text-xs mb-1 block">End Date</label>
-                <div className={readOnlyCls}>
-                  {formatDate(getContextValue('endDate'))}
+                <div>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter mb-1 block">Deal Status</label>
+                  <div className={readOnlyCls}>{getContextValue('dealStatus') || '-'}</div>
                 </div>
               </div>
             </div>
-          </div>
 
-          <div className="space-y-4">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">
-              Section B: Feedback Ratings (Editable)
-            </h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className={labelCls}>Solved Issue</label>
-                <select {...form.register('solvedIssue')} className={iCls}>
-                  <option value="">Not Set</option>
-                  <option value="Yes">Yes</option>
-                  <option value="No">No</option>
-                </select>
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 pb-2 border-b border-gray-100">
+                <div className="h-1 w-1 rounded-full bg-primary"></div>
+                <h3 className="text-[10px] font-bold text-primary uppercase tracking-widest">
+                  Section B: Feedback Ratings (Editable)
+                </h3>
               </div>
 
-              <div>
-                <label className={labelCls}>Follow Up Required</label>
-                <select {...form.register('followUp')} className={iCls}>
-                  <option value="">Not Set</option>
-                  <option value="Yes">Yes</option>
-                  <option value="No">No</option>
-                </select>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className={labelCls}>Solved Issue?</label>
+                  <select {...form.register('solvedIssue')} className={iCls}>
+                    <option value="">Not Set</option>
+                    <option value="Yes">Yes</option>
+                    <option value="No">No</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className={labelCls}>Follow Up Required?</label>
+                  <select {...form.register('followUp')} className={iCls}>
+                    <option value="">Not Set</option>
+                    <option value="Yes">Yes</option>
+                    <option value="No">No</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className={labelCls}>Operation Rating</label>
+                  <input type="text" placeholder="e.g., 5/5, Excellent" {...form.register('ratingOperation')} className={iCls} />
+                </div>
+
+                <div className="space-y-1">
+                  <label className={labelCls}>Support Rating</label>
+                  <input type="text" placeholder="e.g., 5/5, Excellent" {...form.register('ratingCustomerService')} className={iCls} />
+                </div>
               </div>
 
-              <div>
-                <label className={labelCls}>Rating Operation</label>
-                <input
-                  type="text"
-                  placeholder="e.g., Excellent, Good, 5/5"
-                  {...form.register('ratingOperation')}
-                  className={iCls}
-                />
-              </div>
-
-              <div>
-                <label className={labelCls}>Rating Customer Service</label>
-                <input
-                  type="text"
-                  placeholder="e.g., Excellent, Good, 5/5"
-                  {...form.register('ratingCustomerService')}
-                  className={iCls}
-                />
-              </div>
-
-              <div className="col-span-2">
-                <label className={labelCls}>Notes</label>
+              <div className="space-y-1">
+                <label className={labelCls}>Customer Notes</label>
                 <textarea
-                  placeholder="Enter notes..."
+                  placeholder="Additional feedback details..."
                   {...form.register('notes')}
-                  rows={3}
-                  className={iCls}
+                  rows={4}
+                  className="flex min-h-[100px] w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm shadow-sm transition-all focus-visible:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
                 />
               </div>
             </div>
-          </div>
+          </form>
+        </DialogBody>
 
-          {form.formState.errors && Object.keys(form.formState.errors).length > 0 && (
-            <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-sm space-y-1">
-              <p className="font-semibold">Please correct the following errors:</p>
-              {Object.entries(form.formState.errors).map(([field, error]: [string, unknown]) => (
-                <p key={field} className="text-xs"> {field}: {(error as { message?: string })?.message || 'Invalid value'}</p>
-              ))}
-            </div>
-          )}
-
-          <div className="flex gap-3 pt-4 border-t border-[hsl(var(--border))]">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 rounded-xl border border-[hsl(var(--border))] py-3 text-sm font-semibold hover:bg-[hsl(var(--muted))]/50 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="flex-1 rounded-xl bg-[hsl(var(--primary))] py-3 text-sm font-semibold text-[hsl(var(--primary-foreground))] hover:opacity-90 transition-opacity disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              {saving ? 'Saving...' : isNew ? 'Create Feedback' : 'Save Changes'}
-            </button>
-          </div>
-        </form>
+        <DialogFooter>
+          <Button type="button" variant="ghost" onClick={onClose} disabled={saving}>
+            Cancel
+          </Button>
+          <Button type="submit" form="edit-feedback-form" disabled={saving}>
+            {saving ? 'Saving...' : isNew ? 'Create Feedback' : 'Save Changes'}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

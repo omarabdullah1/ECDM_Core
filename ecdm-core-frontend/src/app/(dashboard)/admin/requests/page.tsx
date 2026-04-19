@@ -7,6 +7,7 @@ import { DataTable } from '@/components/ui/DataTable';
 import { useAuthStore } from '@/features/auth/useAuth';
 import { useRouter } from 'next/navigation';
 import ReviewRequestDialog from './ReviewRequestDialog';
+import { PageHeader } from '@/components/layout/PageHeader';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TypeScript Interfaces
@@ -239,28 +240,23 @@ export default function ModificationRequestsPage() {
     if (!isAdmin) return null;
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 pb-8">
             {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div>
-                    <h1 className="text-2xl font-bold text-[hsl(var(--foreground))]">
-                        Modification Requests
-                    </h1>
-                    <p className="text-[hsl(var(--muted-foreground))] mt-1">
-                        Review and approve/reject pending modification requests from users
-                    </p>
-                </div>
-
-                {/* Pending Count Badge */}
-                {requests.filter(r => r.status === 'Pending').length > 0 && (
-                    <div className="flex items-center gap-2 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 px-4 py-2 rounded-xl">
-                        <AlertCircle className="h-5 w-5" />
-                        <span className="font-semibold">
-                            {requests.filter(r => r.status === 'Pending').length} Pending
-                        </span>
-                    </div>
-                )}
-            </div>
+            <PageHeader
+                title="Modification Requests"
+                icon={FileEdit}
+                description="Review and approve/reject pending modification requests from users"
+                actions={
+                    requests.filter(r => r.status === 'Pending').length > 0 ? (
+                        <div className="flex items-center gap-2 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 px-4 py-2 rounded-xl">
+                            <AlertCircle className="h-5 w-5" />
+                            <span className="font-semibold">
+                                {requests.filter(r => r.status === 'Pending').length} Pending
+                            </span>
+                        </div>
+                    ) : undefined
+                }
+            />
 
             {/* Filters */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

@@ -36,35 +36,35 @@ export function Pagination({ currentPage, totalItems, itemsPerPage, onPageChange
   };
 
   return (
-    <div className="flex items-center justify-between px-6 py-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
-      <div className="text-sm text-slate-500 dark:text-slate-400 font-medium">
+    <div className="flex items-center justify-between px-6 py-4 border-t border-[hsl(var(--border))]/40 bg-[hsl(var(--secondary))]/30 rounded-b-xl">
+      <div className="text-sm text-[hsl(var(--muted-foreground))] font-medium hidden sm:block">
         Showing{' '}
-        <span className="text-slate-900 dark:text-white">{from}</span> to{' '}
-        <span className="text-slate-900 dark:text-white">{to}</span> of{' '}
-        <span className="text-slate-900 dark:text-white">{totalItems}</span> results
+        <span className="text-[hsl(var(--foreground))] font-semibold">{from}</span> to{' '}
+        <span className="text-[hsl(var(--foreground))] font-semibold">{to}</span> of{' '}
+        <span className="text-[hsl(var(--foreground))] font-semibold">{totalItems}</span> results
       </div>
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-start">
         <button
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 1}
-          className="px-4 py-2 text-sm font-semibold rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 disabled:opacity-50 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+          className="px-4 py-2 text-xs font-semibold rounded-full border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] disabled:opacity-50 hover:bg-[hsl(var(--secondary))] transition-colors shadow-sm text-[hsl(var(--foreground))]"
         >
           Previous
         </button>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 hidden sm:flex">
           {getPageNumbers().map((p, idx) =>
             p === '...' ? (
-              <span key={`ellipsis-${idx}`} className="w-8 h-8 flex items-center justify-center text-sm text-slate-400">
+              <span key={`ellipsis-${idx}`} className="w-8 h-8 flex items-center justify-center text-sm text-[hsl(var(--muted-foreground))]">
                 …
               </span>
             ) : (
               <button
                 key={p}
                 onClick={() => onPageChange(p)}
-                className={`w-8 h-8 rounded-lg text-sm font-medium transition-all ${
+                className={`w-8 h-8 rounded-full text-xs font-semibold transition-all ${
                   currentPage === p
-                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200 dark:shadow-indigo-900/50'
-                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                    ? 'bg-[hsl(var(--primary))] text-white premium-shadow'
+                    : 'text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--secondary))] hover:text-[hsl(var(--foreground))]'
                 }`}
               >
                 {p}
@@ -75,7 +75,7 @@ export function Pagination({ currentPage, totalItems, itemsPerPage, onPageChange
         <button
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage === totalPages}
-          className="px-4 py-2 text-sm font-semibold rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 disabled:opacity-50 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+          className="px-4 py-2 text-xs font-semibold rounded-full border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] disabled:opacity-50 hover:bg-[hsl(var(--secondary))] transition-colors shadow-sm text-[hsl(var(--foreground))]"
         >
           Next
         </button>

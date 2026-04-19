@@ -17,6 +17,8 @@ import inventoryFinanceRoutes from './features/finance/routes/inventory-finance.
 
 import expenseRoutes from './features/finance/routes/expense.routes';
 import salaryRoutes from './features/finance/routes/salary.routes';
+import financeInvoiceRoutes from './features/finance/routes/invoice.routes';
+
 // ── Marketing domain ────────────────────────────────────────────────
 import campaignRoutes from './features/marketing/routes/campaign.routes';
 import contentTrackerRoutes from './features/marketing/routes/content-tracker.routes';
@@ -71,6 +73,8 @@ const allowedOrigins = [
     'https://ecdmfront-g54vn7na.b4a.run',
     'https://ecdmfront-x0httuwt.b4a.run',
     'http://localhost:3000',
+    'http://localhost:3001',
+    'http://localhost:5173',
     // add any other known frontend hosts here
 ];
 
@@ -169,6 +173,7 @@ app.use('/api/hr/users',  hrEmployeeRoutes);
 app.use('/api/finance/inventory', inventoryFinanceRoutes);
 app.use('/api/finance/expenses', expenseRoutes);
 app.use('/api/finance/salaries', salaryRoutes);
+app.use('/api/finance/invoices', financeInvoiceRoutes);
 
 // R&D
 app.use('/api/rnd', rndRoutes);

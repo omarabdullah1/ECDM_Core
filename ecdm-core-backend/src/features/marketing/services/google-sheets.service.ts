@@ -1,5 +1,5 @@
 import { google, sheets_v4 } from 'googleapis';
-import { JWT } from 'google-auth-library';
+import { getSheetsClient } from '../../../utils/googleAuth.utils';
 import Contact from '../../shared/models/contact.model';
 import MarketingLead from '../models/marketing-lead.model';
 import SalesLead from '../../sales/models/sales-lead.model';
@@ -7,19 +7,6 @@ import { IMarketingLeadDocument } from '../types/marketing-leads.types';
 import { CustomerType, CustomerSector } from '../../shared/types/contact.types';
 import { SheetSyncInput, SheetWebhookInput } from '../validation/marketing-leads.validation';
 import { AppError } from '../../../utils/apiError';
-
-interface ServiceAccountCredentials {
-    type: string;
-    project_id: string;
-    private_key_id: string;
-    private_key: string;
-    client_email: string;
-    client_id: string;
-    auth_uri: string;
-    token_uri: string;
-    auth_provider_x509_cert_url: string;
-    client_x509_cert_url: string;
-}
 
 interface SheetRow {
     name?: string;
@@ -29,31 +16,6 @@ interface SheetRow {
     date?: string;
     notes?: string;
 }
-
-/**
- * Get authenticated Google Sheets client using service account credentials
- */
-const getSheetsClient = async (serviceAccountJson: string): Promise<sheets_v4.Sheets> => {
-    let credentials: ServiceAccountCredentials;
-    
-    try {
-        credentials = JSON.parse(serviceAccountJson);
-    } catch {
-        throw new AppError('Invalid service account JSON format', 400);
-    }
-
-    if (!credentials.client_email || !credentials.private_key) {
-        throw new AppError('Service account JSON missing required fields (client_email, private_key)', 400);
-    }
-
-    const auth = new JWT({
-        email: credentials.client_email,
-        key: credentials.private_key,
-        scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
-    });
-
-    return google.sheets({ version: 'v4', auth });
-};
 
 /**
  * Parse sheet row values into a structured lead object
@@ -230,17 +192,17 @@ export const syncFromSheet = async (config: SheetSyncInput): Promise<{
     // Build a map of phone -> contactId (fetch all contacts we just upserted)
     const phones = parsedRows.map(r => r.normalizedPhone);
     const contacts = await Contact.find({ phone: { $in: phones } }, { _id: 1, phone: 1 }).lean();
-    const phoneToContactId = new Map(contacts.map(c => [c.phone, c._id]));
+    const phoneToCustomerId = new Map(contacts.map(c => [c.phone, c._id]));
 
     // Step 2: Upsert MarketingLead records (using contactId)
     const marketingBulkOps = parsedRows.map(({ normalizedPhone, data }) => {
-        const contactId = phoneToContactId.get(normalizedPhone);
+        const customerId = phoneToCustomerId.get(normalizedPhone);
         return {
             updateOne: {
-                filter: { contactId },
+                filter: { customerId },
                 update: {
                     $set: {
-                        contactId,
+                        customerId,
                         date: parseDate(data.date || ''),
                         notes: data.notes || '',
                     },
@@ -326,7 +288,7 @@ export const handleSheetWebhook = async (data: SheetWebhookInput): Promise<{
         // Find the contact first to get the MarketingLead
         const contact = await Contact.findOne({ phone: normalizedPhone }).lean();
         if (contact) {
-            const deleted = await MarketingLead.findOneAndDelete({ contactId: contact._id });
+            const deleted = await MarketingLead.findOneAndDelete({ customerId: contact._id });
             return { lead: deleted, isNew: false, forwardedToSales: false };
         }
         return { lead: null, isNew: false, forwardedToSales: false };
@@ -354,18 +316,18 @@ export const handleSheetWebhook = async (data: SheetWebhookInput): Promise<{
     );
 
     // Step 2: Check if MarketingLead exists BEFORE upserting (to detect if this is truly new)
-    const existingLead = await MarketingLead.findOne({ contactId: contact._id }).lean();
+    const existingLead = await MarketingLead.findOne({ customerId: contact._id }).lean();
     const isNew = !existingLead;
 
     const leadData = {
-        contactId: contact._id,
+        customerId: contact._id,
         date: parseDate(row.date || ''),
         notes: row.notes || '',
     };
 
     // Step 3: Upsert the MarketingLead
     const lead = await MarketingLead.findOneAndUpdate(
-        { contactId: contact._id },
+        { customerId: contact._id },
         {
             $set: leadData,
             $setOnInsert: { createdAt: new Date() },
@@ -383,7 +345,7 @@ export const handleSheetWebhook = async (data: SheetWebhookInput): Promise<{
     if (isNew && lead) {
         try {
             await SalesLead.create({
-                contactId: contact._id,
+                customerId: contact._id,
                 date: lead.date || new Date(),
                 marketingLeadId: lead._id,
                 issue: '',

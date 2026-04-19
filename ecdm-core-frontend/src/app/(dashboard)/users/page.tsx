@@ -21,6 +21,7 @@ interface User {
     lastLogin?: string;
     targetBudget?: number;
     targetSales?: number;
+    maxDiscountPercentage?: number;
 }
 
 const ROLES = [
@@ -90,6 +91,7 @@ type EditForm = {
     isActive: boolean;
     targetBudget?: number;
     targetSales?: number;
+    maxDiscountPercentage?: number;
 };
 
 const blankEdit: EditForm = {
@@ -102,6 +104,7 @@ const blankEdit: EditForm = {
     isActive: true,
     targetBudget: 0,
     targetSales: 0,
+    maxDiscountPercentage: 0,
 };
 
 export default function UsersPage() {
@@ -169,6 +172,7 @@ export default function UsersPage() {
             isActive: user.isActive ?? true,
             targetBudget: user.targetBudget || 0,
             targetSales: user.targetSales || 0,
+            maxDiscountPercentage: user.maxDiscountPercentage || 0,
         });
         setEditModal(true);
     };
@@ -198,6 +202,7 @@ export default function UsersPage() {
                 isActive: form.isActive,
                 targetBudget: form.targetBudget,
                 targetSales: form.targetSales,
+                maxDiscountPercentage: form.maxDiscountPercentage,
             };
             if (form.password) {
                 payload.password = form.password;
@@ -308,10 +313,19 @@ export default function UsersPage() {
             header: 'Created',
             render: (row: User) => new Date(row.createdAt).toLocaleDateString(),
         },
+        {
+            key: 'maxDiscountPercentage',
+            header: 'Discount Limit',
+            render: (row: User) => row.role === 'Sales' ? (
+                <span className="font-medium text-orange-600 dark:text-orange-400">
+                    {row.maxDiscountPercentage || 0}%
+                </span>
+            ) : <span className="text-gray-400 text-xs">—</span>,
+        },
     ];
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 pb-8">
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
@@ -420,8 +434,8 @@ export default function UsersPage() {
             {/* Edit User Dialog */}
             {
                 editModal && editing && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-                        <div className="w-full max-w-lg rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+                    <div className="fixed inset-0 z-[100] flex overflow-y-auto bg-black/60 backdrop-blur-sm p-4 sm:p-6 animate-in fade-in transition-all">
+                        <div className="w-full max-w-lg rounded-2xl border border-[hsl(var(--border))] modern-glass-card m-auto relative premium-shadow animate-in-slide p-6 shadow-2xl">
                             {/* Header */}
                             <div className="flex items-center justify-between mb-6">
                                 <div className="flex items-center gap-3">
@@ -504,6 +518,20 @@ export default function UsersPage() {
                                         />
                                     </div>
 
+                                {form.role === 'Sales' && (
+                                    <div>
+                                        <label className="block text-sm font-medium mb-1.5">Max Discount %</label>
+                                        <input
+                                            type="number"
+                                            value={form.maxDiscountPercentage}
+                                            onChange={(e) => setForm(prev => ({ ...prev, maxDiscountPercentage: Number(e.target.value) }))}
+                                            min="0"
+                                            max="100"
+                                            className={inputClass}
+                                        />
+                                    </div>
+                                )}
+
                                 <div className="flex items-center gap-3">
                                     <input
                                         type="checkbox"
@@ -528,14 +556,14 @@ export default function UsersPage() {
                                     <button
                                         type="submit"
                                         disabled={saving}
-                                        className="flex-1 rounded-xl bg-[hsl(var(--primary))] py-2.5 text-sm font-semibold text-[hsl(var(--primary-foreground))] disabled:opacity-50 hover:opacity-90 transition-opacity"
+                                        className="flex-1 flex-1 rounded-md bg-[hsl(var(--primary))] py-2 text-sm font-medium text-[hsl(var(--primary-foreground))] shadow-sm hover:opacity-90 transition-all focus-visible:outline-none disabled:opacity-50 hover:opacity-90 transition-opacity"
                                     >
                                         {saving ? 'Saving...' : 'Update Employee'}
                                     </button>
                                     <button
                                         type="button"
                                         onClick={closeEdit}
-                                        className="px-6 rounded-xl border border-[hsl(var(--border))] py-2.5 text-sm font-semibold hover:bg-[hsl(var(--muted))]/50 transition-colors"
+                                        className="px-6 flex-1 rounded-md border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] py-2 text-sm font-medium shadow-sm transition-all hover:bg-[hsl(var(--accent))] focus-visible:outline-none font-semibold hover:bg-[hsl(var(--muted))]/50 transition-colors"
                                     >
                                         Cancel
                                     </button>
@@ -549,8 +577,8 @@ export default function UsersPage() {
             {/* Delete Confirmation Dialog */}
             {
                 delId && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-                        <div className="w-full max-w-sm rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6 shadow-2xl">
+                    <div className="fixed inset-0 z-[100] flex overflow-y-auto bg-black/60 backdrop-blur-sm p-4 sm:p-6 animate-in fade-in transition-all">
+                        <div className="w-full max-w-sm rounded-2xl border border-[hsl(var(--border))] modern-glass-card m-auto relative premium-shadow animate-in-slide p-6 shadow-2xl">
                             <div className="flex flex-col items-center text-center">
                                 <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30 mb-4">
                                     <Trash2 className="h-6 w-6 text-red-600 dark:text-red-400" />
@@ -562,7 +590,7 @@ export default function UsersPage() {
                                 <div className="flex gap-3 w-full">
                                     <button
                                         onClick={() => setDelId(null)}
-                                        className="flex-1 rounded-xl border border-[hsl(var(--border))] py-2.5 text-sm font-semibold hover:bg-[hsl(var(--muted))]/50 transition-colors"
+                                        className="flex-1 flex-1 rounded-md border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] py-2 text-sm font-medium shadow-sm transition-all hover:bg-[hsl(var(--accent))] focus-visible:outline-none font-semibold hover:bg-[hsl(var(--muted))]/50 transition-colors"
                                     >
                                         Cancel
                                     </button>
@@ -582,8 +610,8 @@ export default function UsersPage() {
             {/* Set Target Dialog */}
             {
                 targetModal && selectedUser && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-                        <div className="w-full max-w-md rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6 shadow-2xl">
+                    <div className="fixed inset-0 z-[100] flex overflow-y-auto bg-black/60 backdrop-blur-sm p-4 sm:p-6 animate-in fade-in transition-all">
+                        <div className="w-full max-w-md rounded-2xl border border-[hsl(var(--border))] modern-glass-card m-auto relative premium-shadow animate-in-slide p-6 shadow-2xl">
                             <div className="flex items-center justify-between mb-6">
                                 <div className="flex items-center gap-3">
                                     <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
@@ -631,7 +659,7 @@ export default function UsersPage() {
                                     <button
                                         type="button"
                                         onClick={() => setTargetModal(false)}
-                                        className="flex-1 rounded-xl border border-[hsl(var(--border))] py-2.5 text-sm font-semibold hover:bg-[hsl(var(--muted))]/50 transition-colors"
+                                        className="flex-1 flex-1 rounded-md border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] py-2 text-sm font-medium shadow-sm transition-all hover:bg-[hsl(var(--accent))] focus-visible:outline-none font-semibold hover:bg-[hsl(var(--muted))]/50 transition-colors"
                                     >
                                         Cancel
                                     </button>

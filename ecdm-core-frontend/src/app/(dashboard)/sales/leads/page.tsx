@@ -1,9 +1,11 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import api from '@/lib/axios';
-import { Users, Edit2, Trash2, X, AlertCircle } from 'lucide-react';
+import { Users, Edit2, Trash2, X, AlertCircle, Eye } from 'lucide-react';
+import { useAuthStore } from '@/features/auth/useAuth';
 import toast from 'react-hot-toast';
 import { DataTable } from '@/components/ui/DataTable';
+import { PageHeader } from '@/components/layout/PageHeader';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -42,7 +44,7 @@ export interface SalesLead {
   notes: string;
 }
 
-export const iCls = 'w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-4 py-3 text-sm placeholder:text-[hsl(var(--muted-foreground))] focus:border-[hsl(var(--primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/20 transition-all';
+export const iCls = 'flex h-9 w-full rounded-md border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] px-3 py-1 text-sm shadow-sm transition-all placeholder:text-[hsl(var(--muted-foreground))] focus-visible:outline-none focus-visible:border-[hsl(var(--primary))]/50 focus-visible:ring-[3px] focus-visible:ring-[hsl(var(--primary))]/10';
 export const STATUSES = ['New', 'Contacted', 'Negotiation', 'Closed'] as const;
 export const ORDER_OPTIONS = ['', 'Yes', 'No'] as const;
 export const TYPE_OF_ORDER = ['Maintenance', 'General supplies', 'Supply and installation'];
@@ -69,6 +71,7 @@ const StatusBadge = ({ status }: { status: SalesLead['status'] }) => {
 const blankEdit: { issue: string; order: OrderOption; reason: string; notes: string; status: 'New' | 'Contacted' | 'Negotiation' | 'Closed'; address: string; region: string; typeOfOrder: string; salesPlatform: string } = { issue: '', order: '', reason: '', notes: '', status: 'New', address: '', region: '', typeOfOrder: '', salesPlatform: '' };
 
 export default function SalesLeadsPage() {
+  const { user } = useAuthStore();
   const [rows, setRows] = useState<SalesLead[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -106,6 +109,17 @@ export default function SalesLeadsPage() {
 
   const openE = (r: SalesLead) => {
     setEditing(r);
+    
+    // Ownership & RBAC Check
+    const isAdmin = user?.role === 'Admin' || user?.role === 'SuperAdmin';
+    const isOwner = r.salesPerson && user && (
+      user.email === r.salesPerson || 
+      `${user.firstName} ${user.lastName}`.trim() === r.salesPerson
+    );
+    
+    // We only open the dialog. The isReadOnly prop passed to EditLeadDialog 
+    // will handle the actual locking of fields.
+    
     // Normalize order value to Yes/No/empty for the select field
     const normalizedOrder: OrderOption = r.order === 'Yes' ? 'Yes' : r.order === 'No' ? 'No' : '';
     setForm({
@@ -305,43 +319,52 @@ export default function SalesLeadsPage() {
   ];
 
   // ─── Row Actions ──────────────────────────────────────────────────────────────
-  const renderActions = (row: SalesLead) => (
-    <div className="flex gap-2">
-      <button
-        onClick={() => openE(row)}
-        className="p-1 hover:text-[hsl(var(--primary))]"
-        title="Edit"
-      >
-        <Edit2 className="h-4 w-4" />
-      </button>
-      <button
-        onClick={() => setDelId(row._id)}
-        className="p-1 hover:text-destructive"
-        title="Delete"
-      >
-        <Trash2 className="h-4 w-4" />
-      </button>
-    </div>
-  );
+  const renderActions = (row: SalesLead) => {
+    const isAdmin = user?.role === 'Admin' || user?.role === 'SuperAdmin';
+    const isOwner = row.salesPerson && user && (
+      user.email === row.salesPerson || 
+      `${user.firstName} ${user.lastName}`.trim() === row.salesPerson
+    );
+    const canEdit = isAdmin || !row.salesPerson || isOwner;
+
+    return (
+      <div className="flex gap-2">
+        <button
+          onClick={() => openE(row)}
+          className={`p-1 transition-colors ${canEdit ? 'hover:text-[hsl(var(--primary))]' : 'hover:text-blue-500'}`}
+          title={canEdit ? "Edit" : "Preview"}
+        >
+          {canEdit ? <Edit2 className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+        </button>
+        {isAdmin && (
+          <button
+            onClick={() => setDelId(row._id)}
+            className="p-1 hover:text-destructive"
+            title="Delete"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        )}
+      </div>
+    );
+  };
 
   const COLUMNS = ['ID', 'Name', 'Phone', 'Type', 'Sector', 'Issue', 'Order', 'Reason', 'SalesPerson', 'Date', 'Status', 'Notes', 'Actions'];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Users className="h-7 w-7 text-[hsl(var(--primary))]" />
-          <h1 className="text-2xl font-bold">Sales Leads</h1>
-        </div>
-      </div>
+      <PageHeader 
+        title="Sales Leads"
+        icon={Users}
+      />
 
       {/* Filter */}
-      <div className="flex gap-3 flex-wrap">
+      <div className="flex gap-3 flex-wrap animate-in-slide stagger-2">
         <select
           value={fStatus}
           onChange={e => { setFStatus(e.target.value); setPage(1); }}
-          className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2 text-sm"
+          className="h-9 rounded-md border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] px-3 py-1 text-sm shadow-sm transition-all focus-visible:outline-none focus-visible:border-[hsl(var(--primary))]/50 focus-visible:ring-[3px] focus-visible:ring-[hsl(var(--primary))]/10"
         >
           <option value="">All Statuses</option>
           {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
@@ -349,7 +372,7 @@ export default function SalesLeadsPage() {
         <select
           value={fOrder}
           onChange={e => { setFOrder(e.target.value); setPage(1); }}
-          className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2 text-sm"
+          className="h-9 rounded-md border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] px-3 py-1 text-sm shadow-sm transition-all focus-visible:outline-none focus-visible:border-[hsl(var(--primary))]/50 focus-visible:ring-[3px] focus-visible:ring-[hsl(var(--primary))]/10"
         >
           <option value="">All Orders (Yes/No)</option>
           {ORDER_OPTIONS.filter(o => o !== '').map(o => <option key={o} value={o}>{o}</option>)}
@@ -369,6 +392,7 @@ export default function SalesLeadsPage() {
         onPageChange={setPage}
         bulkDeleteEndpoint="/sales/leads/bulk-delete"
         onBulkDeleteSuccess={fetch_}
+        onRowClick={openE}
         renderActions={renderActions}
         defaultVisibility={{
           "customerId.address": false,
@@ -386,6 +410,11 @@ export default function SalesLeadsPage() {
         onClose={() => setModal(false)}
         onSuccess={fetch_}
         lead={editing}
+        isReadOnly={
+          !!editing?.salesPerson && 
+          !(user?.role === 'Admin' || user?.role === 'SuperAdmin') && 
+          !(user && (user.email === editing.salesPerson || `${user.firstName} ${user.lastName}`.trim() === editing.salesPerson))
+        }
         onRequiresApproval={() => {
           setModal(false);
           setShowApprovalAlert(true);
@@ -394,12 +423,12 @@ export default function SalesLeadsPage() {
 
       {/* Delete Confirmation Modal */}
       {delId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6 shadow-2xl max-w-sm w-full">
+        <div className="fixed inset-0 z-[100] flex overflow-y-auto bg-black/60 backdrop-blur-sm p-4 sm:p-6 animate-in fade-in transition-all">
+          <div className="rounded-md border border-[hsl(var(--border))]/50 modern-glass-card premium-shadow animate-in-slide m-auto relative p-6 shadow-lg sm:max-w-md w-full">
             <p className="mb-4 font-semibold">Delete this lead?</p>
             <div className="flex gap-3">
-              <button onClick={del} className="flex-1 rounded-xl bg-destructive py-2 text-sm font-semibold text-white">Delete</button>
-              <button onClick={() => setDelId(null)} className="flex-1 rounded-xl border py-2 text-sm">Cancel</button>
+              <button onClick={del} className="flex-1 rounded-md bg-[hsl(var(--destructive))] py-2 text-sm font-medium text-[hsl(var(--destructive-foreground))] shadow-sm transition-all hover:opacity-90 focus-visible:outline-none">Delete</button>
+              <button onClick={() => setDelId(null)} className="flex-1 rounded-md border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] py-2 text-sm font-medium shadow-sm transition-all hover:bg-[hsl(var(--accent))] focus-visible:outline-none">Cancel</button>
             </div>
           </div>
         </div>

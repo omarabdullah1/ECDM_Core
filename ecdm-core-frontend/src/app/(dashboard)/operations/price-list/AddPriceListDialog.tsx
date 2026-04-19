@@ -1,5 +1,4 @@
-'use client';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter } from '@/components/ui/dialog';
 import api from '@/lib/axios';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { FileText, Upload, X } from 'lucide-react';
@@ -8,6 +7,9 @@ import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
 import { z } from 'zod';
 import { PRICE_LIST_CATEGORIES } from './columns';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
 
 interface AddPriceListDialogProps {
     onClose: () => void;
@@ -87,124 +89,78 @@ export default function AddPriceListDialog({ onClose, onSuccess }: AddPriceListD
 
     return (
         <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto overflow-x-hidden p-6 outline-none">
-
-                <DialogHeader className="flex flex-row items-center justify-between border-b border-[hsl(var(--border))] pb-4 mb-4 space-y-0">
-                    <div>
-                        <DialogTitle className="text-xl font-bold">Add Price List Item</DialogTitle>
-                        <p className="text-xs text-[hsl(var(--muted-foreground))] mt-0.5">
-                            Create a new item in the price list
-                        </p>
+            <DialogContent className="sm:max-w-2xl">
+                <DialogHeader>
+                    <div className="flex items-center gap-3">
+                        <FileText className="h-5 w-5 text-primary" />
+                        <div>
+                            <DialogTitle>Add Price List Item</DialogTitle>
+                            <p className="text-[10px] font-medium text-gray-400 mt-0.5 uppercase tracking-widest">Pricing & Inventory Management</p>
+                        </div>
                     </div>
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        className="p-2 hover:bg-[hsl(var(--muted))] rounded-lg transition-colors"
-                    >
-                        <X className="h-5 w-5" />
-                    </button>
                 </DialogHeader>
 
-                <form onSubmit={form.handleSubmit(onSubmit, onError)}>
-                    <div className="space-y-5">
-
-                        {/* Item Name */}
-                        <div>
-                            <label className={labelCls}>Item Name *</label>
-                            <input
-                                type="text"
-                                {...form.register('itemName')}
-                                placeholder="Enter item name"
-                                className={iCls}
-                            />
+                <DialogBody>
+                    <form id="add-price-list-form" onSubmit={form.handleSubmit(onSubmit, onError)} className="space-y-6">
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Item Name</label>
+                            <Input {...form.register('itemName')} placeholder="e.g. Industrial Steel Plate" />
                             {form.formState.errors.itemName && (
-                                <p className="text-red-500 text-xs mt-1">
-                                    {form.formState.errors.itemName.message}
-                                </p>
+                                <p className="text-[10px] font-medium text-red-500 mt-1">{form.formState.errors.itemName.message}</p>
                             )}
                         </div>
 
-                        {/* Specification */}
-                        <div>
-                            <label className={labelCls}>Specification</label>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Category</label>
+                                <Select {...form.register('category')}>
+                                    <option value="">Select Category...</option>
+                                    {PRICE_LIST_CATEGORIES.map((cat) => (
+                                        <option key={cat} value={cat}>{cat}</option>
+                                    ))}
+                                </Select>
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Unit Price ($)</label>
+                                <Input type="number" step="0.01" min="0" {...form.register('unitPrice')} placeholder="0.00" />
+                            </div>
+                        </div>
+
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Technical Specifications</label>
                             <textarea
                                 {...form.register('specification')}
-                                placeholder="Enter specification details"
+                                placeholder="Enter detailed technical specs..."
                                 rows={3}
-                                className={iCls}
+                                className="w-full rounded-xl border border-gray-100 bg-gray-50/50 px-4 py-3 text-sm placeholder:text-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all font-medium"
                             />
                         </div>
 
-                        {/* Category — Enum dropdown */}
-                        <div>
-                            <label className={labelCls}>Category</label>
-                            <select
-                                {...form.register('category')}
-                                className={iCls}
-                            >
-                                <option value="">— Select category —</option>
-                                {PRICE_LIST_CATEGORIES.map((cat) => (
-                                    <option key={cat} value={cat}>
-                                        {cat}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-
-                        {/* Unit Price */}
-                        <div>
-                            <label className={labelCls}>Unit Price ($)</label>
-                            <input
-                                type="number"
-                                step="0.01"
-                                min="0"
-                                {...form.register('unitPrice')}
-                                placeholder="0.00"
-                                className={iCls}
-                            />
-                        </div>
-
-                        {/* Notes */}
-                        <div>
-                            <label className={labelCls}>Notes</label>
-                            <textarea
-                                {...form.register('notes')}
-                                placeholder="Additional notes"
-                                rows={2}
-                                className={iCls}
-                            />
-                        </div>
-
-                        {/* Data Sheet Upload */}
-                        <div>
-                            <label className={labelCls}>Data Sheet (PDF)</label>
-                            <div className="border-2 border-dashed border-[hsl(var(--border))] rounded-xl p-6 text-center hover:border-[hsl(var(--primary))] transition-colors">
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Documentation (PDF)</label>
+                            <div className="border border-dashed border-gray-200 rounded-2xl p-6 text-center hover:bg-gray-50/50 transition-all group overflow-hidden relative">
                                 {dataSheetFile ? (
-                                    <div className="flex items-center justify-center gap-3">
-                                        <FileText className="w-8 h-8 text-[hsl(var(--primary))]" />
+                                    <div className="flex items-center justify-center gap-4 animate-in fade-in zoom-in-95">
+                                        <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                                            <FileText className="w-6 h-6 text-primary" />
+                                        </div>
                                         <div className="text-left">
-                                            <p className="font-medium text-sm">{dataSheetFile.name}</p>
-                                            <p className="text-xs text-[hsl(var(--muted-foreground))]">
-                                                {(dataSheetFile.size / 1024).toFixed(2)} KB
-                                            </p>
+                                            <p className="font-bold text-sm text-gray-900">{dataSheetFile.name}</p>
+                                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{(dataSheetFile.size / 1024).toFixed(2)} KB</p>
                                         </div>
                                         <button
                                             type="button"
                                             onClick={() => setDataSheetFile(null)}
-                                            className="p-1 hover:bg-[hsl(var(--muted))] rounded"
+                                            className="ml-4 p-2 hover:bg-red-50 text-gray-400 hover:text-red-500 rounded-lg transition-colors"
                                         >
                                             <X className="w-4 h-4" />
                                         </button>
                                     </div>
                                 ) : (
                                     <label className="cursor-pointer block">
-                                        <Upload className="w-10 h-10 mx-auto text-[hsl(var(--muted-foreground))] mb-2" />
-                                        <p className="text-sm text-[hsl(var(--muted-foreground))]">
-                                            Click to upload or drag and drop
-                                        </p>
-                                        <p className="text-xs text-[hsl(var(--muted-foreground))] mt-1">
-                                            PDF files only (max 10MB)
-                                        </p>
+                                        <Upload className="w-8 h-8 mx-auto text-gray-300 mb-2 group-hover:text-primary transition-colors" />
+                                        <p className="text-xs font-bold text-gray-700 tracking-tight">Upload Data Sheet</p>
+                                        <p className="text-[10px] font-medium text-gray-400 mt-1 uppercase">PDF only · Max 10MB</p>
                                         <input
                                             type="file"
                                             accept=".pdf,application/pdf"
@@ -215,26 +171,25 @@ export default function AddPriceListDialog({ onClose, onSuccess }: AddPriceListD
                                 )}
                             </div>
                         </div>
-                    </div>
 
-                    {/* Footer */}
-                    <div className="flex items-center justify-end gap-3 border-t border-[hsl(var(--border))] pt-4 mt-6">
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            className="px-4 py-2 rounded-xl border border-[hsl(var(--border))] text-sm font-medium hover:bg-[hsl(var(--muted))] transition-colors"
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            type="submit"
-                            disabled={saving}
-                            className="px-6 py-2 rounded-xl bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            {saving ? 'Creating...' : 'Create Item'}
-                        </button>
-                    </div>
-                </form>
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Private Remarks</label>
+                            <textarea
+                                {...form.register('notes')}
+                                placeholder="Internal use only..."
+                                rows={2}
+                                className="w-full rounded-xl border border-gray-100 bg-gray-50/50 px-4 py-3 text-sm placeholder:text-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all font-medium"
+                            />
+                        </div>
+                    </form>
+                </DialogBody>
+
+                <DialogFooter>
+                    <Button variant="ghost" onClick={onClose} disabled={saving}>Cancel</Button>
+                    <Button type="submit" form="add-price-list-form" disabled={saving}>
+                        {saving ? 'Creating Item...' : 'Add to Price List'}
+                    </Button>
+                </DialogFooter>
             </DialogContent>
         </Dialog>
     );

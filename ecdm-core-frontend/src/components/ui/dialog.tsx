@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -78,50 +79,67 @@ export function DialogContent({
   const context = React.useContext(DialogContext);
   if (!context) throw new Error('DialogContent must be used within Dialog');
 
-  if (!context.open) return null;
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!context.open || !mounted) return null;
 
   const handleClose = () => {
     onClose?.();
     context.onOpenChange(false);
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex justify-end pointer-events-none">
       {/* Backdrop */}
       <div 
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm" 
+        className="fixed inset-0 bg-black/40 backdrop-blur-[2px] transition-opacity animate-in fade-in duration-300 pointer-events-auto" 
         onClick={handleClose}
         aria-hidden="true"
       />
       
-      {/* Content - GLOBAL SCROLLABLE FIX */}
+      {/* Dialog Drawer (Full Height) */}
       <div
         className={cn(
-          'relative z-50 w-full max-w-lg rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6 shadow-2xl',
-          'max-h-[85vh] overflow-y-auto', // Global scrollable fix
+          'relative w-full sm:max-w-2xl h-screen flex flex-col',
+          'bg-white/90 backdrop-blur-xl shadow-[0_0_50px_-12px_rgba(0,0,0,0.25)] animate-drawer-in overflow-hidden pointer-events-auto',
+          'dark:bg-[hsl(var(--background))]/80 dark:border-l dark:border-[hsl(var(--border))]/30',
+          'rounded-l-3xl border-l border-[hsl(var(--border))]/50', // Premium rounded edge
           className
         )}
         role="dialog"
         aria-modal="true"
+        onClick={(e) => e.stopPropagation()}
       >
-        {/* Close button */}
+        {/* Close button - now always on top of the card stack */}
         <button
           onClick={handleClose}
-          className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+          className="absolute right-4 top-4 z-50 rounded-lg bg-gray-100/50 p-2 text-gray-500 opacity-70 transition-all hover:bg-gray-100 hover:opacity-100 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary/20"
         >
-          <X className="h-5 w-5" />
+          <X className="h-4 w-4" />
           <span className="sr-only">Close</span>
         </button>
         
         {children}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
 export function DialogHeader({ className, children }: DialogHeaderProps) {
   return (
-    <div className={cn('flex flex-col space-y-1.5 text-center sm:text-left mb-4', className)}>
+    <div className={cn('flex-none px-8 py-6', className)}>
+      {children}
+    </div>
+  );
+}
+
+export function DialogBody({ className, children }: { className?: string; children: React.ReactNode }) {
+  return (
+    <div className={cn('flex-1 min-h-0 overflow-y-auto p-8 custom-scrollbar', className)}>
       {children}
     </div>
   );
@@ -145,7 +163,7 @@ export function DialogDescription({ className, children }: DialogDescriptionProp
 
 export function DialogFooter({ className, children }: DialogFooterProps) {
   return (
-    <div className={cn('flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 mt-4', className)}>
+    <div className={cn('flex-none px-8 py-5 border-t border-[hsl(var(--border))]/30 flex justify-end gap-3', className)}>
       {children}
     </div>
   );

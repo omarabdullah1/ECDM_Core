@@ -3,10 +3,11 @@ import { useState, useEffect, useCallback } from 'react';
 import api from '@/lib/axios';
 import { Star, Plus, Trash2, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { DataTable } from '@/components/ui/DataTable';
+import { PageHeader } from '@/components/layout/PageHeader';
 
 interface Report { _id: string; employee?: { firstName: string; lastName: string }; evaluationPeriod: { startDate: string; endDate: string }; punctualityScore: number; completionRate: number; taskQualityScore: number; overallPerformanceScore: number; notes?: string; }
 
-const iCls = 'w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-4 py-3 text-sm placeholder:text-[hsl(var(--muted-foreground))] focus:border-[hsl(var(--primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/20 transition-all';
+const iCls = 'flex h-9 w-full rounded-md border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] px-3 py-1 text-sm shadow-sm transition-all placeholder:text-[hsl(var(--muted-foreground))] focus-visible:outline-none focus-visible:border-[hsl(var(--primary))]/50 focus-visible:ring-[3px] focus-visible:ring-[hsl(var(--primary))]/10';
 
 function ScoreBadge({ val }: { val: number }) {
   const color = val >= 80 ? 'bg-green-100 text-green-700' : val >= 60 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700';
@@ -67,11 +68,14 @@ export default function ReportPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3"><Star className="h-7 w-7 text-[hsl(var(--primary))]" /><h1 className="text-2xl font-bold">Performance Reports</h1></div>
-        <button onClick={openC} className="flex items-center gap-2 rounded-xl bg-[hsl(var(--primary))] px-4 py-2 text-sm font-semibold text-[hsl(var(--primary-foreground))] hover:opacity-90 transition-opacity"><Plus className="h-4 w-4" />Add Report</button>
-      </div>
+    <div className="space-y-6 pb-8">
+      <PageHeader
+        title="Performance Reports"
+        icon={Star}
+        actions={
+          <button onClick={openC} className="flex items-center gap-2 rounded-md bg-[hsl(var(--primary))] px-4 py-2 text-sm font-medium text-[hsl(var(--primary-foreground))] shadow-sm hover:opacity-90 border-0 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[hsl(var(--primary))]/10 transition-all"><Plus className="h-4 w-4" />Add Report</button>
+        }
+      />
 
       <div className="overflow-x-auto">
         <DataTable
@@ -111,8 +115,8 @@ export default function ReportPage() {
 
 
       {modal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="w-full max-w-lg rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-[100] flex overflow-y-auto bg-black/60 backdrop-blur-sm p-4 sm:p-6 animate-in fade-in transition-all">
+          <div className="w-full max-w-lg rounded-2xl border border-[hsl(var(--border))] modern-glass-card m-auto relative premium-shadow animate-in-slide p-6 shadow-2xl">
             <div className="flex items-center justify-between mb-6"><h2 className="text-lg font-bold">New Performance Report</h2><button onClick={() => setModal(false)}><X className="h-5 w-5" /></button></div>
             <form onSubmit={save} className="space-y-4">
               <input placeholder="Employee ID" value={form.employee || ''} onChange={u('employee')} className={iCls} />
@@ -128,17 +132,17 @@ export default function ReportPage() {
                 <strong>Score formula:</strong> Overall = Punctuality×30% + Completion×30% + (Quality/5×100)×40%
               </div>
               {error && <p className="text-sm text-destructive">{error}</p>}
-              <div className="flex gap-3 pt-2"><button type="submit" disabled={saving} className="flex-1 rounded-xl bg-[hsl(var(--primary))] py-2.5 text-sm font-semibold text-[hsl(var(--primary-foreground))] disabled:opacity-60">{saving ? 'Saving…' : 'Save Report'}</button><button type="button" onClick={() => setModal(false)} className="flex-1 rounded-xl border border-[hsl(var(--border))] py-2.5 text-sm">Cancel</button></div>
+              <div className="flex gap-3 pt-2"><button type="submit" disabled={saving} className="flex-1 flex-1 rounded-md bg-[hsl(var(--primary))] py-2 text-sm font-medium text-[hsl(var(--primary-foreground))] shadow-sm hover:opacity-90 transition-all focus-visible:outline-none disabled:opacity-60">{saving ? 'Saving…' : 'Save Report'}</button><button type="button" onClick={() => setModal(false)} className="flex-1 flex-1 rounded-md border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] py-2 text-sm font-medium shadow-sm transition-all hover:bg-[hsl(var(--accent))] focus-visible:outline-none">Cancel</button></div>
             </form>
           </div>
         </div>
       )}
 
       {delId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6 shadow-2xl max-w-sm w-full">
+        <div className="fixed inset-0 z-[100] flex overflow-y-auto bg-black/60 backdrop-blur-sm p-4 sm:p-6 animate-in fade-in transition-all">
+          <div className="rounded-md border border-[hsl(var(--border))]/50 modern-glass-card premium-shadow animate-in-slide m-auto relative p-6 shadow-lg sm:max-w-md w-full">
             <p className="mb-4 font-semibold">Delete this report?</p>
-            <div className="flex gap-3"><button onClick={del} className="flex-1 rounded-xl bg-destructive py-2 text-sm font-semibold text-white">Delete</button><button onClick={() => setDelId(null)} className="flex-1 rounded-xl border py-2 text-sm">Cancel</button></div>
+            <div className="flex gap-3"><button onClick={del} className="flex-1 rounded-md bg-[hsl(var(--destructive))] py-2 text-sm font-medium text-[hsl(var(--destructive-foreground))] shadow-sm transition-all hover:opacity-90 focus-visible:outline-none">Delete</button><button onClick={() => setDelId(null)} className="flex-1 rounded-md border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] py-2 text-sm font-medium shadow-sm transition-all hover:bg-[hsl(var(--accent))] focus-visible:outline-none">Cancel</button></div>
           </div>
         </div>
       )}

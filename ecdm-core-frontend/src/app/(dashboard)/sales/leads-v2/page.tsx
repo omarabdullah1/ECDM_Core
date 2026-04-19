@@ -184,9 +184,9 @@ export default function SalesLeadsPageV2() {
 
   // ─── Render ───────────────────────────────────────────────────────────────────
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-in-slide stagger-1">
         <div className="flex items-center gap-3">
           <Users className="h-7 w-7 text-[hsl(var(--primary))]" />
           <h1 className="text-2xl font-bold">Sales Leads (V2)</h1>
@@ -202,7 +202,7 @@ export default function SalesLeadsPageV2() {
       </div>
 
       {/* Filters */}
-      <div className="flex gap-3 flex-wrap">
+      <div className="flex gap-3 flex-wrap animate-in-slide stagger-2">
         <select
           value={statusFilter}
           onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}

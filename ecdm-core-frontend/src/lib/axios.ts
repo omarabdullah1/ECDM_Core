@@ -20,31 +20,40 @@ api.interceptors.response.use(
     (response) => response,
     async (error) => {
         const originalRequest = error.config;
-        
-        if (error.response?.status === 401 && !originalRequest._retry) {
+
+        // Never retry the token refresh endpoint itself — prevents infinite loop
+        const isRefreshEndpoint = originalRequest?.url?.includes('/auth/refresh');
+
+        if (error.response?.status === 401 && !originalRequest._retry && !isRefreshEndpoint) {
             originalRequest._retry = true;
-            
+
             try {
                 const { data } = await api.post('/auth/refresh');
-                if (data.success && data.data.accessToken) {
+                if (data.success) {
+                    // Retry the original failed request with the refreshed session
                     return api(originalRequest);
                 }
-            } catch (refreshError) {
-                showError(refreshError as Parameters<typeof showError>[0], 'Session expired. Please log in again.');
+            } catch {
+                // Refresh failed — clear session and redirect, do NOT show error toast
                 if (typeof window !== 'undefined') {
                     localStorage.removeItem('ecdm_user');
                     window.location.href = '/login';
                 }
+                return Promise.reject(error);
             }
         }
-        
-        showError(error);
-        
-        if (error.response?.status === 401 && typeof window !== 'undefined') {
+
+        // Don't show error toast for 401s on auth endpoints
+        if (!isRefreshEndpoint && error.response?.status !== 401) {
+            showError(error);
+        }
+
+        // Redirect on 401 if not already handled above
+        if (error.response?.status === 401 && !originalRequest._retry && typeof window !== 'undefined') {
             localStorage.removeItem('ecdm_user');
             window.location.href = '/login';
         }
-        
+
         return Promise.reject(error);
     },
 );

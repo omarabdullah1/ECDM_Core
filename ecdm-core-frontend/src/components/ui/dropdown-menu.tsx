@@ -87,7 +87,7 @@ export function DropdownMenuContent({
         <div
             onClick={() => setOpen(false)}
             className={cn(
-                'absolute z-50 min-w-[10rem] rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] py-1 shadow-lg animate-fade-in',
+                'absolute z-50 min-w-[10rem] overflow-hidden rounded-md border border-[hsl(var(--border))]/50 bg-[hsl(var(--card))] p-1 text-[hsl(var(--foreground))] shadow-sm animate-fade-in',
                 posClass, alignClass, className,
             )}
         >
@@ -110,7 +110,7 @@ export function DropdownMenuItem({ children, className, onClick, disabled }: Ite
             disabled={disabled}
             onClick={onClick}
             className={cn(
-                'flex w-full items-center gap-2 px-3 py-1.5 text-xs transition-colors hover:bg-[hsl(var(--muted))] disabled:opacity-50 disabled:cursor-not-allowed text-left',
+                'flex h-8 w-full select-none items-center gap-2 rounded-sm px-2 text-xs outline-none transition-colors hover:bg-[hsl(var(--secondary))]/80 focus:bg-[hsl(var(--secondary))]/80 disabled:opacity-50 disabled:cursor-not-allowed text-left',
                 className,
             )}
         >
@@ -121,13 +121,13 @@ export function DropdownMenuItem({ children, className, onClick, disabled }: Ite
 
 /* ─── Separator ───────────────────────────────────────────────── */
 export function DropdownMenuSeparator({ className }: { className?: string }) {
-    return <div className={cn('my-1 h-px bg-[hsl(var(--border))]', className)} />;
+    return <div className={cn('-mx-1 my-1 h-px bg-[hsl(var(--border))]/50', className)} />;
 }
 
 /* ─── Label ───────────────────────────────────────────────────── */
 export function DropdownMenuLabel({ children, className }: { children: React.ReactNode; className?: string }) {
     return (
-        <p className={cn('px-3 py-1.5 text-[11px] font-semibold text-[hsl(var(--muted-foreground))] uppercase tracking-wide', className)}>
+        <p className={cn('px-2 py-1.5 text-[11px] font-semibold text-[hsl(var(--muted-foreground))] uppercase tracking-wide', className)}>
             {children}
         </p>
     );

@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import { AppError } from '../../../utils/apiError';
 import { DealStatus } from '../../customer/types/customer-order.types';
 import CustomerOrder from '../../customer/models/customer-order.model';
@@ -61,11 +62,22 @@ export const update = async (id: string, data: UpdateSalesOrderInput): Promise<I
     console.log('Raw input data:', JSON.stringify(data, null, 2));
 
     // Capture previous status for Campaign ROI tracking and automation triggers
-    const previousOrder = await SalesOrder.findById(id).select('finalStatus quotationStatusFirstFollowUp statusSecondFollowUp finalStatusThirdFollowUp');
+    const previousOrder = await SalesOrder.findById(id).select('finalStatus quotationStatusFirstFollowUp statusSecondFollowUp finalStatusThirdFollowUp orderStatus');
     const previousFinalStatus = previousOrder?.finalStatus;
     const previousFirstFollowUpStatus = previousOrder?.quotationStatusFirstFollowUp;
     const previousSecondFollowUpStatus = previousOrder?.statusSecondFollowUp;
     const previousThirdFollowUpStatus = previousOrder?.finalStatusThirdFollowUp;
+    const previousOrderStatus = previousOrder?.orderStatus;
+
+    // ─── Business Logic: Invoice Approval Check ─────────────────────────────
+    if ((data as any).orderStatus === 'Completed' && previousOrderStatus !== 'Completed') {
+        const InvoiceModel = mongoose.model('FinanceInvoice');
+        const invoice = await InvoiceModel.findOne({ salesOrderId: id, status: 'Approved' });
+        if (!invoice) {
+            throw new AppError('Cannot complete Sales Order: No approved invoice found for this order.', 400);
+        }
+    }
+
 
     // ═════════════════════════════════════════════════════════════════════════
     // Type Conversion Layer - FormData sends everything as strings

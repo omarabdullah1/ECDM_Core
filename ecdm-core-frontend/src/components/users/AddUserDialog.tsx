@@ -4,7 +4,10 @@ import { X, UserPlus, AlertCircle } from 'lucide-react';
 import { z } from 'zod';
 import api from '@/lib/axios';
 import toast from 'react-hot-toast';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
 
 // ── Validation Schema ───────────────────────────────────────────────
 const formSchema = z.object({
@@ -16,6 +19,7 @@ const formSchema = z.object({
     phone: z.string().optional(),
     targetBudget: z.number().optional(),
     targetSales: z.number().optional(),
+    maxDiscountPercentage: z.number().min(0).max(100).optional(),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -53,6 +57,7 @@ export default function AddUserDialog({ isOpen, onClose, onSuccess }: AddUserDia
         phone: '',
         targetBudget: 0,
         targetSales: 0,
+        maxDiscountPercentage: 0,
     });
     const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
     const [saving, setSaving] = useState(false);
@@ -109,6 +114,7 @@ export default function AddUserDialog({ isOpen, onClose, onSuccess }: AddUserDia
             phone: '',
             targetBudget: 0,
             targetSales: 0,
+            maxDiscountPercentage: 0,
         });
         setErrors({});
         setApiError('');
@@ -119,156 +125,147 @@ export default function AddUserDialog({ isOpen, onClose, onSuccess }: AddUserDia
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-            <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto overflow-x-hidden p-6 outline-none">
-                {/* Header */}
-                <DialogHeader className="flex flex-row items-center justify-between mb-6 space-y-0">
+            <DialogContent className="sm:max-w-2xl">
+                <DialogHeader>
                     <div className="flex items-center gap-3">
-                        <UserPlus className="h-6 w-6 text-[hsl(var(--primary))]" />
-                        <DialogTitle className="text-lg font-bold">Add New Employee</DialogTitle>
+                        <UserPlus className="h-5 w-5 text-[hsl(var(--primary))]" />
+                        <DialogTitle>Add New Employee</DialogTitle>
                     </div>
-                    <button onClick={handleClose} className="hover:opacity-70" type="button">
-                        <X className="h-5 w-5" />
-                    </button>
                 </DialogHeader>
 
-                {/* Form */}
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    {/* Name Row */}
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-sm font-medium mb-1.5">
-                                First Name <span className="text-red-500">*</span>
-                            </label>
-                            <input
-                                type="text"
-                                name="firstName"
-                                value={form.firstName}
+                <DialogBody>
+                    <form id="add-user-form" onSubmit={handleSubmit} className="space-y-6">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">First Name</label>
+                                <Input
+                                    type="text"
+                                    name="firstName"
+                                    value={form.firstName}
+                                    onChange={handleChange}
+                                    placeholder="John"
+                                />
+                                {errors.firstName && (
+                                    <p className="mt-1 text-[10px] text-red-500 font-medium">{errors.firstName}</p>
+                                )}
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Last Name</label>
+                                <Input
+                                    type="text"
+                                    name="lastName"
+                                    value={form.lastName}
+                                    onChange={handleChange}
+                                    placeholder="Doe"
+                                />
+                                {errors.lastName && (
+                                    <p className="mt-1 text-[10px] text-red-500 font-medium">{errors.lastName}</p>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Email Address</label>
+                            <Input
+                                type="email"
+                                name="email"
+                                value={form.email}
                                 onChange={handleChange}
-                                placeholder="John"
-                                className={inputClass}
+                                placeholder="john.doe@company.com"
                             />
-                            {errors.firstName && (
-                                <p className="mt-1 text-xs text-red-500">{errors.firstName}</p>
+                            {errors.email && (
+                                <p className="mt-1 text-[10px] text-red-500 font-medium">{errors.email}</p>
                             )}
                         </div>
-                        <div>
-                            <label className="block text-sm font-medium mb-1.5">
-                                Last Name <span className="text-red-500">*</span>
-                            </label>
-                            <input
-                                type="text"
-                                name="lastName"
-                                value={form.lastName}
+
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Password</label>
+                            <Input
+                                type="password"
+                                name="password"
+                                value={form.password}
                                 onChange={handleChange}
-                                placeholder="Doe"
-                                className={inputClass}
+                                placeholder="Minimum 8 characters"
                             />
-                            {errors.lastName && (
-                                <p className="mt-1 text-xs text-red-500">{errors.lastName}</p>
+                            {errors.password && (
+                                <p className="mt-1 text-[10px] text-red-500 font-medium">{errors.password}</p>
                             )}
                         </div>
-                    </div>
 
-                    {/* Email */}
-                    <div>
-                        <label className="block text-sm font-medium mb-1.5">
-                            Email <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                            type="email"
-                            name="email"
-                            value={form.email}
-                            onChange={handleChange}
-                            placeholder="john.doe@company.com"
-                            className={inputClass}
-                        />
-                        {errors.email && (
-                            <p className="mt-1 text-xs text-red-500">{errors.email}</p>
-                        )}
-                    </div>
-
-                    {/* Password */}
-                    <div>
-                        <label className="block text-sm font-medium mb-1.5">
-                            Password <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                            type="password"
-                            name="password"
-                            value={form.password}
-                            onChange={handleChange}
-                            placeholder="Minimum 8 characters"
-                            className={inputClass}
-                        />
-                        {errors.password && (
-                            <p className="mt-1 text-xs text-red-500">{errors.password}</p>
-                        )}
-                    </div>
-
-                    {/* Role */}
-                    <div>
-                        <label className="block text-sm font-medium mb-1.5">
-                            Role <span className="text-red-500">*</span>
-                        </label>
-                        <select
-                            name="role"
-                            value={form.role}
-                            onChange={handleChange}
-                            className={inputClass}
-                        >
-                            <option value="">Select a role</option>
-                            {ROLES.map(role => (
-                                <option key={role.value} value={role.value}>
-                                    {role.label}
-                                </option>
-                            ))}
-                        </select>
-                        {errors.role && (
-                            <p className="mt-1 text-xs text-red-500">{errors.role}</p>
-                        )}
-                    </div>
-
-                    {/* Phone (Optional) */}
-                    <div>
-                        <label className="block text-sm font-medium mb-1.5">
-                            Phone <span className="text-[hsl(var(--muted-foreground))]">(Optional)</span>
-                        </label>
-                        <input
-                            type="text"
-                            name="phone"
-                            value={form.phone}
-                            onChange={handleChange}
-                            placeholder="+1 234 567 890"
-                            className={inputClass}
-                        />
-                    </div>
-
-                    {/* API Error */}
-                    {apiError && (
-                        <div className="flex items-start gap-2 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 rounded-xl p-3">
-                            <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
-                            <p className="text-sm text-red-600 dark:text-red-400">{apiError}</p>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Assigned Role</label>
+                                <Select
+                                    name="role"
+                                    value={form.role}
+                                    onChange={handleChange}
+                                >
+                                    <option value="">Select a role</option>
+                                    {ROLES.map(role => (
+                                        <option key={role.value} value={role.value}>
+                                            {role.label}
+                                        </option>
+                                    ))}
+                                </Select>
+                                {errors.role && (
+                                    <p className="mt-1 text-[10px] text-red-500 font-medium">{errors.role}</p>
+                                )}
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Phone (Optional)</label>
+                                <Input
+                                    type="text"
+                                    name="phone"
+                                    value={form.phone}
+                                    onChange={handleChange}
+                                    placeholder="+1 234 567 890"
+                                />
+                            </div>
                         </div>
-                    )}
 
-                    {/* Actions */}
-                    <div className="flex gap-3 pt-2">
-                        <button
-                            type="submit"
-                            disabled={saving}
-                            className="flex-1 rounded-xl bg-[hsl(var(--primary))] py-2.5 text-sm font-semibold text-[hsl(var(--primary-foreground))] disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
-                        >
-                            {saving ? 'Creating...' : 'Create Employee'}
-                        </button>
-                        <button
-                            type="button"
-                            onClick={handleClose}
-                            className="px-6 rounded-xl border border-[hsl(var(--border))] py-2.5 text-sm font-semibold hover:bg-[hsl(var(--muted))]/50 transition-colors"
-                        >
-                            Cancel
-                        </button>
-                    </div>
-                </form>
+                        {form.role === 'Sales' && (
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Max Discount %</label>
+                                    <Input
+                                        type="number"
+                                        name="maxDiscountPercentage"
+                                        value={form.maxDiscountPercentage}
+                                        onChange={(e) => setForm(prev => ({ ...prev, maxDiscountPercentage: Number(e.target.value) }))}
+                                        min="0"
+                                        max="100"
+                                        placeholder="0"
+                                    />
+                                </div>
+                            </div>
+                        )}
+
+                        {apiError && (
+                            <div className="flex items-center gap-2 p-3 rounded-xl bg-red-50 border border-red-100 text-red-600 text-[11px] font-medium">
+                                <AlertCircle className="h-4 w-4" />
+                                {apiError}
+                            </div>
+                        )}
+                    </form>
+                </DialogBody>
+
+                <DialogFooter>
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={handleClose}
+                        disabled={saving}
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        type="submit"
+                        form="add-user-form"
+                        disabled={saving}
+                    >
+                        {saving ? 'Creating...' : 'Create Employee'}
+                    </Button>
+                </DialogFooter>
             </DialogContent>
         </Dialog>
     );

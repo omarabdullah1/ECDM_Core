@@ -44,6 +44,7 @@ const ar: Translations = {
     customerFollowUp: 'المتابعة',
     customerFeedback: 'التقييمات',
     finance: 'المالية',
+    invoices: 'الفواتير',
     orderFinance: 'تمويل الطلبات',
     generalExpenses: 'المصروفات العامة',
     salaries: 'الرواتب',

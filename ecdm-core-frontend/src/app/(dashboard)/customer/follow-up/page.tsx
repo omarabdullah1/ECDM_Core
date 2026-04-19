@@ -4,6 +4,8 @@ import api from '@/lib/axios';
 import { ClipboardList, TrendingUp, Phone, CheckCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { DataTable } from '@/components/ui/DataTable';
+import { PageHeader } from '@/components/layout/PageHeader';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { createColumns, type FollowUp } from './columns';
 import EditFollowUpDialog from './EditFollowUpDialog';
 import EditFeedbackDialog from '../feedback/EditFeedbackDialog';
@@ -22,7 +24,7 @@ interface OrderContext {
   orderId?: string;
 }
 
-const iCls = 'w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-4 py-3 text-sm placeholder:text-[hsl(var(--muted-foreground))] focus:border-[hsl(var(--primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/20 transition-all';
+const iCls = 'flex h-9 w-full rounded-md border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] px-3 py-1 text-sm shadow-sm transition-all placeholder:text-[hsl(var(--muted-foreground))] focus-visible:outline-none focus-visible:border-[hsl(var(--primary))]/50 focus-visible:ring-[3px] focus-visible:ring-[hsl(var(--primary))]/10';
 const blank = { workOrder: '', customer: '', csr: '', customerOrderId: '', followUpDate: '', status: 'Pending', notes: '' };
 
 export default function FollowUpPage() {
@@ -198,19 +200,19 @@ export default function FollowUpPage() {
   const columns = createColumns(handleStatusUpdate, openE, setDelId);
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <ClipboardList className="h-7 w-7 text-[hsl(var(--primary))]" />
-          <h1 className="text-2xl font-bold">Follow Ups</h1>
-        </div>
-        <button
-          onClick={openC}
-          className="rounded-xl bg-[hsl(var(--primary))] px-4 py-2 text-sm font-semibold text-[hsl(var(--primary-foreground))] hover:opacity-90 transition-opacity"
-        >
-          + Add Follow Up
-        </button>
-      </div>
+    <div className="space-y-6 pb-8">
+      <PageHeader 
+        title="Follow Ups"
+        icon={ClipboardList}
+        actions={
+          <button
+            onClick={openC}
+            className="flex items-center justify-center gap-2 rounded-md bg-[hsl(var(--primary))] px-4 py-2 text-sm font-medium text-[hsl(var(--primary-foreground))] shadow-sm hover:opacity-90 transition-all focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[hsl(var(--primary))]/10 border-0"
+          >
+            + Add Follow Up
+          </button>
+        }
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="rounded-xl border border-[hsl(var(--border))] bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-950 dark:to-amber-900 p-6">
@@ -250,7 +252,7 @@ export default function FollowUpPage() {
         </div>
       </div>
 
-      <div className="flex gap-3 flex-wrap">
+      <div className="flex gap-3 flex-wrap animate-in-slide stagger-2">
         <select
           value={statusFilter}
           onChange={e => { setStatusFilter(e.target.value); setPage(1); }}
@@ -300,97 +302,92 @@ export default function FollowUpPage() {
         }}
       />
 
-      {/* Create/Edit Form Modal */}
-      {modal && !editing && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6 shadow-2xl max-w-2xl w-full max-h-[85vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-bold">Create Follow Up</h2>
-              <button onClick={() => setModal(false)} className="p-2 hover:bg-[hsl(var(--muted))] rounded-lg">
-                <X className="h-5 w-5" />
-              </button>
+      {/* Create Form Modal */}
+      <Dialog open={modal && !editing} onOpenChange={(open) => !open && setModal(false)}>
+        <DialogContent className="p-6 outline-none">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold">Create Follow Up</DialogTitle>
+          </DialogHeader>
+
+          <form onSubmit={save} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4 text-left">
+              <div className="col-span-2 sm:col-span-1">
+                <label className="text-xs font-semibold text-[hsl(var(--muted-foreground))] uppercase mb-1.5 block">Customer Order (Context)</label>
+                <select
+                  value={form.customerOrderId}
+                  onChange={e => handleCustomerOrderChange(e.target.value)}
+                  className={iCls}
+                  disabled={loadingLookups}
+                >
+                  <option value="">Select Order (Optional)</option>
+                  {customerOrders.map(o => (
+                    <option key={o._id} value={o._id}>
+                      {o.customerId?.name || 'Order'} - {o.engineerName || 'No Engineer'}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="col-span-2 sm:col-span-1">
+                <label className="text-xs font-semibold text-[hsl(var(--muted-foreground))] uppercase mb-1.5 block">Customer</label>
+                <select
+                  value={form.customer}
+                  onChange={u('customer')}
+                  className={iCls}
+                  disabled={loadingLookups}
+                >
+                  <option value="">Select Customer</option>
+                  {customers.map(c => (
+                    <option key={c._id} value={c._id}>{c.name} - {c.phone}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="col-span-2 sm:col-span-1">
+                <label className="text-xs font-semibold text-[hsl(var(--muted-foreground))] uppercase mb-1.5 block">CSR</label>
+                <select value={form.csr} onChange={u('csr')} className={iCls} disabled={loadingLookups}>
+                  <option value="">Select CSR</option>
+                  {csrUsers.map(u => (
+                    <option key={u._id} value={u._id}>{u.firstName} {u.lastName}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="col-span-2 sm:col-span-1">
+                <label className="text-xs font-semibold text-[hsl(var(--muted-foreground))] uppercase mb-1.5 block">Follow Up Date</label>
+                <input type="date" value={form.followUpDate} onChange={u('followUpDate')} className={iCls} />
+              </div>
+
+              <div className="col-span-2">
+                <label className="text-xs font-semibold text-[hsl(var(--muted-foreground))] uppercase mb-1.5 block">Status</label>
+                <select value={form.status} onChange={u('status')} className={iCls}>
+                  <option value="Pending">Pending</option>
+                  <option value="Contacted">Contacted</option>
+                  <option value="Scheduled">Scheduled</option>
+                  <option value="Completed">Completed</option>
+                  <option value="Canceled">Canceled</option>
+                </select>
+              </div>
             </div>
 
-            <form onSubmit={save} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-xs font-semibold text-[hsl(var(--muted-foreground))] uppercase mb-1.5 block">Customer Order (Context)</label>
-                  <select
-                    value={form.customerOrderId}
-                    onChange={e => handleCustomerOrderChange(e.target.value)}
-                    className={iCls}
-                    disabled={loadingLookups}
-                  >
-                    <option value="">Select Order (Optional)</option>
-                    {customerOrders.map(o => (
-                      <option key={o._id} value={o._id}>
-                        {o.customerId?.name || 'Order'} - {o.engineerName || 'No Engineer'}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+            <div>
+              <label className="text-xs font-semibold text-[hsl(var(--muted-foreground))] uppercase mb-1.5 block">Notes</label>
+              <textarea value={form.notes} onChange={u('notes')} rows={3} className={iCls} placeholder="Enter notes..." />
+            </div>
 
-                <div>
-                  <label className="text-xs font-semibold text-[hsl(var(--muted-foreground))] uppercase mb-1.5 block">Customer</label>
-                  <select
-                    value={form.customer}
-                    onChange={u('customer')}
-                    className={iCls}
-                    disabled={loadingLookups}
-                  >
-                    <option value="">Select Customer</option>
-                    {customers.map(c => (
-                      <option key={c._id} value={c._id}>{c.name} - {c.phone}</option>
-                    ))}
-                  </select>
-                </div>
+            {error && <p className="text-destructive text-sm">{error}</p>}
 
-                <div>
-                  <label className="text-xs font-semibold text-[hsl(var(--muted-foreground))] uppercase mb-1.5 block">CSR</label>
-                  <select value={form.csr} onChange={u('csr')} className={iCls} disabled={loadingLookups}>
-                    <option value="">Select CSR</option>
-                    {csrUsers.map(u => (
-                      <option key={u._id} value={u._id}>{u.firstName} {u.lastName}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="text-xs font-semibold text-[hsl(var(--muted-foreground))] uppercase mb-1.5 block">Follow Up Date</label>
-                  <input type="date" value={form.followUpDate} onChange={u('followUpDate')} className={iCls} />
-                </div>
-
-                <div>
-                  <label className="text-xs font-semibold text-[hsl(var(--muted-foreground))] uppercase mb-1.5 block">Status</label>
-                  <select value={form.status} onChange={u('status')} className={iCls}>
-                    <option value="Pending">Pending</option>
-                    <option value="Contacted">Contacted</option>
-                    <option value="Scheduled">Scheduled</option>
-                    <option value="Completed">Completed</option>
-                    <option value="Canceled">Canceled</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="text-xs font-semibold text-[hsl(var(--muted-foreground))] uppercase mb-1.5 block">Notes</label>
-                <textarea value={form.notes} onChange={u('notes')} rows={3} className={iCls} placeholder="Enter notes..." />
-              </div>
-
-              {error && <p className="text-destructive text-sm">{error}</p>}
-
-              <div className="flex gap-3 pt-4">
-                <button type="button" onClick={() => setModal(false)} className="flex-1 rounded-xl border py-3 text-sm font-semibold hover:bg-[hsl(var(--muted))]/50">
-                  Cancel
-                </button>
-                <button type="submit" disabled={saving} className="flex-1 rounded-xl bg-[hsl(var(--primary))] py-3 text-sm font-semibold text-[hsl(var(--primary-foreground))] hover:opacity-90 disabled:opacity-60">
-                  {saving ? 'Saving...' : 'Create Follow Up'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+            <div className="flex gap-3 pt-4 border-t border-[hsl(var(--border))]">
+              <button type="button" onClick={() => setModal(false)} className="flex-1 rounded-xl border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] py-3 text-sm font-semibold hover:bg-[hsl(var(--muted))]/50 transition-colors">
+                Cancel
+              </button>
+              <button type="submit" disabled={saving} className="flex-1 rounded-xl bg-[hsl(var(--primary))] py-3 text-sm font-semibold text-[hsl(var(--primary-foreground))] hover:opacity-90 transition-opacity disabled:opacity-60">
+                {saving ? 'Saving...' : 'Create Follow Up'}
+              </button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* Edit Dialog */}
       {modal && editing && (
@@ -412,23 +409,33 @@ export default function FollowUpPage() {
         />
       )}
 
-      {delId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6 shadow-2xl max-w-sm w-full">
-            <p className="mb-4 font-semibold">Delete this follow-up?</p>
+      <Dialog open={!!delId} onOpenChange={(open) => !open && setDelId(null)}>
+        <DialogContent className="p-6 outline-none">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold">Delete Follow Up</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-[hsl(var(--muted-foreground))] mb-6 text-left">
+              Are you sure you want to delete this follow-up records? This action cannot be undone.
+            </p>
             <div className="flex gap-3">
-              <button onClick={del} className="flex-1 rounded-xl bg-destructive py-2 text-sm font-semibold text-white">
+              <button 
+                onClick={del} 
+                className="flex-1 rounded-xl bg-red-600 py-3 text-sm font-semibold text-white shadow-sm transition-all hover:bg-red-700 focus-visible:outline-none"
+              >
                 Delete
               </button>
-              <button onClick={() => setDelId(null)} className="flex-1 rounded-xl border py-2 text-sm">
+              <button 
+                onClick={() => setDelId(null)} 
+                className="flex-1 rounded-xl border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] py-3 text-sm font-medium shadow-sm transition-all hover:bg-[hsl(var(--accent))] focus-visible:outline-none"
+              >
                 Cancel
               </button>
             </div>
           </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
 
-import { X } from 'lucide-react';

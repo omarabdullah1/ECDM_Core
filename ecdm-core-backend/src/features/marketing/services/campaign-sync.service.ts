@@ -1,47 +1,13 @@
 import { google, sheets_v4 } from 'googleapis';
-import { JWT } from 'google-auth-library';
+import { getSheetsClient } from '../../../utils/googleAuth.utils';
 import Campaign from '../models/campaign.model';
 import { AppError } from '../../../utils/apiError';
-
-interface ServiceAccountCredentials {
-    type: string;
-    project_id: string;
-    private_key_id: string;
-    private_key: string;
-    client_email: string;
-    client_id: string;
-}
 
 interface SheetSyncInput {
     spreadsheetId: string;
     sheetRange: string;
     serviceAccountJson: string;
 }
-
-/**
- * Get authenticated Google Sheets client using service account credentials
- */
-const getSheetsClient = async (serviceAccountJson: string): Promise<sheets_v4.Sheets> => {
-    let credentials: ServiceAccountCredentials;
-    
-    try {
-        credentials = JSON.parse(serviceAccountJson);
-    } catch {
-        throw new AppError('Invalid service account JSON format', 400);
-    }
-
-    if (!credentials.client_email || !credentials.private_key) {
-        throw new AppError('Service account JSON missing required fields (client_email, private_key)', 400);
-    }
-
-    const auth = new JWT({
-        email: credentials.client_email,
-        key: credentials.private_key,
-        scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
-    });
-
-    return google.sheets({ version: 'v4', auth });
-};
 
 /**
  * Parse and normalize numeric values from Google Sheets

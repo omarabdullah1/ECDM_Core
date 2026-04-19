@@ -4,6 +4,7 @@ import api from '@/lib/axios';
 import toast from 'react-hot-toast';
 import { Archive } from 'lucide-react';
 import { DataTable } from '@/components/ui/DataTable';
+import { PageHeader } from '@/components/layout/PageHeader';
 import { createSalesOrderColumns, type SalesOrder, createActionsRenderer } from '../order/columns';
 
 export default function NonPotentialOrdersPage() {
@@ -51,25 +52,23 @@ export default function NonPotentialOrdersPage() {
     });
 
     return (
-        <div className="space-y-6">
-            <div className="flex items-center gap-3">
-                <Archive className="h-7 w-7 text-red-800" />
-                <div>
-                    <h1 className="text-2xl font-bold text-red-800">Non-Potential Customers</h1>
-                    <p className="text-sm text-[hsl(var(--muted-foreground))] mt-1">Archive of leads and orders that were rejected or marked as not potential after the final follow-up.</p>
-                </div>
-            </div>
+        <div className="space-y-6 pb-8">
+            <PageHeader 
+                title="Non-Potential Customers"
+                icon={Archive}
+                description="Archive of leads and orders that were rejected or marked as not potential after the final follow-up."
+            />
 
             <div className="flex gap-3 flex-wrap items-center">
-                <select value={fStatus} onChange={e => { setFStatus(e.target.value); setPage(1); }} className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2 text-sm">
+                <select value={fStatus} onChange={e => { setFStatus(e.target.value); setPage(1); }} className="h-9 rounded-md border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] px-3 py-1 text-sm shadow-sm transition-all focus-visible:outline-none focus-visible:border-[hsl(var(--primary))]/50 focus-visible:ring-[3px] focus-visible:ring-[hsl(var(--primary))]/10">
                     <option value="">All Quotation Statuses</option>
                     {Q_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
-                <select value={fFinalStatus} onChange={e => { setFFinalStatus(e.target.value); setPage(1); }} className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2 text-sm">
+                <select value={fFinalStatus} onChange={e => { setFFinalStatus(e.target.value); setPage(1); }} className="h-9 rounded-md border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] px-3 py-1 text-sm shadow-sm transition-all focus-visible:outline-none focus-visible:border-[hsl(var(--primary))]/50 focus-visible:ring-[3px] focus-visible:ring-[hsl(var(--primary))]/10">
                     <option value="">All Final Statuses</option>
                     {F_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
-                <select value={fTypeOfOrder} onChange={e => { setFTypeOfOrder(e.target.value); setPage(1); }} className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2 text-sm">
+                <select value={fTypeOfOrder} onChange={e => { setFTypeOfOrder(e.target.value); setPage(1); }} className="h-9 rounded-md border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] px-3 py-1 text-sm shadow-sm transition-all focus-visible:outline-none focus-visible:border-[hsl(var(--primary))]/50 focus-visible:ring-[3px] focus-visible:ring-[hsl(var(--primary))]/10">
                     <option value="">All Order Types</option>
                     {TYPE_OF_ORDER.map(s => <option key={s} value={s}>{s}</option>)}
                 </select>

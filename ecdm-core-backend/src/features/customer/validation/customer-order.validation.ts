@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { DevicePickupType, DealStatus } from '../types/customer-order.types';
+import { DevicePickupType, DealStatus, PaymentMethod, ExtraExpenseType } from '../types/customer-order.types';
 
 export const createCustomerOrderSchema = z.object({
     customerId:           z.string().min(1, 'Customer ID is required'),
@@ -16,6 +16,17 @@ export const createCustomerOrderSchema = z.object({
     devicePickupType:     z.nativeEnum(DevicePickupType).optional(),
     deal:                 z.nativeEnum(DealStatus).optional(),
     cost:                 z.number().optional(),
+    
+    // Financial tracking
+    paidAmount:           z.number().optional(),
+    paymentMethod:        z.nativeEnum(PaymentMethod).optional(),
+    spareParts:           z.string().optional(),
+    extraExpenseType:     z.nativeEnum(ExtraExpenseType).optional(),
+    extraExpenseAmount:   z.number().optional(),
+    salesPercentage:      z.string().optional(),
+    technicianPercentage: z.string().optional(),
+    engineerPercentage:   z.string().optional(),
+    
     startDate:            z.string().or(z.date()).optional(),
     endDate:              z.string().or(z.date()).optional(),
     deviceReturnedDate:   z.string().or(z.date()).optional(),

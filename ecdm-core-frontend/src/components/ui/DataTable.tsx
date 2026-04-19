@@ -68,6 +68,8 @@ interface DataTableProps<T extends { _id: string }> {
   defaultVisibility?: VisibilityState;
   // Row className function for custom row styling (e.g., ownership dimming)
   rowClassName?: (row: T) => string;
+  // Row click handler (standardized pattern for opening edit dialogs)
+  onRowClick?: (row: T) => void;
 }
 
 // Admin roles that can perform bulk delete
@@ -91,6 +93,7 @@ export function DataTable<T extends { _id: string }>({
   meta,
   defaultVisibility = {},
   rowClassName,
+  onRowClick,
 }: DataTableProps<T>) {
   const { user } = useAuthStore();
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
@@ -226,7 +229,7 @@ export function DataTable<T extends { _id: string }>({
           <button
             onClick={() => setShowBulkDeleteConfirm(true)}
             disabled={deleting}
-            className="flex items-center gap-2 rounded-xl bg-destructive px-4 py-2 text-sm font-semibold text-white hover:opacity-90 transition-opacity disabled:opacity-50"
+            className="flex h-9 items-center gap-2 rounded-md bg-[hsl(var(--destructive))] px-4 text-sm font-medium text-[hsl(var(--destructive-foreground))] shadow-sm hover:opacity-90 transition-all disabled:opacity-50"
           >
             <Trash2 className="h-4 w-4" />
             Delete Selected ({selectedRows.size})
@@ -243,19 +246,19 @@ export function DataTable<T extends { _id: string }>({
           placeholder="Search all columns..."
           value={globalFilter ?? ""}
           onChange={(event) => setGlobalFilter(event.target.value)}
-          className="max-w-sm w-full h-7 rounded-md border border-[hsl(var(--border))] px-2 py-0 text-xs focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/20 bg-transparent"
+          className="max-w-sm w-full h-9 rounded-full border border-[hsl(var(--border))]/60 px-4 py-1 text-sm shadow-sm transition-all placeholder:text-[hsl(var(--muted-foreground))] focus-visible:outline-none focus-visible:border-[hsl(var(--primary))]/50 focus-visible:ring-[3px] focus-visible:ring-[hsl(var(--primary))]/10 bg-[hsl(var(--background))]/50 hover:bg-[hsl(var(--background))] hover:premium-shadow"
         />
 
-        <div className="flex-1 text-xs text-[hsl(var(--muted-foreground))] hidden sm:block">
+        <div className="flex-1 text-sm text-[hsl(var(--muted-foreground))] hidden sm:block">
           {selectedRows.size} of {data.length} row(s) selected.
         </div>
 
         <div className="relative" ref={dropdownRef}>
           <button
             onClick={() => setShowColumnDropdown(!showColumnDropdown)}
-            className="ml-auto hidden h-7 lg:flex items-center justify-center rounded-md border border-[hsl(var(--border))] bg-transparent px-2.5 text-xs font-medium shadow-sm hover:bg-[hsl(var(--muted))] hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring transition-colors"
+            className="ml-auto hidden h-9 lg:flex items-center justify-center rounded-md border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] px-4 text-sm font-medium shadow-sm hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--accent-foreground))] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[hsl(var(--primary))]/10 transition-colors"
           >
-            <Settings2 className="mr-1.5 h-3.5 w-3.5" />
+            <Settings2 className="mr-2 h-4 w-4" />
             View Columns
           </button>
 
@@ -284,21 +287,21 @@ export function DataTable<T extends { _id: string }>({
       </div>
 
       {/* Data Table */}
-      <div className="relative w-full overflow-x-auto custom-table-scrollbar rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--card))]">
+      <div className="relative w-full overflow-x-auto custom-table-scrollbar modern-glass-card premium-shadow rounded-xl border border-[hsl(var(--border))]/40 max-h-[65vh]">
         {loading ? (
           <TableSkeleton rows={10} columns={visibleColumns.length + (renderActions ? 1 : 0)} height="h-10" />
         ) : (
-          <table className="w-full text-sm whitespace-nowrap min-w-max">
-            <thead className="border-b border-[hsl(var(--border))] bg-[hsl(var(--muted))]/30">
+          <table className="w-full text-sm whitespace-nowrap min-w-max border-collapse">
+            <thead className="sticky top-0 z-40 bg-[hsl(var(--card))] shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
               <tr>
                 {/* Checkbox column - only show if user is admin and bulk delete is enabled */}
                 {canBulkDelete && (
-                  <th className="sticky left-0 z-30 px-2 py-1.5 text-left w-10 bg-gray-100 border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]">
+                  <th className="sticky left-0 z-50 p-3 text-left w-10 bg-[hsl(var(--card))] border-b border-r border-[hsl(var(--border))]/50">
                     <input
                       type="checkbox"
                       checked={data.length > 0 && selectedRows.size === data.length}
                       onChange={toggleAllSelection}
-                      className="h-3.5 w-3.5 rounded border-[hsl(var(--border))] cursor-pointer"
+                      className="h-4 w-4 rounded border-[hsl(var(--border))] cursor-pointer accent-[hsl(var(--primary))]"
                     />
                   </th>
                 )}
@@ -309,13 +312,13 @@ export function DataTable<T extends { _id: string }>({
                     <th
                       key={String(col.key)}
                       className={[
-                        `px-2 py-1.5 text-left font-semibold text-[11px] uppercase tracking-wide whitespace-nowrap`,
+                        `p-4 text-left text-[10px] font-bold text-[hsl(var(--muted-foreground))] uppercase tracking-wider whitespace-nowrap border-b border-[hsl(var(--border))]/30 bg-[hsl(var(--muted))]/5`,
                         col.className || '',
                         isFirstDataCol
-                          ? 'sticky left-0 z-30 bg-gray-100 border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]'
+                          ? 'sticky left-0 z-50 bg-[hsl(var(--card))] shadow-[1px_0_0_0_hsl(var(--border))]'
                           : '',
                         isLastDataCol
-                          ? 'sticky right-0 z-30 bg-gray-100 border-l border-gray-200 shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.1)]'
+                          ? 'sticky right-0 z-50 bg-[hsl(var(--card))] shadow-[-1px_0_0_0_hsl(var(--border))]'
                           : '',
                       ].join(' ')}
                     >
@@ -324,7 +327,7 @@ export function DataTable<T extends { _id: string }>({
                   );
                 })}
                 {renderActions && (
-                  <th className="sticky right-0 z-30 px-2 py-1.5 text-left font-semibold text-[11px] uppercase tracking-wide bg-gray-100 border-l border-gray-200 shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.1)]">
+                  <th className="sticky right-0 z-50 p-3 text-left text-[10px] font-bold text-[hsl(var(--muted-foreground))] uppercase tracking-wider bg-[hsl(var(--card))] border-b border-l border-[hsl(var(--border))]/50 shadow-[-1px_0_0_0_hsl(var(--border))]">
                     Actions
                   </th>
                 )}
@@ -337,16 +340,60 @@ export function DataTable<T extends { _id: string }>({
                 return (
                   <tr
                     key={row._id}
-                    className={`border-b border-[hsl(var(--border))]/50 hover:bg-[hsl(var(--muted))]/20 ${selectedRows.has(row._id) ? 'bg-[hsl(var(--primary))]/5' : ''} ${customRowClass}`}
+                    className={`border-b border-[hsl(var(--border))]/50 transition-colors hover:bg-[hsl(var(--muted))]/50 ${selectedRows.has(row._id) ? 'bg-[hsl(var(--primary))]/5' : ''} ${customRowClass} cursor-pointer group`}
+                    onClick={(e) => {
+                      // 1. Prevent action if user is currently selecting text
+                      const selection = window.getSelection();
+                      if (selection && selection.toString().trim() !== '') return;
+
+                      // 2. Ignore if clicking interactive elements
+                      const target = e.target as HTMLElement;
+                      if (target.closest('button, input, select, textarea, a, label')) return;
+
+                      // 3. Ignore if clicking the checkbox column (first td if bulk delete is enabled)
+                      if (canBulkDelete) {
+                        const td = target.closest('td');
+                        // Ensure it's the first td in this row
+                        if (td && td === e.currentTarget.firstElementChild) {
+                           // If user clicked the empty padding of checkbox cell, toggle checkbox instead
+                           toggleRowSelection(row._id);
+                           return;
+                        }
+                      }
+
+                      // 4. Use explicit onRowClick if provided
+                      if (onRowClick) {
+                        onRowClick(row);
+                        return;
+                      }
+
+                      // 5. Fallback: Try finding an explicit Edit button
+                      const rowEl = e.currentTarget;
+                      let actionEl = rowEl.querySelector(
+                        'button[title*="Edit" i], button[title*="تعديل" i], a[title*="Edit" i], a[title*="تعديل" i]'
+                      ) as HTMLElement | null;
+
+                      // Fallback: look for a button containing the Edit icon
+                      if (!actionEl) {
+                        const editIcon = rowEl.querySelector('.lucide-edit, .lucide-edit2, .lucide-edit-2, [data-lucide="edit"]');
+                        if (editIcon) {
+                           actionEl = editIcon.closest('button, a') as HTMLElement | null;
+                        }
+                      }
+
+                      if (actionEl) {
+                        actionEl.click();
+                      }
+                    }}
                   >
                     {/* Checkbox cell */}
                     {canBulkDelete && (
-                      <td className="sticky left-0 z-20 px-2 py-1.5 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.08)]">
+                      <td className="sticky left-0 z-30 p-3 bg-[hsl(var(--card))] border-r border-[hsl(var(--border))]/50 group-hover:bg-[hsl(var(--muted))]/50 transition-colors">
                         <input
                           type="checkbox"
                           checked={selectedRows.has(row._id)}
                           onChange={() => toggleRowSelection(row._id)}
-                          className="h-3.5 w-3.5 rounded border-[hsl(var(--border))] cursor-pointer"
+                          className="h-4 w-4 rounded border-[hsl(var(--border))] cursor-pointer accent-[hsl(var(--primary))]"
                         />
                       </td>
                     )}
@@ -357,23 +404,27 @@ export function DataTable<T extends { _id: string }>({
                         <td
                           key={String(col.key)}
                           className={[
-                            `px-2 py-1.5 text-[13px]`,
+                            `p-3 text-[12px] font-medium`,
                             col.className || '',
                             isFirstDataCol
-                              ? 'sticky left-0 z-20 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.08)]'
+                              ? 'sticky left-0 z-30 bg-[hsl(var(--card))] border-r border-[hsl(var(--border))]/50 group-hover:bg-[hsl(var(--muted))]/50 transition-colors'
                               : '',
                             isLastDataCol
-                              ? 'sticky right-0 z-20 bg-white border-l border-gray-200 shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]'
+                              ? 'sticky right-0 z-30 bg-[hsl(var(--card))] border-l border-[hsl(var(--border))]/50 group-hover:bg-[hsl(var(--muted))]/50 transition-colors'
                               : '',
                           ].join(' ')}
                         >
                           {col.render
                             ? col.render(row, meta)
-                            : String(getCellValue(row, col.key) ?? '-')}
+                            : <span className="text-[hsl(var(--foreground))]">{String(getCellValue(row, col.key) ?? '-')}</span>}
                         </td>
                       );
                     })}
-                    {renderActions && <td className="sticky right-0 z-20 px-2 py-1.5 bg-white border-l border-gray-200 shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]">{renderActions(row)}</td>}
+                    {renderActions && (
+                      <td className="sticky right-0 z-30 p-3 bg-[hsl(var(--card))] border-l border-[hsl(var(--border))]/50 group-hover:bg-[hsl(var(--muted))]/50 transition-colors">
+                        {renderActions(row)}
+                      </td>
+                    )}
                   </tr>
                 )
               })}
@@ -411,36 +462,36 @@ export function DataTable<T extends { _id: string }>({
 
       {/* Bulk Delete Confirmation Modal */}
       {showBulkDeleteConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6 shadow-2xl max-w-sm w-full">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 transition-all">
+          <div className="rounded-md border border-[hsl(var(--border))]/50 bg-[hsl(var(--card))] p-6 shadow-lg sm:max-w-md w-full">
             <div className="flex items-center gap-3 mb-4">
-              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-destructive/10 flex items-center justify-center">
-                <AlertTriangle className="h-5 w-5 text-destructive" />
+              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-[hsl(var(--destructive))]/10 flex items-center justify-center">
+                <AlertTriangle className="h-5 w-5 text-[hsl(var(--destructive))]" />
               </div>
               <div>
-                <p className="font-semibold">Delete {selectedRows.size} item(s)?</p>
-                <p className="text-xs text-[hsl(var(--muted-foreground))]">
+                <p className="font-semibold text-lg">Delete {selectedRows.size} item(s)?</p>
+                <p className="text-sm text-[hsl(var(--muted-foreground))]">
                   This action requires admin privileges
                 </p>
               </div>
             </div>
-            <p className="mb-4 text-sm text-[hsl(var(--muted-foreground))]">
+            <p className="mb-6 text-sm text-[hsl(var(--muted-foreground))]">
               This action cannot be undone. All selected records will be permanently removed from the system.
             </p>
-            <div className="flex gap-3">
-              <button
-                onClick={handleBulkDelete}
-                disabled={deleting}
-                className="flex-1 rounded-xl bg-destructive py-2.5 text-sm font-semibold text-white disabled:opacity-50 hover:opacity-90 transition-opacity"
-              >
-                {deleting ? 'Deleting…' : 'Delete All'}
-              </button>
+            <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2">
               <button
                 onClick={() => setShowBulkDeleteConfirm(false)}
                 disabled={deleting}
-                className="flex-1 rounded-xl border border-[hsl(var(--border))] py-2.5 text-sm hover:bg-[hsl(var(--muted))] transition-colors"
+                className="mt-2 sm:mt-0 inline-flex h-9 items-center justify-center rounded-md border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] px-4 py-2 text-sm font-medium shadow-sm transition-all hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--accent-foreground))] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[hsl(var(--primary))]/10 disabled:opacity-50"
               >
                 Cancel
+              </button>
+              <button
+                onClick={handleBulkDelete}
+                disabled={deleting}
+                className="inline-flex h-9 items-center justify-center rounded-md bg-[hsl(var(--destructive))] px-4 py-2 text-sm font-medium text-[hsl(var(--destructive-foreground))] shadow-sm transition-all hover:opacity-90 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[hsl(var(--primary))]/10 disabled:opacity-50"
+              >
+                {deleting ? 'Deleting…' : 'Delete All'}
               </button>
             </div>
           </div>

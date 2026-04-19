@@ -4,6 +4,7 @@ import Link from 'next/link';
 import api from '@/lib/axios';
 import { Users, Eye, X, Clock, TrendingUp, ShoppingCart, FileText, Edit } from 'lucide-react';
 import { DataTable } from '@/components/ui/DataTable';
+import { PageHeader } from '@/components/layout/PageHeader';
 import { useAuthStore } from '@/features/auth/useAuth';
 import EditCustomerDialog from './EditCustomerDialog';
 
@@ -214,24 +215,20 @@ export default function CustomerListPage() {
   const COLUMNS = ['Customer ID', 'Name', 'Phone', 'Status', 'Address', 'Sector', 'Created', 'Actions'];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Users className="h-7 w-7 text-[hsl(var(--primary))]" />
-          <h1 className="text-2xl font-bold">Customers List</h1>
-        </div>
-        <p className="text-sm text-[hsl(var(--muted-foreground))]">
-          Global customer tracking (SSOT)
-        </p>
-      </div>
+      <PageHeader 
+        title="Customers List"
+        icon={Users}
+        description="Global customer tracking (SSOT)"
+      />
 
       {/* Filter */}
-      <div className="flex gap-3 flex-wrap">
+      <div className="flex gap-3 flex-wrap animate-in-slide stagger-2">
         <select
           value={fSector}
           onChange={e => { setFSector(e.target.value); setPage(1); }}
-          className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2 text-sm"
+          className="h-9 rounded-md border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] px-3 py-1 text-sm shadow-sm transition-all focus-visible:outline-none focus-visible:border-[hsl(var(--primary))]/50 focus-visible:ring-[3px] focus-visible:ring-[hsl(var(--primary))]/10"
         >
           <option value="">All Sectors</option>
           {SECTORS.map(s => <option key={s} value={s}>{s}</option>)}
@@ -239,7 +236,7 @@ export default function CustomerListPage() {
         <select
           value={fPotentialStatus}
           onChange={e => { setFPotentialStatus(e.target.value); setPage(1); }}
-          className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2 text-sm"
+          className="h-9 rounded-md border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] px-3 py-1 text-sm shadow-sm transition-all focus-visible:outline-none focus-visible:border-[hsl(var(--primary))]/50 focus-visible:ring-[3px] focus-visible:ring-[hsl(var(--primary))]/10"
         >
           <option value="">All Customers</option>
           <option value="Potential">Potential</option>
@@ -260,6 +257,12 @@ export default function CustomerListPage() {
         onPageChange={setPage}
         bulkDeleteEndpoint="/shared/customers/bulk-delete"
         onBulkDeleteSuccess={fetch_}
+        onRowClick={(row) => {
+          if (isAdmin) {
+            setCustomerToEdit(row);
+            setEditModal(true);
+          }
+        }}
         renderActions={renderActions}
         defaultVisibility={{
           address: false,
@@ -272,8 +275,8 @@ export default function CustomerListPage() {
 
       {/* History Modal */}
       {historyModal && selectedCustomer && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="w-full max-w-2xl rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6 shadow-2xl max-h-[85vh] overflow-y-auto">
+        <div className="fixed inset-0 z-[100] flex overflow-y-auto bg-black/60 backdrop-blur-sm p-4 sm:p-6 animate-in fade-in transition-all">
+          <div className="w-full max-w-2xl rounded-2xl border border-[hsl(var(--border))] modern-glass-card m-auto relative premium-shadow animate-in-slide p-6 shadow-2xl">
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h2 className="text-lg font-bold">Customer History</h2>
@@ -287,7 +290,7 @@ export default function CustomerListPage() {
             {historyLoading ? (
               <div className="text-center text-[hsl(var(--muted-foreground))] py-8">Loading history…</div>
             ) : history ? (
-              <div className="space-y-6">
+              <div className="space-y-6 pb-8">
                 {/* Marketing History */}
                 <div>
                   <div className="flex items-center gap-2 mb-3">

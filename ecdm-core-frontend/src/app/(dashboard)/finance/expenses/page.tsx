@@ -16,6 +16,7 @@ import {
   UserPlus,
   X,
 } from 'lucide-react';
+import { PageHeader } from '@/components/layout/PageHeader';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
@@ -41,7 +42,7 @@ const universalExtract = (rawData: any): any[] => {
   return (possibleArray as any[]) || [];
 };
 
-const iCls = 'w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-4 py-3 text-sm placeholder:text-[hsl(var(--muted-foreground))] focus:border-[hsl(var(--primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/20 transition-all';
+const iCls = 'flex h-9 w-full rounded-md border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] px-3 py-1 text-sm shadow-sm transition-all placeholder:text-[hsl(var(--muted-foreground))] focus-visible:outline-none focus-visible:border-[hsl(var(--primary))]/50 focus-visible:ring-[3px] focus-visible:ring-[hsl(var(--primary))]/10';
 const labelCls = 'block text-sm font-medium text-[hsl(var(--foreground))] mb-1';
 
 const formatMoney = (val: any) => {
@@ -204,39 +205,31 @@ export default function ExpensesPage() {
   if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="border-b bg-card">
-        <div className="flex flex-col gap-4 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-              <CreditCard className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <h1 className="text-xl font-semibold">General Expenses</h1>
-              <p className="text-sm text-muted-foreground">
-                Tracking general company expenses
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-4">
+    <div className="space-y-6 pb-8">
+      <PageHeader
+        title="General Expenses"
+        icon={CreditCard}
+        description="Tracking general company expenses"
+        actions={
+          <>
             <button
               onClick={handleSync}
               disabled={syncing}
-              className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+              className="flex items-center gap-2 rounded-md border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] px-4 py-2 text-sm font-medium shadow-sm hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--accent-foreground))] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[hsl(var(--primary))]/10 transition-all disabled:opacity-50"
             >
               {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
               {syncing ? 'Syncing...' : 'Sync Report'}
             </button>
             <button
               onClick={() => setAddModalOpen(true)}
-              className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+              className="flex items-center gap-2 rounded-md bg-[hsl(var(--primary))] px-4 py-2 text-sm font-medium text-[hsl(var(--primary-foreground))] shadow-sm hover:opacity-90 border-0 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[hsl(var(--primary))]/10 transition-all"
             >
               <UserPlus className="h-4 w-4" />
               Add Expense
             </button>
-          </div>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       <div className="p-6">
         <div className="mb-4 flex items-center gap-2">
@@ -331,7 +324,7 @@ export default function ExpensesPage() {
       {addModalOpen && (
         /* Add Expense Modal */
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm transition-opacity">
-        <div className="rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+        <div className="rounded-2xl border border-[hsl(var(--border))] modern-glass-card premium-shadow animate-in-slide m-auto relative shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
 
           {/* Modal Header */}
           <div className="px-6 py-4 border-b border-[hsl(var(--border))] flex justify-between items-center bg-[hsl(var(--muted))]/50">

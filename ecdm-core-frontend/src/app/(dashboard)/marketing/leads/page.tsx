@@ -5,6 +5,8 @@ import api from '@/lib/axios';
 import toast from 'react-hot-toast';
 import { TrendingUp, Plus, Edit2, Trash2, X, ChevronLeft, ChevronRight, Sheet, Upload, Loader2, AlertTriangle, Check, RefreshCw, Save, Database } from 'lucide-react';
 import { DataTable } from '@/components/ui/DataTable';
+import { PageHeader } from '@/components/layout/PageHeader';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter } from '@/components/ui/dialog';
 
 interface Customer {
   _id: string;
@@ -52,7 +54,7 @@ interface AnalysisResult {
   conflicts: AnalyzedLead[];
 }
 
-const iCls = 'w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-4 py-3 text-sm placeholder:text-[hsl(var(--muted-foreground))] focus:border-[hsl(var(--primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/20 transition-all';
+const iCls = 'flex h-9 w-full rounded-md border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] px-3 py-1 text-sm shadow-sm transition-all placeholder:text-[hsl(var(--muted-foreground))] focus-visible:outline-none focus-visible:border-[hsl(var(--primary))]/50 focus-visible:ring-[3px] focus-visible:ring-[hsl(var(--primary))]/10';
 const TYPES = ['Google', 'Facebook', 'Instagram', 'TikTok', 'Snapchat', 'WhatsApp', 'Website', 'Referral', 'Cold Call', 'Exhibition', 'Other'];
 const SECTORS = ['B2B', 'B2C', 'B2G', 'Hybrid', 'Other'];
 const blank = { name: '', phone: '', type: '', sector: 'B2C', date: '', notes: '' };
@@ -335,36 +337,36 @@ export default function MarketingLeadsPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <TrendingUp className="h-7 w-7 text-[hsl(var(--primary))]" />
-          <h1 className="text-2xl font-bold">Marketing Leads</h1>
-        </div>
-        <div className="flex gap-2">
-          <button onClick={openSyncModal} className="flex items-center gap-2 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-4 py-2 text-sm font-medium hover:bg-[hsl(var(--muted))] transition-colors">
-            <Sheet className="h-4 w-4 text-green-600" />
-            Sync Sheet
-          </button>
-          <button onClick={openC} className="flex items-center gap-2 rounded-xl bg-[hsl(var(--primary))] px-4 py-2 text-sm font-semibold text-[hsl(var(--primary-foreground))] hover:opacity-90 transition-opacity">
-            <Plus className="h-4 w-4" />Add
-          </button>
-        </div>
-      </div>
+    <div className="space-y-6 pb-8">
+      <PageHeader
+        title="Marketing Leads"
+        icon={TrendingUp}
+        actions={
+          <>
+            <button onClick={openSyncModal} className="flex items-center gap-2 rounded-md border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] px-4 py-2 text-sm font-medium shadow-sm hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--accent-foreground))] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[hsl(var(--primary))]/10 transition-all">
+              <Sheet className="h-4 w-4 text-green-600" />
+              Sync Sheet
+            </button>
+            <button onClick={openC} className="flex items-center gap-2 rounded-md bg-[hsl(var(--primary))] px-4 py-2 text-sm font-medium text-[hsl(var(--primary-foreground))] shadow-sm hover:opacity-90 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[hsl(var(--primary))]/10 transition-all">
+              <Plus className="h-4 w-4" />Add
+            </button>
+          </>
+        }
+      />
 
       <div className="flex gap-3 flex-wrap items-center">
-        <select value={fType} onChange={e => { setFType(e.target.value); setPage(1); }} className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2 text-sm">
+        <select value={fType} onChange={e => { setFType(e.target.value); setPage(1); }} className="h-9 rounded-md border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] px-3 py-1 text-sm shadow-sm transition-all focus-visible:outline-none focus-visible:border-[hsl(var(--primary))]/50 focus-visible:ring-[3px] focus-visible:ring-[hsl(var(--primary))]/10">
           <option value="">All Types</option>
           {TYPES.map(t => <option key={t} value={t}>{t}</option>)}
         </select>
-        <select value={fSector} onChange={e => { setFSector(e.target.value); setPage(1); }} className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2 text-sm">
+        <select value={fSector} onChange={e => { setFSector(e.target.value); setPage(1); }} className="h-9 rounded-md border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] px-3 py-1 text-sm shadow-sm transition-all focus-visible:outline-none focus-visible:border-[hsl(var(--primary))]/50 focus-visible:ring-[3px] focus-visible:ring-[hsl(var(--primary))]/10">
           <option value="">All Sectors</option>
           {SECTORS.map(s => <option key={s} value={s}>{s}</option>)}
         </select>
         {selectedRows.size > 0 && (
           <button
             onClick={() => setShowBulkDeleteConfirm(true)}
-            className="flex items-center gap-2 rounded-xl bg-destructive px-4 py-2 text-sm font-semibold text-white hover:opacity-90 transition-opacity ml-auto"
+            className="flex items-center gap-2 rounded-md bg-[hsl(var(--destructive))] px-4 py-2 text-sm font-medium text-[hsl(var(--destructive-foreground))] shadow-sm hover:opacity-90 transition-all ml-auto focus-visible:outline-none"
           >
             <Trash2 className="h-4 w-4" />
             Delete Selected ({selectedRows.size})
@@ -431,7 +433,8 @@ export default function MarketingLeadsPage() {
             },
           ]}
           loading={loading}
-          emptyMessage="No leads found."
+          onRowClick={openE}
+          emptyMessage="No marketing leads found."
           page={page}
           totalPages={tp}
           totalItems={total}
@@ -455,57 +458,81 @@ export default function MarketingLeadsPage() {
 
 
 
-      {/* Add/Edit Lead Modal */}
-      {modal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="w-full max-w-lg rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6 shadow-2xl">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-bold">{editing ? 'Edit Lead' : 'Add Lead'}</h2>
-              <button onClick={() => setModal(false)}><X className="h-5 w-5" /></button>
-            </div>
-            <form onSubmit={save} className="space-y-4">
-              <input required placeholder="Name" value={form.name} onChange={u('name')} className={iCls} />
-              <input required placeholder="Phone" value={form.phone} onChange={u('phone')} className={iCls} />
-              <select required value={form.type} onChange={u('type')} className={iCls}>
-                <option value="">Select Type</option>
-                {TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-              </select>
-              <select value={form.sector} onChange={u('sector')} className={iCls}>
-                {SECTORS.map(s => <option key={s} value={s}>{s}</option>)}
-              </select>
-              <input type="date" placeholder="Date" value={form.date} onChange={u('date')} className={iCls} />
-              <textarea placeholder="Notes" value={form.notes} onChange={u('notes')} rows={3} className={iCls} />
+      {/* Add/Edit Lead Dialog */}
+      <Dialog open={modal} onOpenChange={setModal}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{editing ? 'Edit Lead' : 'Add Lead'}</DialogTitle>
+          </DialogHeader>
+          <DialogBody>
+            <form id="lead-form" onSubmit={save} className="space-y-4">
+              <div className="space-y-4">
+                <div>
+                  <label className="text-xs font-semibold text-[hsl(var(--muted-foreground))] uppercase mb-1.5 block">Name</label>
+                  <input required placeholder="Name" value={form.name} onChange={u('name')} className={iCls} />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-[hsl(var(--muted-foreground))] uppercase mb-1.5 block">Phone</label>
+                  <input required placeholder="Phone" value={form.phone} onChange={u('phone')} className={iCls} />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs font-semibold text-[hsl(var(--muted-foreground))] uppercase mb-1.5 block">Type</label>
+                    <select required value={form.type} onChange={u('type')} className={iCls}>
+                      <option value="">Select Type</option>
+                      {TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-[hsl(var(--muted-foreground))] uppercase mb-1.5 block">Sector</label>
+                    <select value={form.sector} onChange={u('sector')} className={iCls}>
+                      {SECTORS.map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-[hsl(var(--muted-foreground))] uppercase mb-1.5 block">Date</label>
+                  <input type="date" placeholder="Date" value={form.date} onChange={u('date')} className={iCls} />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-[hsl(var(--muted-foreground))] uppercase mb-1.5 block">Notes</label>
+                  <textarea placeholder="Notes" value={form.notes} onChange={u('notes')} rows={3} className={iCls} />
+                </div>
+              </div>
               {error && <p className="text-sm text-destructive">{error}</p>}
-              <div className="flex gap-3 pt-2">
-                <button type="submit" disabled={saving} className="flex-1 rounded-xl bg-[hsl(var(--primary))] py-2.5 text-sm font-semibold text-[hsl(var(--primary-foreground))] disabled:opacity-60">
-                  {saving ? 'Saving…' : 'Save'}
-                </button>
-                <button type="button" onClick={() => setModal(false)} className="flex-1 rounded-xl border border-[hsl(var(--border))] py-2.5 text-sm">Cancel</button>
-              </div>
             </form>
-          </div>
-        </div>
-      )}
-
-      {/* Google Sheets Sync Modal - 2 Step Process */}
-      {syncModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="w-full max-w-2xl max-h-[85vh] overflow-y-auto rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6 shadow-2xl">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <Sheet className="h-6 w-6 text-green-600" />
-                <h2 className="text-lg font-bold">
-                  {syncStep === 'config' && 'Connect Google Sheet'}
-                  {syncStep === 'review' && 'Review Changes'}
-                  {syncStep === 'done' && 'Sync Complete'}
-                </h2>
-              </div>
-              <button onClick={closeSyncModal}><X className="h-5 w-5" /></button>
+          </DialogBody>
+          <DialogFooter>
+            <div className="flex gap-3 w-full">
+              <button type="button" onClick={() => setModal(false)} className="flex-1 rounded-xl border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] py-3 text-sm font-semibold hover:bg-[hsl(var(--muted))]/50 transition-colors">
+                Cancel
+              </button>
+              <button type="submit" form="lead-form" disabled={saving} className="flex-1 rounded-xl bg-[hsl(var(--primary))] py-3 text-sm font-semibold text-[hsl(var(--primary-foreground))] hover:opacity-90 transition-opacity disabled:opacity-60">
+                {saving ? 'Saving…' : 'Save Lead'}
+              </button>
             </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
+      {/* Google Sheets Sync Dialog */}
+      <Dialog open={syncModal} onOpenChange={setSyncModal}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <div className="flex items-center gap-3">
+              <Sheet className="h-6 w-6 text-green-600" />
+              <DialogTitle>
+                {syncStep === 'config' && 'Connect Google Sheet'}
+                {syncStep === 'review' && 'Review Changes'}
+                {syncStep === 'done' && 'Sync Complete'}
+              </DialogTitle>
+            </div>
+          </DialogHeader>
+
+          <DialogBody>
             {/* Step 1: Configuration */}
             {syncStep === 'config' && (
-              <form onSubmit={handleSync(onSyncSubmit)} className="space-y-4">
+              <form id="sync-config-form" onSubmit={handleSync(onSyncSubmit)} className="space-y-4">
                 {/* Saved Connections Dropdown */}
                 <div>
                   <label className="block text-sm font-medium mb-1.5 flex items-center gap-2">
@@ -608,17 +635,6 @@ export default function MarketingLeadsPage() {
                     )}
                   </>
                 )}
-
-                <div className="flex gap-3 pt-2">
-                  <button type="submit" disabled={syncing} className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-green-600 py-2.5 text-sm font-semibold text-white disabled:opacity-60 hover:bg-green-700 transition-colors">
-                    {syncing ? (
-                      <><Loader2 className="h-4 w-4 animate-spin" />Analyzing…</>
-                    ) : (
-                      <><Sheet className="h-4 w-4" />Analyze Sheet</>
-                    )}
-                  </button>
-                  <button type="button" onClick={closeSyncModal} className="flex-1 rounded-xl border border-[hsl(var(--border))] py-2.5 text-sm">Cancel</button>
-                </div>
               </form>
             )}
 
@@ -715,55 +731,39 @@ export default function MarketingLeadsPage() {
                     </div>
                   </div>
                 )}
-
-                {/* Actions */}
-                <div className="flex gap-3 pt-2">
-                  <button
-                    type="button"
-                    onClick={handleCommit}
-                    disabled={syncing}
-                    className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-green-600 py-2.5 text-sm font-semibold text-white disabled:opacity-60 hover:bg-green-700 transition-colors"
-                  >
-                    {syncing ? (
-                      <><Loader2 className="h-4 w-4 animate-spin" />Committing…</>
-                    ) : (
-                      <><Check className="h-4 w-4" />Commit Changes</>
-                    )}
-                  </button>
-                  <button type="button" onClick={() => setSyncStep('config')} className="rounded-xl border border-[hsl(var(--border))] px-4 py-2.5 text-sm">Back</button>
-                  <button type="button" onClick={closeSyncModal} className="rounded-xl border border-[hsl(var(--border))] px-4 py-2.5 text-sm">Cancel</button>
-                </div>
               </div>
             )}
 
             {/* Step 3: Done */}
             {syncStep === 'done' && commitResult && (
-              <div className="space-y-4">
-                <div className={`rounded-xl p-6 text-center ${commitResult.errors.length > 0 ? 'bg-amber-500/10' : 'bg-green-500/10'}`}>
-                  <Check className={`h-12 w-12 mx-auto mb-3 ${commitResult.errors.length > 0 ? 'text-amber-600' : 'text-green-600'}`} />
-                  <p className="text-lg font-bold mb-4">Sync Completed</p>
-                  <div className="grid grid-cols-4 gap-3 max-w-md mx-auto">
-                    <div>
-                      <p className="text-2xl font-bold text-green-600">{commitResult.created}</p>
-                      <p className="text-xs text-[hsl(var(--muted-foreground))]">Created</p>
+              <div className="space-y-4 text-center">
+                <div className={`rounded-full mx-auto flex h-16 w-16 items-center justify-center ${commitResult.errors.length > 0 ? 'bg-amber-500/10' : 'bg-green-500/10'}`}>
+                  <Check className={`h-8 w-8 ${commitResult.errors.length > 0 ? 'text-amber-600' : 'text-green-600'}`} />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold">Sync Completed</h3>
+                  <div className="mt-4 grid grid-cols-4 gap-3">
+                    <div className="rounded-xl border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] p-3">
+                      <p className="text-xl font-bold text-green-600">{commitResult.created}</p>
+                      <p className="text-[10px] uppercase font-bold text-[hsl(var(--muted-foreground))]">Created</p>
                     </div>
-                    <div>
-                      <p className="text-2xl font-bold text-blue-600">{commitResult.updated}</p>
-                      <p className="text-xs text-[hsl(var(--muted-foreground))]">Updated</p>
+                    <div className="rounded-xl border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] p-3">
+                      <p className="text-xl font-bold text-blue-600">{commitResult.updated}</p>
+                      <p className="text-[10px] uppercase font-bold text-[hsl(var(--muted-foreground))]">Updated</p>
                     </div>
-                    <div>
-                      <p className="text-2xl font-bold text-[hsl(var(--muted-foreground))]">{commitResult.skipped}</p>
-                      <p className="text-xs text-[hsl(var(--muted-foreground))]">Skipped</p>
+                    <div className="rounded-xl border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] p-3">
+                      <p className="text-xl font-bold text-[hsl(var(--muted-foreground))]">{commitResult.skipped}</p>
+                      <p className="text-[10px] uppercase font-bold text-[hsl(var(--muted-foreground))]">Skipped</p>
                     </div>
-                    <div>
-                      <p className="text-2xl font-bold text-purple-600">{commitResult.forwarded}</p>
-                      <p className="text-xs text-[hsl(var(--muted-foreground))]">Forwarded</p>
+                    <div className="rounded-xl border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] p-3">
+                      <p className="text-xl font-bold text-purple-600">{commitResult.forwarded}</p>
+                      <p className="text-[10px] uppercase font-bold text-[hsl(var(--muted-foreground))]">Forwarded</p>
                     </div>
                   </div>
                 </div>
 
                 {commitResult.errors.length > 0 && (
-                  <div className="rounded-xl bg-red-500/10 border border-red-500/20 p-4">
+                  <div className="mt-4 rounded-xl bg-red-500/10 border border-red-500/20 p-4 text-left">
                     <p className="text-sm font-medium text-red-600 mb-2">Errors ({commitResult.errors.length})</p>
                     <ul className="text-xs text-red-600 space-y-1 max-h-24 overflow-y-auto">
                       {commitResult.errors.slice(0, 10).map((e, i) => <li key={i}>• {e}</li>)}
@@ -771,55 +771,103 @@ export default function MarketingLeadsPage() {
                     </ul>
                   </div>
                 )}
-
-                <div className="flex justify-center pt-2">
-                  <button type="button" onClick={closeSyncModal} className="rounded-xl bg-[hsl(var(--primary))] px-8 py-2.5 text-sm font-semibold text-[hsl(var(--primary-foreground))]">Done</button>
-                </div>
               </div>
             )}
-          </div>
-        </div>
-      )}
+          </DialogBody>
 
-      {/* Delete Confirmation Modal */}
-      {delId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6 shadow-2xl max-w-sm w-full">
-            <p className="mb-4 font-semibold">Delete this lead?</p>
-            <div className="flex gap-3">
-              <button onClick={del} className="flex-1 rounded-xl bg-destructive py-2 text-sm font-semibold text-white">Delete</button>
-              <button onClick={() => setDelId(null)} className="flex-1 rounded-xl border py-2 text-sm">Cancel</button>
+          <DialogFooter>
+            <div className="flex gap-3 w-full">
+              {syncStep === 'config' && (
+                <>
+                  <button type="button" onClick={closeSyncModal} className="flex-1 rounded-xl border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] py-3 text-sm font-semibold hover:bg-[hsl(var(--muted))]/50 transition-colors">
+                    Cancel
+                  </button>
+                  <button type="submit" form="sync-config-form" disabled={syncing} className="flex-1 rounded-xl bg-green-600 py-3 text-sm font-semibold text-white disabled:opacity-60 hover:bg-green-700 transition-colors">
+                    {syncing ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Analyzing…</> : <><Sheet className="h-4 w-4 mr-2" />Analyze Sheet</>}
+                  </button>
+                </>
+              )}
+              {syncStep === 'review' && (
+                <>
+                  <button type="button" onClick={() => setSyncStep('config')} className="px-6 rounded-xl border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] py-3 text-sm font-semibold hover:bg-[hsl(var(--muted))]/50 transition-colors">
+                    Back
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCommit}
+                    disabled={syncing}
+                    className="flex-1 rounded-xl bg-green-600 py-3 text-sm font-semibold text-white disabled:opacity-60 hover:bg-green-700 transition-colors"
+                  >
+                    {syncing ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Committing…</> : <><Check className="h-4 w-4 mr-2" />Commit Changes</>}
+                  </button>
+                </>
+              )}
+              {syncStep === 'done' && (
+                <button type="button" onClick={closeSyncModal} className="w-full rounded-xl bg-[hsl(var(--primary))] py-3 text-sm font-semibold text-[hsl(var(--primary-foreground))]">
+                  Done
+                </button>
+              )}
             </div>
-          </div>
-        </div>
-      )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-      {/* Bulk Delete Confirmation Modal */}
-      {showBulkDeleteConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6 shadow-2xl max-w-sm w-full">
-            <div className="flex items-center gap-3 mb-4">
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={!!delId} onOpenChange={(open) => !open && setDelId(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Confirm Delete</DialogTitle>
+          </DialogHeader>
+          <DialogBody>
+            <p className="text-[hsl(var(--muted-foreground))]">
+              Are you sure you want to delete this lead? This action cannot be undone.
+            </p>
+          </DialogBody>
+          <DialogFooter>
+            <div className="flex gap-3 w-full">
+              <button onClick={() => setDelId(null)} className="flex-1 rounded-xl border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] py-3 text-sm font-semibold hover:bg-[hsl(var(--muted))]/50 transition-colors">
+                Cancel
+              </button>
+              <button onClick={del} className="flex-1 rounded-xl bg-destructive py-3 text-sm font-semibold text-white hover:opacity-90 transition-opacity">
+                Delete Lead
+              </button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Delete Confirmation Dialog */}
+      <Dialog open={showBulkDeleteConfirm} onOpenChange={setShowBulkDeleteConfirm}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <div className="flex items-center gap-3">
               <div className="p-2 rounded-full bg-destructive/10">
                 <AlertTriangle className="h-5 w-5 text-destructive" />
               </div>
-              <p className="font-semibold">Delete {selectedRows.size} leads?</p>
+              <DialogTitle>Delete {selectedRows.size} leads?</DialogTitle>
             </div>
-            <p className="text-sm text-[hsl(var(--muted-foreground))] mb-4">
-              This action cannot be undone. All selected leads will be permanently removed.
+          </DialogHeader>
+          <DialogBody>
+            <p className="text-sm text-[hsl(var(--muted-foreground))]">
+              This action cannot be undone. All selected leads will be permanently removed from the system.
             </p>
-            <div className="flex gap-3">
+          </DialogBody>
+          <DialogFooter>
+            <div className="flex gap-3 w-full">
+              <button onClick={() => setShowBulkDeleteConfirm(false)} className="flex-1 rounded-xl border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] py-3 text-sm font-semibold hover:bg-[hsl(var(--muted))]/50 transition-colors">
+                Cancel
+              </button>
               <button
                 onClick={handleBulkDelete}
                 disabled={bulkDeleting}
-                className="flex-1 rounded-xl bg-destructive py-2 text-sm font-semibold text-white disabled:opacity-60"
+                className="flex-1 rounded-xl bg-destructive py-3 text-sm font-semibold text-white disabled:opacity-60 hover:opacity-90 transition-opacity"
               >
-                {bulkDeleting ? 'Deleting…' : 'Delete All'}
+                {bulkDeleting ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Deleting…</> : 'Delete All'}
               </button>
-              <button onClick={() => setShowBulkDeleteConfirm(false)} className="flex-1 rounded-xl border py-2 text-sm">Cancel</button>
             </div>
-          </div>
-        </div>
-      )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

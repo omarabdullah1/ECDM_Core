@@ -1,5 +1,6 @@
 'use client';
 import { DataTable } from '@/components/ui/DataTable';
+import { PageHeader } from '@/components/layout/PageHeader';
 import api from '@/lib/axios';
 import toast from 'react-hot-toast';
 import { Plus, Tags, X } from 'lucide-react';
@@ -86,30 +87,26 @@ export default function PriceListPage() {
     });
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 pb-8">
 
             {/* ─── Header ──────────────────────────────────────────────────────── */}
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                    <Tags className="h-7 w-7 text-[hsl(var(--primary))]" />
-                    <div>
-                        <h1 className="text-2xl font-bold">Price List</h1>
-                        <p className="text-sm text-[hsl(var(--muted-foreground))]">
-                            Manage spare parts, supplies, and service pricing
-                        </p>
-                    </div>
-                </div>
-                <button
-                    onClick={() => setShowAddModal(true)}
-                    className="flex items-center gap-2 rounded-xl bg-[hsl(var(--primary))] px-4 py-2 text-sm font-semibold text-[hsl(var(--primary-foreground))] hover:opacity-90 transition-opacity"
-                >
-                    <Plus className="h-4 w-4" />
-                    Add Item
-                </button>
-            </div>
+            <PageHeader
+                title="Price List"
+                icon={Tags}
+                description="Manage spare parts, supplies, and service pricing"
+                actions={
+                    <button
+                        onClick={() => setShowAddModal(true)}
+                        className="flex items-center gap-2 rounded-md bg-[hsl(var(--primary))] px-4 py-2 text-sm font-medium text-[hsl(var(--primary-foreground))] shadow-sm hover:opacity-90 border-0 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[hsl(var(--primary))]/10 transition-all"
+                    >
+                        <Plus className="h-4 w-4" />
+                        Add Item
+                    </button>
+                }
+            />
 
             {/* ─── Filters ─────────────────────────────────────────────────────── */}
-            <div className="flex gap-3 flex-wrap">
+            <div className="flex gap-3 flex-wrap animate-in-slide stagger-2">
                 <input
                     type="text"
                     value={search}
@@ -120,7 +117,7 @@ export default function PriceListPage() {
                 <select
                     value={categoryFilter}
                     onChange={handleCategoryChange}
-                    className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2 text-sm"
+                    className="h-9 rounded-md border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] px-3 py-1 text-sm shadow-sm transition-all focus-visible:outline-none focus-visible:border-[hsl(var(--primary))]/50 focus-visible:ring-[3px] focus-visible:ring-[hsl(var(--primary))]/10"
                 >
                     <option value="">All Categories</option>
                     {PRICE_LIST_CATEGORIES.map((cat) => (
@@ -168,8 +165,8 @@ export default function PriceListPage() {
 
             {/* ─── Delete Confirmation ─────────────────────────────────────────── */}
             {delId && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-                    <div className="w-full max-w-md rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] shadow-2xl p-6">
+                <div className="fixed inset-0 z-[100] flex overflow-y-auto bg-black/60 backdrop-blur-sm p-4 sm:p-6 animate-in fade-in transition-all">
+                    <div className="w-full max-w-md rounded-2xl border border-[hsl(var(--border))] modern-glass-card m-auto relative premium-shadow animate-in-slide shadow-2xl p-6">
                         <div className="flex items-center justify-between mb-4">
                             <h3 className="text-lg font-bold">Confirm Delete</h3>
                             <button

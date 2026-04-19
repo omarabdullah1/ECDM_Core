@@ -80,6 +80,12 @@ const userSchema = new Schema<IUserDocument>(
             type: Number,
             default: 0,
         },
+        maxDiscountPercentage: {
+            type: Number,
+            default: 0,
+            min: 0,
+            max: 100,
+        },
         refreshToken: {
             type: String,
             select: false,

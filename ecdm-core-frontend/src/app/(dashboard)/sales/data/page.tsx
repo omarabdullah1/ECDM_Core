@@ -5,10 +5,11 @@ import { FileText, Plus, Edit2, Trash2, X, Download, Upload, History, Lock } fro
 import { downloadSalesDataTemplate } from '@/lib/excelTemplate';
 import ImportDataDialog from '@/components/sales/ImportDataDialog';
 import { DataTable } from '@/components/ui/DataTable';
+import { PageHeader } from '@/components/layout/PageHeader';
 import { createSalesDataColumns, SalesData } from './columns';
 import toast from 'react-hot-toast';
 
-const iCls = 'w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-4 py-3 text-sm placeholder:text-[hsl(var(--muted-foreground))] focus:border-[hsl(var(--primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/20 transition-all';
+const iCls = 'flex h-9 w-full rounded-md border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] px-3 py-1 text-sm shadow-sm transition-all placeholder:text-[hsl(var(--muted-foreground))] focus-visible:outline-none focus-visible:border-[hsl(var(--primary))]/50 focus-visible:ring-[3px] focus-visible:ring-[hsl(var(--primary))]/10';
 const OUTCOMES = ['Pending', 'No Answer', 'Interested', 'Converted', 'Rejected'];
 const TYPE_OF_ORDER = ['Maintenance', 'General supplies', 'Supply and installation'];
 const SALES_PLATFORM = ['Online', 'In Side', 'Phone', 'Out side', 'Data'];
@@ -154,43 +155,43 @@ export default function SalesDataPage() {
   });
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <FileText className="h-7 w-7 text-[hsl(var(--primary))]" />
-          <h1 className="text-2xl font-bold">Sales Data</h1>
-        </div>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => downloadSalesDataTemplate()}
-            className="flex items-center gap-2 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-4 py-2 text-sm font-semibold hover:bg-[hsl(var(--muted))] transition-colors"
-          >
-            <Download className="h-4 w-4" />
-            Download Template
-          </button>
-          <button
-            onClick={() => setImportDialogOpen(true)}
-            className="flex items-center gap-2 rounded-xl bg-[hsl(var(--primary))] px-4 py-2 text-sm font-semibold text-[hsl(var(--primary-foreground))] hover:opacity-90 transition-opacity"
-          >
-            <Upload className="h-4 w-4" />
-            Import Excel
-          </button>
-          <button
-            onClick={openCreate}
-            className="flex items-center gap-2 rounded-xl bg-[hsl(var(--primary))] px-4 py-2 text-sm font-semibold text-[hsl(var(--primary-foreground))] hover:opacity-90 transition-opacity"
-          >
-            <Plus className="h-4 w-4" />
-            Add
-          </button>
-        </div>
-      </div>
+    <div className="space-y-6 pb-8">
+      <PageHeader 
+        title="Sales Data"
+        icon={FileText}
+        actions={
+          <>
+            <button
+              onClick={() => downloadSalesDataTemplate()}
+              className="flex items-center gap-2 rounded-md border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] px-4 py-2 text-sm font-medium shadow-sm hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--accent-foreground))] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[hsl(var(--primary))]/10 transition-all"
+            >
+              <Download className="h-4 w-4" />
+              Download Template
+            </button>
+            <button
+              onClick={() => setImportDialogOpen(true)}
+              className="flex items-center gap-2 rounded-md border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] px-4 py-2 text-sm font-medium shadow-sm hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--accent-foreground))] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[hsl(var(--primary))]/10 transition-all"
+            >
+              <Upload className="h-4 w-4" />
+              Import Excel
+            </button>
+            <button
+              onClick={openCreate}
+              className="flex items-center gap-2 rounded-md bg-[hsl(var(--primary))] px-4 py-2 text-sm font-medium text-[hsl(var(--primary-foreground))] shadow-sm hover:opacity-90 border-0 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[hsl(var(--primary))]/10 transition-all"
+            >
+              <Plus className="h-4 w-4" />
+              Add
+            </button>
+          </>
+        }
+      />
 
       <div className="flex gap-3 flex-wrap items-center">
-        <select value={fOutcome} onChange={e => { setFOutcome(e.target.value); setPage(1); }} className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2 text-sm">
+        <select value={fOutcome} onChange={e => { setFOutcome(e.target.value); setPage(1); }} className="h-9 rounded-md border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] px-3 py-1 text-sm shadow-sm transition-all focus-visible:outline-none focus-visible:border-[hsl(var(--primary))]/50 focus-visible:ring-[3px] focus-visible:ring-[hsl(var(--primary))]/10">
           <option value="">All Outcomes</option>
           {OUTCOMES.map(s => <option key={s} value={s}>{s}</option>)}
         </select>
-        <select value={fTypeOfOrder} onChange={e => { setFTypeOfOrder(e.target.value); setPage(1); }} className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2 text-sm">
+        <select value={fTypeOfOrder} onChange={e => { setFTypeOfOrder(e.target.value); setPage(1); }} className="h-9 rounded-md border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] px-3 py-1 text-sm shadow-sm transition-all focus-visible:outline-none focus-visible:border-[hsl(var(--primary))]/50 focus-visible:ring-[3px] focus-visible:ring-[hsl(var(--primary))]/10">
           <option value="">All Order Types</option>
           {TYPE_OF_ORDER.map(s => <option key={s} value={s}>{s}</option>)}
         </select>
@@ -228,8 +229,8 @@ export default function SalesDataPage() {
       {/* Create/Edit Modal */}
       {
         modal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-            <div className="w-full max-w-2xl rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+          <div className="fixed inset-0 z-[100] flex overflow-y-auto bg-black/60 backdrop-blur-sm p-4 sm:p-6 animate-in fade-in transition-all">
+            <div className="w-full max-w-2xl rounded-2xl border border-[hsl(var(--border))] modern-glass-card m-auto relative premium-shadow animate-in-slide p-6 shadow-2xl">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-lg font-bold">
                   {editing ? 'Edit Sales Data' : 'Add Sales Data'}
@@ -434,14 +435,14 @@ export default function SalesDataPage() {
                   <button
                     type="submit"
                     disabled={saving}
-                    className="flex-1 rounded-xl bg-[hsl(var(--primary))] py-2.5 text-sm font-semibold text-[hsl(var(--primary-foreground))] disabled:opacity-60"
+                    className="flex-1 flex-1 rounded-md bg-[hsl(var(--primary))] py-2 text-sm font-medium text-[hsl(var(--primary-foreground))] shadow-sm hover:opacity-90 transition-all focus-visible:outline-none disabled:opacity-60"
                   >
                     {saving ? 'Saving…' : 'Save'}
                   </button>
                   <button
                     type="button"
                     onClick={() => setModal(false)}
-                    className="flex-1 rounded-xl border border-[hsl(var(--border))] py-2.5 text-sm"
+                    className="flex-1 flex-1 rounded-md border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] py-2 text-sm font-medium shadow-sm transition-all hover:bg-[hsl(var(--accent))] focus-visible:outline-none"
                   >
                     Cancel
                   </button>
@@ -455,19 +456,19 @@ export default function SalesDataPage() {
       {/* Delete Confirmation Modal */}
       {
         delId && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-            <div className="rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6 shadow-2xl max-w-sm w-full">
+          <div className="fixed inset-0 z-[100] flex overflow-y-auto bg-black/60 backdrop-blur-sm p-4 sm:p-6 animate-in fade-in transition-all">
+            <div className="rounded-md border border-[hsl(var(--border))]/50 modern-glass-card premium-shadow animate-in-slide m-auto relative p-6 shadow-lg sm:max-w-md w-full">
               <p className="mb-4 font-semibold">Delete this sales data record?</p>
               <div className="flex gap-3">
                 <button
                   onClick={del}
-                  className="flex-1 rounded-xl bg-destructive py-2 text-sm font-semibold text-white"
+                  className="flex-1 rounded-md bg-[hsl(var(--destructive))] py-2 text-sm font-medium text-[hsl(var(--destructive-foreground))] shadow-sm transition-all hover:opacity-90 focus-visible:outline-none"
                 >
                   Delete
                 </button>
                 <button
                   onClick={() => setDelId(null)}
-                  className="flex-1 rounded-xl border py-2 text-sm"
+                  className="flex-1 rounded-md border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] py-2 text-sm font-medium shadow-sm transition-all hover:bg-[hsl(var(--accent))] focus-visible:outline-none"
                 >
                   Cancel
                 </button>

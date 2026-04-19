@@ -10,6 +10,7 @@ interface User {
     email: string;
     role: string;
     isActive: boolean;
+    maxDiscountPercentage?: number;
     fullName?: string;
 }
 

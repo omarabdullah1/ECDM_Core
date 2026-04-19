@@ -51,7 +51,9 @@ const salesOrderSchema = new Schema<ISalesOrderDocument>(
                 description: { type: String, required: true },
                 quantity: { type: Number, required: true, default: 1 },
                 unitPrice: { type: Number, required: true, default: 0 },
-                total: { type: Number, required: true, default: 0 }
+                total: { type: Number, required: true, default: 0 },
+                priceListId: { type: Schema.Types.ObjectId, ref: 'PriceList' },
+                dataSheetUrl: { type: String, trim: true }
             }],
             subTotal: { type: Number, default: 0 },
             discount: { type: Number, default: 0 },
@@ -76,6 +78,8 @@ const salesOrderSchema = new Schema<ISalesOrderDocument>(
         // Legacy fields (kept for backward compatibility)
         quotationStatus: { type: String, enum: Object.values(QuotationStatus), default: QuotationStatus.Pending },
         finalStatus: { type: String, enum: Object.values(SalesOrderFinalStatus), default: SalesOrderFinalStatus.Pending },
+
+        invoiceId: { type: String, trim: true, index: true },
 
         notes: { type: String, maxlength: [2000, 'Notes cannot exceed 2000 characters'] },
     },

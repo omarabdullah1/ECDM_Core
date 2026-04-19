@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '@/features/auth/useAuth';
+import { PageHeader } from '@/components/layout/PageHeader';
 
 // ─── Types ──────────────────────────────────────────────────────────────────────
 interface AttendanceFolder {
@@ -117,69 +118,63 @@ export default function AttendancePage() {
     };
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 pb-8">
             {/* Header */}
-            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                    <Calendar className="h-8 w-8 text-[hsl(var(--primary))]" />
-                    <div>
-                        <h1 className="text-2xl font-bold">Attendance Folders</h1>
-                        <p className="text-sm text-[hsl(var(--muted-foreground))]">
-                            {folders.length} date folders found
-                        </p>
-                    </div>
-                </div>
-                
-                <div className="flex flex-wrap items-center gap-3">
-                    {/* Date Range Filter */}
-                    <div className="flex items-center gap-2 p-2 rounded-xl bg-[hsl(var(--card))] border border-[hsl(var(--border))]">
-                        <FilterIcon className="h-4 w-4 text-[hsl(var(--muted-foreground))]" />
-                        <div className="flex items-center gap-2">
-                            <label htmlFor="startDate" className="text-xs text-[hsl(var(--muted-foreground))] whitespace-nowrap font-medium">
-                                From:
-                            </label>
-                            <input 
-                                type="date" 
-                                id="startDate" 
-                                value={startDate} 
-                                onChange={(e) => setStartDate(e.target.value)} 
-                                className="px-2 py-1 text-sm rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--background))] focus:border-[hsl(var(--primary))] focus:outline-none focus:ring-1 focus:ring-[hsl(var(--primary))]"
-                            />
+            <PageHeader
+                title="Attendance Folders"
+                icon={Calendar}
+                description={`${folders.length} date folders found`}
+                actions={
+                    <div className="flex flex-wrap items-center gap-3">
+                        {/* Date Range Filter */}
+                        <div className="flex items-center gap-2 p-2 rounded-xl bg-[hsl(var(--card))] border border-[hsl(var(--border))]">
+                            <FilterIcon className="h-4 w-4 text-[hsl(var(--muted-foreground))]" />
+                            <div className="flex items-center gap-2">
+                                <label htmlFor="startDate" className="text-xs text-[hsl(var(--muted-foreground))] whitespace-nowrap font-medium">
+                                    From:
+                                </label>
+                                <input 
+                                    type="date" 
+                                    id="startDate" 
+                                    value={startDate} 
+                                    onChange={(e) => setStartDate(e.target.value)} 
+                                    className="px-2 py-1 text-sm rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--background))] focus:border-[hsl(var(--primary))] focus:outline-none focus:ring-1 focus:ring-[hsl(var(--primary))]"
+                                />
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <label htmlFor="endDate" className="text-xs text-[hsl(var(--muted-foreground))] whitespace-nowrap font-medium">
+                                    To:
+                                </label>
+                                <input 
+                                    type="date" 
+                                    id="endDate" 
+                                    value={endDate} 
+                                    onChange={(e) => setEndDate(e.target.value)} 
+                                    className="px-2 py-1 text-sm rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--background))] focus:border-[hsl(var(--primary))] focus:outline-none focus:ring-1 focus:ring-[hsl(var(--primary))]"
+                                />
+                            </div>
+                            {(startDate || endDate) && (
+                                <button 
+                                    onClick={() => { setStartDate(''); setEndDate(''); }} 
+                                    className="text-xs text-red-500 hover:text-red-700 font-medium px-2 py-1 hover:bg-red-50 dark:hover:bg-red-950/30 rounded transition-colors"
+                                >
+                                    Clear
+                                </button>
+                            )}
                         </div>
-                        <div className="flex items-center gap-2">
-                            <label htmlFor="endDate" className="text-xs text-[hsl(var(--muted-foreground))] whitespace-nowrap font-medium">
-                                To:
-                            </label>
-                            <input 
-                                type="date" 
-                                id="endDate" 
-                                value={endDate} 
-                                onChange={(e) => setEndDate(e.target.value)} 
-                                className="px-2 py-1 text-sm rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--background))] focus:border-[hsl(var(--primary))] focus:outline-none focus:ring-1 focus:ring-[hsl(var(--primary))]"
-                            />
-                        </div>
-                        {(startDate || endDate) && (
-                            <button 
-                                onClick={() => { setStartDate(''); setEndDate(''); }} 
-                                className="text-xs text-red-500 hover:text-red-700 font-medium px-2 py-1 hover:bg-red-50 dark:hover:bg-red-950/30 rounded transition-colors"
+                        {/* Upload Button */}
+                        {canUpload && (
+                            <button
+                                onClick={() => setUploadOpen(true)}
+                                className="flex items-center gap-2 rounded-md bg-[hsl(var(--primary))] px-4 py-2 text-sm font-medium text-[hsl(var(--primary-foreground))] shadow-sm hover:opacity-90 border-0 transition-all"
                             >
-                                Clear
+                                <Upload className="h-4 w-4" />
+                                Upload Sheet
                             </button>
                         )}
                     </div>
-
-                    {/* Upload Button */}
-                    {canUpload && (
-                        <button
-                            onClick={() => setUploadOpen(true)}
-                            className="flex items-center gap-2 rounded-xl bg-[hsl(var(--primary))] px-4 py-2.5 text-sm font-semibold text-[hsl(var(--primary-foreground))] hover:opacity-90 transition-opacity"
-                        >
-                            <Upload className="h-4 w-4" />
-                            Upload Sheet
-                        </button>
-                    )}
-                </div>
-            </div>
+                }
+            />
 
             {/* Loading State */}
             {loading && (
@@ -204,7 +199,7 @@ export default function AttendancePage() {
                     {folders.map((folder) => (
                         <div
                             key={folder._id}
-                            className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] hover:shadow-lg transition-all duration-200 overflow-hidden"
+                            className="rounded-xl border border-[hsl(var(--border))] modern-glass-card premium-shadow animate-in-slide m-auto relative hover:shadow-lg transition-all duration-200 overflow-hidden"
                         >
                             {/* Card Header */}
                             <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 p-4 border-b border-[hsl(var(--border))]">
@@ -260,8 +255,8 @@ export default function AttendancePage() {
 
             {/* Upload Dialog */}
             {uploadOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-                    <div className="w-full max-w-lg rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6 shadow-2xl">
+                <div className="fixed inset-0 z-[100] flex overflow-y-auto bg-black/60 backdrop-blur-sm p-4 sm:p-6 animate-in fade-in transition-all">
+                    <div className="w-full max-w-lg rounded-2xl border border-[hsl(var(--border))] modern-glass-card m-auto relative premium-shadow animate-in-slide p-6 shadow-2xl">
                         {/* Header */}
                         <div className="flex items-center justify-between mb-6">
                             <div className="flex items-center gap-3">

@@ -4,7 +4,7 @@ import Customer from '../../shared/models/contact.model';
 import User from '../../auth/auth.model';
 import { CreateSalesLeadInput, UpdateSalesLeadInput } from '../validation/sales-leads.validation';
 import { ISalesLeadDocument, SalesLeadStatus } from '../types/sales-leads.types';
-import { OrderStatus } from '../types/sales-order.types';
+import { OrderStatus, ThirdFollowUpStatus } from '../types/sales-order.types';
 import { AppError } from '../../../utils/apiError';
 
 export const create = async (data: CreateSalesLeadInput): Promise<ISalesLeadDocument> => {
@@ -18,8 +18,8 @@ export const create = async (data: CreateSalesLeadInput): Promise<ISalesLeadDocu
             if (doc.salesPerson) {
                 const user = await User.findOne({
                     $or: [
-                        { email: doc.salesPerson },
-                        { $expr: { $eq: [{ $concat: ['$firstName', ' ', '$lastName'] }, doc.salesPerson] } }
+                        { email: { $regex: new RegExp(`^${doc.salesPerson.trim()}$`, 'i') } },
+                        { $expr: { $eq: [{ $concat: ['$firstName', ' ', '$lastName'] }, doc.salesPerson.trim()] } }
                     ]
                 }).select('_id');
                 if (user) salesPersonId = user._id;
@@ -43,13 +43,14 @@ export const create = async (data: CreateSalesLeadInput): Promise<ISalesLeadDocu
 };
 
 export const getAll = async (query: Record<string, unknown>) => {
-    const { page = 1, limit = 10, search, status, salesPerson, type, sector } = query;
+    const { page = 1, limit = 10, search, status, salesPerson, type, sector, excludeNo } = query;
     const filter: Record<string, unknown> = {};
     if (search) filter.$text = { $search: search as string };
     if (status) filter.status = status;
     if (salesPerson) filter.salesPerson = salesPerson;
     if (type) filter.type = type;
     if (sector) filter.sector = sector;
+    if (excludeNo === 'true') filter.order = { $ne: 'No' };
     const skip = (Number(page) - 1) * Number(limit);
     const [data, total] = await Promise.all([
         SalesLead.find(filter)
@@ -132,73 +133,83 @@ export const update = async (id: string, data: UpdateSalesLeadInput, userInfo?: 
             const existingOrder = await SalesOrder.findOne({ salesLead: doc._id });
 
             if (existingOrder) {
-                console.log(`⚠️ SalesOrder already exists for Lead ${doc._id}: ${existingOrder._id}`);
+                console.log(`🔄 SalesOrder already exists for Lead ${doc._id}. Restoring to Pending.`);
+                // Restore the order if it was previously canceled/not-potential
+                existingOrder.orderStatus = OrderStatus.Pending;
+                existingOrder.finalStatusThirdFollowUp = '';
+                await existingOrder.save();
             } else {
                 console.log(`📦 Creating new SalesOrder for Lead ${doc._id}`);
-                console.log(`   Lead salesPerson: "${doc.salesPerson}"`);
-
+                
                 // Map salesPerson from Lead (email/name string) to User ObjectId
                 let salesPersonId = null;
                 if (doc.salesPerson) {
-                    // Try to find user by email first, then by name
                     const user = await User.findOne({
                         $or: [
-                            { email: doc.salesPerson },
-                            { $expr: { $eq: [{ $concat: ['$firstName', ' ', '$lastName'] }, doc.salesPerson] } }
+                            { email: { $regex: new RegExp(`^${doc.salesPerson.trim()}$`, 'i') } },
+                            { $expr: { $eq: [{ $concat: ['$firstName', ' ', '$lastName'] }, doc.salesPerson.trim()] } }
                         ]
-                    }).select('_id firstName lastName email');
-
-                    if (user) {
-                        salesPersonId = user._id;
-                        console.log(`   ✅ Mapped salesPerson "${doc.salesPerson}" → User ID: ${salesPersonId} (${user.firstName} ${user.lastName})`);
-                    } else {
-                        console.warn(`   ⚠️ Could not find User for salesPerson: "${doc.salesPerson}"`);
-                    }
-                } else {
-                    console.warn(`   ⚠️ No salesPerson set on Lead - SalesOrder will be created without assignment`);
+                    }).select('_id');
+                    if (user) salesPersonId = user._id;
                 }
 
-                // Safely extract the Customer ID from the populated document or use as-is
                 const targetCustomerId = doc.customerId?._id || doc.customerId;
 
                 try {
-                    // Create a new SalesOrder linked to this lead
-                    const newOrder = await SalesOrder.create({
+                    await SalesOrder.create({
                         salesLead: doc._id,
-                        customer: targetCustomerId, // Use safely extracted ID
-                        salesPerson: salesPersonId,  // ✅ Now properly assigned
+                        customer: targetCustomerId,
+                        salesPerson: salesPersonId,
                         orderStatus: OrderStatus.Pending,
                         issueDescription: doc.issue || 'Order created from Sales Lead',
-                        // CRITICAL FIX: Explicitly set safe default enums to prevent validation failures 
-                        // when upstream string values don't match the SalesOrder enums exactly
                         typeOfOrder: '',
                         salesPlatform: '',
                     });
-
-                    console.log(`   ✅ SalesOrder created: ${newOrder._id} (salesPerson: ${salesPersonId || 'unassigned'})`);
                 } catch (createError) {
-                    console.error('❌ FATAL ERROR creating Sales Order from Lead:', createError);
-                    // Do not block the API response, but log heavily so development is aware
+                    console.error('❌ Error creating Sales Order:', createError);
                 }
             }
         }
 
-        // ── CASE: Changed to "No" (THE GUARD CONDITION) ─────────────────────────
+        // ── CASE: Changed to "No" (Archive to Non-Potential) ────────────────────
         else if (newOrder === 'No') {
-            // Find the associated SalesOrder
             const existingOrder = await SalesOrder.findOne({ salesLead: doc._id });
 
             if (existingOrder) {
-                // GUARD: Only allow cancellation if order is still Pending
-                if (existingOrder.orderStatus !== OrderStatus.Pending) {
-                    throw new AppError(
-                        'Action already taken on the Sales Order. Cannot revert to No.',
-                        400
-                    );
+                console.log(`📦 Archiving SalesOrder for Lead ${doc._id} as Not Potential.`);
+                // Instead of deleting, mark as canceled and not potential
+                existingOrder.orderStatus = OrderStatus.Canceled;
+                existingOrder.finalStatusThirdFollowUp = ThirdFollowUpStatus.NotPotential;
+                await existingOrder.save();
+            } else {
+                console.log(`✨ Creating Archived SalesOrder for Lead ${doc._id}`);
+                
+                let salesPersonId = null;
+                if (doc.salesPerson) {
+                    const user = await User.findOne({
+                        $or: [
+                            { email: { $regex: new RegExp(`^${doc.salesPerson.trim()}$`, 'i') } },
+                            { $expr: { $eq: [{ $concat: ['$firstName', ' ', '$lastName'] }, doc.salesPerson.trim()] } }
+                        ]
+                    }).select('_id');
+                    if (user) salesPersonId = user._id;
                 }
 
-                // Safe to delete - order is still in Pending status
-                await SalesOrder.findByIdAndDelete(existingOrder._id);
+                try {
+                    await SalesOrder.create({
+                        salesLead: doc._id,
+                        customer: doc.customerId?._id || doc.customerId,
+                        salesPerson: salesPersonId,
+                        orderStatus: OrderStatus.Canceled,
+                        finalStatusThirdFollowUp: ThirdFollowUpStatus.NotPotential,
+                        issueDescription: doc.issue || 'Lead marked as not potential',
+                        typeOfOrder: '',
+                        salesPlatform: '',
+                    });
+                    console.log('✅ Archive SalesOrder created successfully');
+                } catch (err) {
+                    console.error('❌ Failed to create Archived SalesOrder:', err);
+                }
             }
         }
     }
@@ -206,7 +217,11 @@ export const update = async (id: string, data: UpdateSalesLeadInput, userInfo?: 
     // ══════════════════════════════════════════════════════════════════════════
 
     // Apply SalesLead-specific updates
+    doc.order = newOrder;
+    doc.status = status as SalesLeadStatus;
+    doc.salesPerson = salesPerson;
     Object.assign(doc, salesLeadData);
+    
     await doc.save();
 
     // Re-populate to return fresh data with updated Customer fields

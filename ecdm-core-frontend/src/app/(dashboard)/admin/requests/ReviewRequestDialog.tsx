@@ -6,6 +6,7 @@ import {
     DialogHeader,
     DialogTitle,
     DialogDescription,
+    DialogBody,
     DialogFooter
 } from '@/components/ui/dialog';
 import {
@@ -16,9 +17,8 @@ import {
     Calendar,
     FileText,
     AlertTriangle,
-    Minus,
-    Plus
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import type { ModificationRequest } from './page';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -45,7 +45,6 @@ interface DiffItem {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const formatFieldLabel = (key: string): string => {
-    // Convert camelCase to Title Case with spaces
     return key
         .replace(/([A-Z])/g, ' $1')
         .replace(/^./, (str) => str.toUpperCase())
@@ -58,7 +57,6 @@ const formatValue = (value: unknown): string => {
     if (typeof value === 'boolean') return value ? 'Yes' : 'No';
     if (value instanceof Date) return new Date(value).toLocaleDateString();
     if (typeof value === 'object') {
-        // Handle nested objects (like populated references)
         if ('name' in (value as Record<string, unknown>)) {
             return String((value as Record<string, unknown>).name);
         }
@@ -80,14 +78,13 @@ const valuesAreEqual = (a: unknown, b: unknown): boolean => {
     return false;
 };
 
-// Fields to exclude from the diff display
 const EXCLUDED_FIELDS = [
     '_id',
     '__v',
     'createdAt',
     'updatedAt',
     'id',
-    'customer', // populated field (use customerId instead)
+    'customer',
     'salesLead',
     'salesData',
 ];
@@ -106,11 +103,10 @@ export default function ReviewRequestDialog({
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [activeTab, setActiveTab] = useState<'changes' | 'full'>('changes');
 
-    // Calculate the diff between original and proposed data
     const diff = useMemo<DiffItem[]>(() => {
         const allKeys = new Set([
-            ...Object.keys(request.originalData),
-            ...Object.keys(request.proposedData),
+            ...Object.keys(request.originalData || {}),
+            ...Object.keys(request.proposedData || {}),
         ]);
 
         const items: DiffItem[] = [];
@@ -118,8 +114,8 @@ export default function ReviewRequestDialog({
         allKeys.forEach((key) => {
             if (EXCLUDED_FIELDS.includes(key)) return;
 
-            const originalValue = request.originalData[key];
-            const proposedValue = request.proposedData[key];
+            const originalValue = request.originalData?.[key];
+            const proposedValue = request.proposedData?.[key];
             const hasChanged = !valuesAreEqual(originalValue, proposedValue);
 
             items.push({
@@ -131,7 +127,6 @@ export default function ReviewRequestDialog({
             });
         });
 
-        // Sort: changed items first, then alphabetically
         return items.sort((a, b) => {
             if (a.hasChanged && !b.hasChanged) return -1;
             if (!a.hasChanged && b.hasChanged) return 1;
@@ -164,168 +159,141 @@ export default function ReviewRequestDialog({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto overflow-x-hidden p-6 outline-none">
+            <DialogContent className="sm:max-w-2xl">
                 <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2">
-                        <FileText className="h-5 w-5 text-[hsl(var(--primary))]" />
-                        Review Modification Request
-                    </DialogTitle>
-                    <DialogDescription>
-                        Compare the original and proposed changes below. You can approve or reject this request.
-                    </DialogDescription>
+                    <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                            <FileText className="h-5 w-5 text-primary" />
+                        </div>
+                        <div>
+                            <DialogTitle>Review Modification</DialogTitle>
+                            <DialogDescription>
+                                Proposed changes for {formatFieldLabel(request.moduleName)}
+                            </DialogDescription>
+                        </div>
+                    </div>
                 </DialogHeader>
 
-                {/* Request Meta Info */}
-                <div className="flex flex-wrap gap-4 p-4 bg-[hsl(var(--muted))]/50 rounded-xl text-sm">
-                    <div className="flex items-center gap-2">
-                        <span className="text-[hsl(var(--muted-foreground))]">Module:</span>
-                        <span className="font-medium">{formatFieldLabel(request.moduleName)}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <User className="h-4 w-4 text-[hsl(var(--muted-foreground))]" />
-                        <span className="text-[hsl(var(--muted-foreground))]">By:</span>
-                        <span className="font-medium">
-                            {request.requestedBy?.firstName} {request.requestedBy?.lastName}
-                        </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4 text-[hsl(var(--muted-foreground))]" />
-                        <span className="text-[hsl(var(--muted-foreground))]">Date:</span>
-                        <span className="font-medium">{formatDate(request.createdAt)}</span>
-                    </div>
-                </div>
-
-                {/* Tab Buttons */}
-                <div className="flex gap-2 border-b border-[hsl(var(--border))]">
-                    <button
-                        onClick={() => setActiveTab('changes')}
-                        className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === 'changes'
-                                ? 'border-[hsl(var(--primary))] text-[hsl(var(--primary))]'
-                                : 'border-transparent text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]'
-                            }`}
-                    >
-                        Changes Only ({changedItems.length})
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('full')}
-                        className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === 'full'
-                                ? 'border-[hsl(var(--primary))] text-[hsl(var(--primary))]'
-                                : 'border-transparent text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]'
-                            }`}
-                    >
-                        All Fields ({diff.length})
-                    </button>
-                </div>
-
-                {/* Diff Comparison */}
-                <div className="max-h-[400px] overflow-y-auto space-y-2">
-                    {displayItems.length === 0 ? (
-                        <div className="flex items-center justify-center gap-2 py-8 text-[hsl(var(--muted-foreground))]">
-                            <AlertTriangle className="h-5 w-5" />
-                            <span>No changes detected</span>
+                <DialogBody>
+                    <div className="space-y-6">
+                        {/* Request Meta Info */}
+                        <div className="grid grid-cols-2 gap-3 p-4 bg-gray-50 border border-gray-100 rounded-2xl">
+                            <div className="flex items-center gap-2">
+                                <User className="h-3.5 w-3.5 text-gray-400" />
+                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Requested By:</span>
+                                <span className="text-xs font-bold text-gray-700">{request.requestedBy?.firstName} {request.requestedBy?.lastName}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <Calendar className="h-3.5 w-3.5 text-gray-400" />
+                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Submitted:</span>
+                                <span className="text-xs font-bold text-gray-700">{formatDate(request.createdAt)}</span>
+                            </div>
                         </div>
-                    ) : (
-                        displayItems.map((item) => (
-                            <div
-                                key={item.key}
-                                className={`p-3 rounded-lg border ${item.hasChanged
-                                        ? 'border-amber-200 bg-amber-50/50 dark:border-amber-800 dark:bg-amber-900/10'
-                                        : 'border-[hsl(var(--border))] bg-[hsl(var(--card))]'
+
+                        {/* Tab Buttons */}
+                        <div className="flex p-1 bg-gray-100/50 rounded-xl border border-gray-100">
+                            <button
+                                onClick={() => setActiveTab('changes')}
+                                className={`flex-1 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${activeTab === 'changes'
+                                        ? 'bg-white text-primary shadow-sm'
+                                        : 'text-gray-400 hover:text-gray-600'
                                     }`}
                             >
-                                <div className="flex items-center gap-2 mb-2">
-                                    {item.hasChanged ? (
-                                        <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-600 dark:text-amber-400">
-                                            <AlertTriangle className="h-3 w-3" />
-                                            Changed
-                                        </span>
-                                    ) : null}
-                                    <span className="text-sm font-semibold text-[hsl(var(--foreground))]">
-                                        {item.label}
-                                    </span>
-                                </div>
+                                Changes ({changedItems.length})
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('full')}
+                                className={`flex-1 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${activeTab === 'full'
+                                        ? 'bg-white text-primary shadow-sm'
+                                        : 'text-gray-400 hover:text-gray-600'
+                                    }`}
+                            >
+                                All Fields ({diff.length})
+                            </button>
+                        </div>
 
-                                <div className="grid grid-cols-[1fr_auto_1fr] gap-3 items-center">
-                                    {/* Original Value */}
-                                    <div className={`p-2 rounded text-sm ${item.hasChanged
-                                            ? 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400'
-                                            : 'bg-[hsl(var(--muted))]/50 text-[hsl(var(--foreground))]'
-                                        }`}>
-                                        <div className="flex items-center gap-1 text-xs font-medium mb-1">
-                                            {item.hasChanged && <Minus className="h-3 w-3" />}
-                                            Original
+                        {/* Diff Comparison */}
+                        <div className="space-y-3">
+                            {displayItems.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center py-10 text-gray-300">
+                                    <AlertTriangle className="h-8 w-8 mb-2 opacity-20" />
+                                    <span className="text-xs font-bold uppercase tracking-widest">No changes detected</span>
+                                </div>
+                            ) : (
+                                displayItems.map((item) => (
+                                    <div
+                                        key={item.key}
+                                        className={`rounded-2xl border transition-all ${item.hasChanged
+                                                ? 'border-amber-100 bg-amber-50/20'
+                                                : 'border-gray-100 bg-white'
+                                            }`}
+                                    >
+                                        <div className="px-4 py-2 border-b border-inherit flex items-center justify-between">
+                                            <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest leading-none">
+                                                {item.label}
+                                            </span>
+                                            {item.hasChanged && (
+                                                <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest px-2 py-0.5 bg-amber-100 rounded-full">Modified</span>
+                                            )}
                                         </div>
-                                        <div className="break-words whitespace-pre-wrap">
-                                            {formatValue(item.originalValue)}
+
+                                        <div className="p-3 grid grid-cols-[1fr_auto_1fr] gap-4 items-center">
+                                            <div className="space-y-1">
+                                                <p className="text-[9px] font-bold text-gray-300 uppercase tracking-widest">Original</p>
+                                                <p className={`text-xs font-medium break-words ${item.hasChanged ? 'text-red-500' : 'text-gray-600'}`}>
+                                                    {formatValue(item.originalValue)}
+                                                </p>
+                                            </div>
+                                            <ArrowRight className={`h-4 w-4 ${item.hasChanged ? 'text-amber-400' : 'text-gray-200'}`} />
+                                            <div className="space-y-1 text-right">
+                                                <p className="text-[9px] font-bold text-gray-300 uppercase tracking-widest">Proposed</p>
+                                                <p className={`text-xs font-black break-words ${item.hasChanged ? 'text-green-600' : 'text-gray-600'}`}>
+                                                    {formatValue(item.proposedValue)}
+                                                </p>
+                                            </div>
                                         </div>
                                     </div>
+                                ))
+                            )}
+                        </div>
 
-                                    {/* Arrow */}
-                                    <ArrowRight className={`h-4 w-4 ${item.hasChanged
-                                            ? 'text-amber-500'
-                                            : 'text-[hsl(var(--muted-foreground))]'
-                                        }`} />
+                        {/* Review Notes */}
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Decision Remarks</label>
+                            <textarea
+                                value={reviewNotes}
+                                onChange={(e) => setReviewNotes(e.target.value)}
+                                placeholder="State the reason for approval or rejection..."
+                                rows={3}
+                                className="w-full rounded-2xl border border-gray-100 bg-gray-50/50 px-4 py-3 text-sm placeholder:text-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all font-medium resize-none shadow-inner"
+                            />
+                        </div>
+                    </div>
+                </DialogBody>
 
-                                    {/* Proposed Value */}
-                                    <div className={`p-2 rounded text-sm ${item.hasChanged
-                                            ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400'
-                                            : 'bg-[hsl(var(--muted))]/50 text-[hsl(var(--foreground))]'
-                                        }`}>
-                                        <div className="flex items-center gap-1 text-xs font-medium mb-1">
-                                            {item.hasChanged && <Plus className="h-3 w-3" />}
-                                            Proposed
-                                        </div>
-                                        <div className="break-words whitespace-pre-wrap">
-                                            {formatValue(item.proposedValue)}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        ))
-                    )}
-                </div>
-
-                {/* Review Notes */}
-                <div>
-                    <label className="block text-sm font-medium text-[hsl(var(--foreground))] mb-2">
-                        Review Notes (optional)
-                    </label>
-                    <textarea
-                        value={reviewNotes}
-                        onChange={(e) => setReviewNotes(e.target.value)}
-                        placeholder="Add any notes about your decision..."
-                        rows={3}
-                        className="w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-4 py-3 text-sm placeholder:text-[hsl(var(--muted-foreground))] focus:border-[hsl(var(--primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/20 transition-all resize-none"
-                    />
-                </div>
-
-                {/* Action Buttons */}
-                <DialogFooter className="flex-col sm:flex-row gap-2">
-                    <button
-                        onClick={() => onOpenChange(false)}
-                        disabled={isSubmitting}
-                        className="px-4 py-2 rounded-xl border border-[hsl(var(--border))] text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] transition-colors disabled:opacity-50"
-                    >
+                <DialogFooter>
+                    <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
                         Cancel
-                    </button>
-
-                    <button
-                        onClick={() => handleSubmit('Rejected')}
-                        disabled={isSubmitting}
-                        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50"
-                    >
-                        <XCircle className="h-4 w-4" />
-                        {isSubmitting ? 'Processing...' : 'Reject'}
-                    </button>
-
-                    <button
-                        onClick={() => handleSubmit('Approved')}
-                        disabled={isSubmitting}
-                        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-green-600 text-white hover:bg-green-700 transition-colors disabled:opacity-50"
-                    >
-                        <CheckCircle className="h-4 w-4" />
-                        {isSubmitting ? 'Processing...' : 'Approve'}
-                    </button>
+                    </Button>
+                    <div className="flex gap-2 ml-auto">
+                        <Button
+                            variant="destructive"
+                            onClick={() => handleSubmit('Rejected')}
+                            disabled={isSubmitting}
+                            className="bg-red-50 font-bold text-red-600 hover:bg-red-500 hover:text-white border-red-100"
+                        >
+                            <XCircle className="h-4 w-4 mr-2" />
+                            Reject
+                        </Button>
+                        <Button
+                            onClick={() => handleSubmit('Approved')}
+                            disabled={isSubmitting}
+                            className="bg-green-600 font-bold hover:bg-green-700 shadow-lg shadow-green-600/20"
+                        >
+                            <CheckCircle className="h-4 w-4 mr-2" />
+                            Approve
+                        </Button>
+                    </div>
                 </DialogFooter>
             </DialogContent>
         </Dialog>

@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 import api from '@/lib/axios';
 import { API_BASE_URL } from '@/lib/constants';
 import { generateQuotationPDF } from '@/utils/generateQuotationPDF';
+import JSZip from 'jszip';
 
 /**
  * Sales Orders Data Table - Column Definitions
@@ -87,6 +88,8 @@ export interface SalesOrder {
       quantity: number;
       unitPrice: number;
       total: number;
+      priceListId?: string;
+      dataSheetUrl?: string;
     }>;
     subTotal: number;
     discount: number;
@@ -171,6 +174,103 @@ const handleDownload = async (url: string, filename: string) => {
   } catch (err) {
     console.error('❌ Download failed:', err);
     toast.error('File not found! It may have been deleted or the path is invalid.');
+  }
+};
+
+/**
+ * Bundle Quotation PDF and Datasheets into a ZIP file
+ * @param row - The SalesOrder data
+ */
+const handleDownloadQuotationBundle = async (row: any) => {
+  try {
+    const zip = new JSZip();
+    const orderId = row.salesOrderId || (typeof row._id === 'string' ? row._id.slice(-6).toUpperCase() : 'N/A');
+    
+    toast.loading('Preparing bundle...', { id: 'zip-download' });
+
+    // 1. Generate Quotation PDF
+    // We pass 'blob' action to get the Blob back
+    const pdfBlob = generateQuotationPDF(row, 'blob');
+    if (pdfBlob instanceof Blob) {
+      zip.file(`Quotation_${orderId}.pdf`, pdfBlob);
+    } else {
+      throw new Error('Failed to generate PDF Blob');
+    }
+
+    // 2. Identify Datasheets
+    let items = row.quotation?.items || [];
+    
+    // Fallback for old orders: if items don't have dataSheetUrl, try to fetch from price list
+    const needsLookup = items.some((i: any) => !i.dataSheetUrl && i.description && i.description.includes('PL-'));
+    
+    if (needsLookup) {
+      try {
+        const { data } = await api.get('/operations/price-list', { params: { limit: 1000 } });
+        const priceList = data?.data?.data || data?.data || [];
+        
+        items = items.map((item: any) => {
+          if (!item.dataSheetUrl) {
+            // Description format: "PL-XXXX — Item Name"
+            const match = priceList.find((p: any) => {
+              const itemId = p.sparePartsId || (typeof p._id === 'string' ? p._id.slice(-6) : 'ID');
+              // Using same delimiter as in AddQuotationDialog
+              const label = `${itemId} — ${p.itemName || 'Unnamed Item'}`;
+              return label === item.description;
+            });
+            if (match && match.dataSheetUrl) {
+              return { ...item, dataSheetUrl: match.dataSheetUrl };
+            }
+          }
+          return item;
+        });
+      } catch (err) {
+        console.error('Fallback price list fetch failed:', err);
+      }
+    }
+
+    const uniqueDatasheets = Array.from(new Set(items
+      .map((i: any) => i.dataSheetUrl)
+      .filter((url: any) => !!url)
+    )) as string[];
+
+    if (uniqueDatasheets.length > 0) {
+      const datasheetPromises = uniqueDatasheets.map(async (url) => {
+        try {
+          const fullUrl = getFileUrl(url);
+          const response = await fetch(fullUrl);
+          if (!response.ok) return null;
+          const blob = await response.blob();
+          const fileName = url.split('/').pop() || 'datasheet.pdf';
+          return { fileName, blob };
+        } catch (e) {
+          console.error('Failed to fetch datasheet:', url, e);
+          return null;
+        }
+      });
+
+      const files = await Promise.all(datasheetPromises);
+      files.forEach(file => {
+        if (file) {
+          zip.file(`Datasheet_${file.fileName}`, file.blob);
+        }
+      });
+    }
+
+    // 3. Generate and Download ZIP
+    const zipContent = await zip.generateAsync({ type: 'blob' });
+    const downloadUrl = window.URL.createObjectURL(zipContent);
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = `Quotation_${orderId}_Bundle.zip`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(downloadUrl);
+
+    toast.success('Bundle downloaded successfully!', { id: 'zip-download' });
+  } catch (error) {
+    console.error('❌ Bundle error:', error);
+    toast.error('Could not generate the download bundle.', { id: 'zip-download' });
   }
 };
 
@@ -770,17 +870,17 @@ export const createSalesOrderColumns = (config?: SalesOrderColumnsConfig) => {
               <button
                 onClick={() => {
                   try {
-                    generateQuotationPDF(row as any, 'download');
+                    handleDownloadQuotationBundle(row);
                   } catch (error) {
-                    console.error('Failed to generate PDF:', error);
-                    toast.error('Failed to download PDF');
+                    console.error('Failed to generate bundle:', error);
+                    toast.error('Failed to download quotation bundle');
                   }
                 }}
-                title="Download PDF"
+                title="Download PDF Bundle (with Datasheets)"
                 disabled={!canModify}
                 className={`inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors border h-8 px-3 ${canModify ? 'border-green-200 text-green-600 hover:bg-green-50' : 'opacity-30 cursor-not-allowed pointer-events-none'}`}
               >
-                <Download className="w-4 h-4" />
+                <Download className="w-4 h-4 mr-1" /> Bundle
               </button>
               {canModify && (
                 <button
@@ -938,8 +1038,9 @@ export const createSalesOrderColumns = (config?: SalesOrderColumnsConfig) => {
       header: 'Sales Person ID',
       render: (row: SalesOrder) => {
         const salesPersonId = row.salesPersonId
-          || row.salesLead?.salesPerson
+          || (typeof row.salesLead?.salesPerson === 'object' ? row.salesLead?.salesPerson?._id : row.salesLead?.salesPerson)
           || row.salesData?.salesPerson?._id;
+
 
         return (
           <span className="text-sm font-mono">
@@ -958,9 +1059,12 @@ export const createSalesOrderColumns = (config?: SalesOrderColumnsConfig) => {
       render: (row: SalesOrder) => {
         const salesPersonFromData = row.salesData?.salesPerson as any;
         const salesPersonDirect = row.salesPerson as any;
-        const salesPersonFromLead = row.salesLead?.salesPerson as any;
         
-        const email = salesPersonFromData?.email || salesPersonDirect?.email || salesPersonFromLead?.email || '';
+        // Handle case where salesPerson on lead might be a string (email/name) or a populated object
+        const salesPersonFromLead = row.salesLead?.salesPerson;
+        const leadEmail = typeof salesPersonFromLead === 'object' ? (salesPersonFromLead as any)?.email : salesPersonFromLead;
+        
+        const email = salesPersonFromData?.email || salesPersonDirect?.email || leadEmail || '';
         
         return <span className="text-xs font-mono">{email || 'Not Assigned'}</span>;
       },

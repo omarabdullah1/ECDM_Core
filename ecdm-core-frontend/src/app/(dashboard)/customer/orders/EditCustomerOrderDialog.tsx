@@ -7,7 +7,7 @@ import { X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '@/lib/axios';
 import { CustomerOrder } from './columns';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter } from '@/components/ui/dialog';
 
 /**
  * Edit Customer Order Dialog - Operational Fields Only
@@ -52,7 +52,7 @@ type FormSchema = z.infer<typeof formSchema>;
 const DEVICE_PICKUP_TYPES = ['Customer Drop-off', 'Company Pickup', 'On-site Repair'];
 const DEAL_STATUSES = ['Pending', 'Approved', 'Rejected', 'Done'];
 
-const iCls = 'w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-4 py-3 text-sm placeholder:text-[hsl(var(--muted-foreground))] focus:border-[hsl(var(--primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/20 transition-all disabled:opacity-60 disabled:cursor-not-allowed';
+const iCls = 'flex h-9 w-full rounded-md border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] px-3 py-1 text-sm shadow-sm transition-all placeholder:text-[hsl(var(--muted-foreground))] focus-visible:outline-none focus-visible:border-[hsl(var(--primary))]/50 focus-visible:ring-[3px] focus-visible:ring-[hsl(var(--primary))]/10';
 const labelCls = 'text-xs font-semibold text-[hsl(var(--muted-foreground))] uppercase tracking-wide mb-1.5 block';
 const readOnlyCls = 'text-sm px-3 py-2 bg-[hsl(var(--muted))]/30 rounded-lg border border-[hsl(var(--border))]';
 
@@ -205,215 +205,125 @@ export default function EditCustomerOrderDialog({ order, onClose, onSuccess }: E
         payload.notes = values.notes;
       }
 
-      // Date fields - Convert to ISO
-      const dateFields: Array<keyof FormSchema> = [
-        'actualVisitDate',
-        'startDate',
-        'endDate',
-        'deviceReturnedDate',
-      ];
-
+      const dateFields: Array<keyof FormSchema> = ['actualVisitDate', 'startDate', 'endDate', 'deviceReturnedDate'];
       dateFields.forEach((field) => {
         const value = values[field];
         if (value && value !== '') {
-          try {
-            payload[field] = new Date(value as string).toISOString();
-            console.log(`✓ Date → ISO [${field}]:`, payload[field]);
-          } catch (err) {
-            console.warn(`⚠️ Invalid date for ${field}:`, value);
-          }
+          try { payload[field] = new Date(value as string).toISOString(); } catch {}
         }
       });
 
-      console.log('📦 Payload:', payload);
-
-      // Make API call
       await api.put(`/customer/orders/${order._id}`, payload);
-
-      console.log('✅ Order updated successfully');
       toast.success('Customer order updated successfully!');
-
-      // Close dialog and trigger refresh
       onSuccess();
       onClose();
-    } catch (err: unknown) {
-      console.error('❌ API Error:', err);
-      const message =
-        (err as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message || 'Failed to update order';
-      toast.error(message);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Failed to update order');
     } finally {
       setSaving(false);
     }
   };
 
-  // ─── Extract Upstream Data (Read-Only) ──────────────────────────────────────
   const customer = order.customerId;
   const customerName = customer?.name || '-';
   const scheduledVisit = formatDateDisplay(order.scheduledVisitDate);
   const typeOfOrder = order.typeOfOrder || '-';
   const issue = order.issue || '-';
-
-  // Dynamically pull cost from Quotation if available, fallback to static cost
   const quotationTotal = order.salesOrderId?.quotation?.grandTotal;
   const finalCost = quotationTotal !== undefined ? quotationTotal : order.cost;
   const displayCost = finalCost !== undefined && finalCost > 0 ? `EGP ${Number(finalCost).toFixed(2)}` : '-';
 
   return (
     <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto overflow-x-hidden p-6 outline-none">
-        {/* ─── Header ─────────────────────────────────────────────────── */}
-        <DialogHeader className="flex flex-row items-center justify-between border-b border-[hsl(var(--border))] pb-4 mb-4 space-y-0">
-          <div>
-            <DialogTitle className="text-xl font-bold">Edit Customer Order</DialogTitle>
-            <p className="text-xs text-[hsl(var(--muted-foreground))] mt-0.5">
-              Order ID: {order._id}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-2 hover:bg-[hsl(var(--muted))] rounded-lg transition-colors"
-          >
-            <X className="h-5 w-5" />
-          </button>
+      <DialogContent className="sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Edit Customer Order</DialogTitle>
+          <p className="text-[11px] text-[hsl(var(--muted-foreground))] font-medium mt-0.5">
+            Order ID: {order._id}
+          </p>
         </DialogHeader>
 
-        <form onSubmit={form.handleSubmit(onSubmit, onError)}>
-          <div className="space-y-8">
-            {/* ═══════════════════════════════════════════════════════════════
-                SECTION A: Context (READ-ONLY)
-            ═══════════════════════════════════════════════════════════════ */}
+        <DialogBody>
+          <form id="edit-customer-order-form" onSubmit={form.handleSubmit(onSubmit, onError)} className="space-y-8">
             <div className="space-y-4">
-              <div className="flex items-center gap-2 pb-2 border-b border-[hsl(var(--border))]">
-                <div className="h-1 w-1 rounded-full bg-[hsl(var(--muted-foreground))]"></div>
-                <h3 className="text-sm font-bold text-[hsl(var(--muted-foreground))] uppercase tracking-wider">
+              <div className="flex items-center gap-2 pb-2 border-b border-gray-100">
+                <div className="h-1 w-1 rounded-full bg-gray-400"></div>
+                <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
                   Section A: Context (Read-Only)
                 </h3>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-[hsl(var(--muted))]/20 rounded-xl border border-[hsl(var(--border))]/50">
+              <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50/50 rounded-xl border border-gray-100">
                 <div>
                   <label className={labelCls}>Customer Name</label>
                   <div className={readOnlyCls}>{customerName}</div>
                 </div>
-
                 <div>
-                  <label className={labelCls}>Scheduled Visit Date</label>
+                  <label className={labelCls}>Scheduled Visit</label>
                   <div className={readOnlyCls}>{scheduledVisit}</div>
                 </div>
-
                 <div>
-                  <label className={labelCls}>Type of Order</label>
+                  <label className={labelCls}>Order Type</label>
                   <div className={readOnlyCls}>{typeOfOrder}</div>
                 </div>
-
                 <div>
-                  <label className={labelCls}>Issue</label>
-                  <div className={readOnlyCls} title={issue}>{issue}</div>
-                </div>
-
-                <div>
-                  <label className={labelCls}>Cost</label>
+                  <label className={labelCls}>Total Cost</label>
                   <div className={readOnlyCls}>{displayCost}</div>
+                </div>
+                <div className="col-span-2">
+                  <label className={labelCls}>Inquiry Issue</label>
+                  <div className={readOnlyCls}>{issue}</div>
                 </div>
               </div>
             </div>
 
-            {/* ═══════════════════════════════════════════════════════════════
-                SECTION B: Operational (EDITABLE)
-            ═══════════════════════════════════════════════════════════════ */}
             <div className="space-y-4">
-              <div className="flex items-center gap-2 pb-2 border-b border-[hsl(var(--border))]">
-                <div className="h-1 w-1 rounded-full bg-[hsl(var(--primary))]"></div>
-                <h3 className="text-sm font-bold text-[hsl(var(--primary))] uppercase tracking-wider">
+              <div className="flex items-center gap-2 pb-2 border-b border-gray-100">
+                <div className="h-1 w-1 rounded-full bg-primary"></div>
+                <h3 className="text-[10px] font-bold text-primary uppercase tracking-widest">
                   Section B: Operational (Editable)
                 </h3>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Engineer Name */}
-                <div>
-                  <label className={labelCls}>Engineer Name</label>
-                  <select 
-                    {...form.register('engineerId')} 
-                    className={iCls}
-                    disabled={loadingEngineers}
-                  >
-                    <option value="">{loadingEngineers ? 'Loading engineers...' : 'Select an Engineer...'}</option>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className={labelCls}>Assigned Engineer</label>
+                  <select {...form.register('engineerId')} className={iCls} disabled={loadingEngineers}>
+                    <option value="">{loadingEngineers ? 'Loading...' : 'Select Engineer...'}</option>
                     {engineers.map((engineer) => (
-                      <option key={engineer._id} value={engineer._id}>
-                        {engineer.firstName} {engineer.lastName} {engineer.department ? `(${engineer.department})` : ''}
-                      </option>
+                      <option key={engineer._id} value={engineer._id}>{engineer.firstName} {engineer.lastName}</option>
                     ))}
                   </select>
                 </div>
-
-                {/* Actual Visit Date */}
-                <div>
+                <div className="space-y-1">
                   <label className={labelCls}>Actual Visit Date</label>
-                  <input
-                    type="datetime-local"
-                    {...form.register('actualVisitDate')}
-                    className={iCls}
-                  />
+                  <input type="datetime-local" {...form.register('actualVisitDate')} className={iCls} />
                 </div>
-
-                {/* Device Pickup Type */}
-                <div>
-                  <label className={labelCls}>Device Pickup Type</label>
+                <div className="space-y-1">
+                  <label className={labelCls}>Pickup Type</label>
                   <select {...form.register('devicePickupType')} className={iCls}>
-                    <option value="">Select pickup type...</option>
-                    {DEVICE_PICKUP_TYPES.map((type) => (
-                      <option key={type} value={type}>
-                        {type}
-                      </option>
-                    ))}
+                    <option value="">Select type...</option>
+                    {DEVICE_PICKUP_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                   </select>
                 </div>
-
-                {/* Deal Status */}
-                <div>
+                <div className="space-y-1">
                   <label className={labelCls}>Deal Status</label>
                   <select {...form.register('deal')} className={iCls}>
                     <option value="">Select status...</option>
-                    {DEAL_STATUSES.map((status) => (
-                      <option key={status} value={status}>
-                        {status}
-                      </option>
-                    ))}
+                    {DEAL_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
                   </select>
                 </div>
-
-
-                {/* Start Date */}
-                <div>
+                <div className="space-y-1">
                   <label className={labelCls}>Start Date</label>
-                  <input
-                    type="date"
-                    {...form.register('startDate')}
-                    className={iCls}
-                  />
+                  <input type="date" {...form.register('startDate')} className={iCls} />
                 </div>
-
-                {/* End Date */}
-                <div>
+                <div className="space-y-1">
                   <label className={labelCls}>End Date</label>
-                  <input
-                    type="date"
-                    {...form.register('endDate')}
-                    className={iCls}
-                  />
+                  <input type="date" {...form.register('endDate')} className={iCls} />
                 </div>
-
-                {/* Device Returned Date */}
-                <div>
+                <div className="space-y-1">
                   <label className={labelCls}>Device Returned Date</label>
-                  <input
-                    type="date"
-                    {...form.register('deviceReturnedDate')}
-                    className={iCls}
-                  />
+                  <input type="date" {...form.register('deviceReturnedDate')} className={iCls} />
                 </div>
 
                 {/* Notes */}
@@ -443,27 +353,28 @@ export default function EditCustomerOrderDialog({ order, onClose, onSuccess }: E
                   </ul>
                 </div>
               )}
-          </div>
-
-          {/* ─── Footer Actions ─────────────────────────────────────────────── */}
-          <div className="flex gap-3 pt-4 border-t border-[hsl(var(--border))] mt-6">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 rounded-xl border border-[hsl(var(--border))] py-3 text-sm font-semibold hover:bg-[hsl(var(--muted))]/50 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="flex-1 rounded-xl bg-[hsl(var(--primary))] py-3 text-sm font-semibold text-[hsl(var(--primary-foreground))] hover:opacity-90 transition-opacity disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              {saving ? 'Saving...' : 'Save Changes'}
-            </button>
-          </div>
         </form>
-      </DialogContent>
-    </Dialog>
-  );
+      </DialogBody>
+      <DialogFooter>
+        <div className="flex gap-3 w-full">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 rounded-xl border border-[hsl(var(--border))] py-3 text-sm font-semibold hover:bg-[hsl(var(--muted))]/50 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            form="edit-customer-order-form"
+            disabled={saving}
+            className="flex-1 rounded-xl bg-[hsl(var(--primary))] py-3 text-sm font-semibold text-[hsl(var(--primary-foreground))] hover:opacity-90 transition-opacity disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {saving ? 'Saving...' : 'Save Changes'}
+          </button>
+        </div>
+      </DialogFooter>
+    </DialogContent>
+  </Dialog>
+);
 }

@@ -188,6 +188,7 @@ export const createUser = async (data: {
     isActive?: boolean;
     targetBudget?: number;
     targetSales?: number;
+    maxDiscountPercentage?: number;
 }): Promise<IUserDocument> => {
     const existing = await User.findOne({ email: data.email });
     if (existing) {
@@ -204,6 +205,7 @@ export const createUser = async (data: {
         isActive: data.isActive ?? true,
         targetBudget: data.targetBudget ?? 0,
         targetSales: data.targetSales ?? 0,
+        maxDiscountPercentage: data.maxDiscountPercentage ?? 0,
     });
 
     // Remove password from response
@@ -234,6 +236,7 @@ export const updateUser = async (
         isActive?: boolean;
         targetBudget?: number;
         targetSales?: number;
+        maxDiscountPercentage?: number;
     },
 ): Promise<IUserDocument> => {
     const user = await User.findById(userId);
@@ -259,6 +262,7 @@ export const updateUser = async (
     if (data.isActive !== undefined) user.isActive = data.isActive;
     if (data.targetBudget !== undefined) user.targetBudget = data.targetBudget;
     if (data.targetSales !== undefined) user.targetSales = data.targetSales;
+    if (data.maxDiscountPercentage !== undefined) user.maxDiscountPercentage = data.maxDiscountPercentage;
 
     await user.save();
 

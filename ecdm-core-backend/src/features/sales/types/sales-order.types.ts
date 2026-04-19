@@ -44,6 +44,8 @@ export interface IQuotationItem {
     quantity: number;
     unitPrice: number;
     total: number;
+    priceListId?: string;
+    dataSheetUrl?: string;
 }
 
 /**
@@ -107,6 +109,7 @@ export interface ISalesOrder {
     // Legacy fields (kept for backward compatibility)
     quotationStatus: QuotationStatus;
     finalStatus: SalesOrderFinalStatus;
+    invoiceId?: string;
 
     notes?: string;
     createdAt: Date;

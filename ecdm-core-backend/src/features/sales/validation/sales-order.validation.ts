@@ -73,6 +73,8 @@ export const updateSalesOrderSchema = z.object({
 
     notes: z.string().max(2000).optional(),
     quotation: z.any().optional(),
+    orderStatus: z.string().optional(),
 });
+
 export type CreateSalesOrderInput = z.infer<typeof createSalesOrderSchema>;
 export type UpdateSalesOrderInput = z.infer<typeof updateSalesOrderSchema>;

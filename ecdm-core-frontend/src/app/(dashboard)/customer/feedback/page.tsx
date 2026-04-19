@@ -4,6 +4,8 @@ import api from '@/lib/axios';
 import { MessageSquare, Trash2, Edit2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { DataTable } from '@/components/ui/DataTable';
+import { PageHeader } from '@/components/layout/PageHeader';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import EditFeedbackDialog from './EditFeedbackDialog';
 
 interface Customer {
@@ -101,10 +103,8 @@ export default function FeedbackPage() {
   const del = async () => { if (!delId) return; try { await api.delete(`/customer/feedback/${delId}`); fetch_(); } catch { } setDelId(null); };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3"><MessageSquare className="h-7 w-7 text-[hsl(var(--primary))]" /><h1 className="text-2xl font-bold">Feedback</h1></div>
-      </div>
+    <div className="space-y-6 pb-8">
+      <PageHeader title="Feedback" icon={MessageSquare} />
 
       <div className="overflow-x-auto">
         <DataTable
@@ -152,14 +152,32 @@ export default function FeedbackPage() {
         />
       )}
 
-      {delId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6 shadow-2xl max-w-sm w-full">
-            <p className="mb-4 font-semibold">Delete this feedback?</p>
-            <div className="flex gap-3"><button onClick={del} className="flex-1 rounded-xl bg-destructive py-2 text-sm font-semibold text-white">Delete</button><button onClick={() => setDelId(null)} className="flex-1 rounded-xl border py-2 text-sm">Cancel</button></div>
+      <Dialog open={!!delId} onOpenChange={(open) => !open && setDelId(null)}>
+        <DialogContent className="p-6 outline-none">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold">Delete Feedback</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-[hsl(var(--muted-foreground))] mb-6">
+              Are you sure you want to delete this feedback? This action cannot be undone.
+            </p>
+            <div className="flex gap-3">
+              <button 
+                onClick={del} 
+                className="flex-1 rounded-xl bg-red-600 py-3 text-sm font-semibold text-white shadow-sm transition-all hover:bg-red-700 focus-visible:outline-none"
+              >
+                Delete
+              </button>
+              <button 
+                onClick={() => setDelId(null)} 
+                className="flex-1 rounded-xl border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] py-3 text-sm font-medium shadow-sm transition-all hover:bg-[hsl(var(--accent))] focus-visible:outline-none"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

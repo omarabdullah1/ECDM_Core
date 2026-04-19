@@ -258,7 +258,7 @@ export default function ProfilePage() {
                     {/* Sales Performance Card - Only for Sales roles */}
                     {(user?.role === 'Sales' || user?.role === 'Manager' || user?.role === 'SuperAdmin') && (
                         <div className="rounded-2xl border border-[hsl(var(--border))] bg-gradient-to-br from-blue-50 to-white dark:from-blue-950 dark:to-gray-900 p-4 space-y-3">
-                            <div className="flex items-center justify-between">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-in-slide stagger-1">
                                 <h3 className="text-xs font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-400 flex items-center gap-1.5">
                                     <Target className="w-3.5 h-3.5" />
                                     Sales Performance

@@ -17,6 +17,19 @@ export enum DealStatus {
     NotSet   = '',
 }
 
+export enum PaymentMethod {
+    Cash = 'Cash',
+    BankTransfer = 'Bank Transfer',
+    NotSet = '',
+}
+
+export enum ExtraExpenseType {
+    Other = 'Other',
+    Transport = 'Transport',
+    Delivery = 'Delivery',
+    NotSet = '',
+}
+
 export interface ICustomerOrder {
     // Core references
     customerId:    Types.ObjectId;    // → Customer (shared SSOT) — always required
@@ -33,6 +46,17 @@ export interface ICustomerOrder {
     devicePickupType?:   DevicePickupType;
     deal?:               DealStatus;
     cost?:               number;
+    
+    // Financial Tracking (New)
+    paidAmount?:         number;
+    paymentMethod?:      PaymentMethod;
+    spareParts?:         string;
+    extraExpenseType?:   ExtraExpenseType;
+    extraExpenseAmount?: number;
+    salesPercentage?:    string; // e.g. "5%"
+    technicianPercentage?: string;
+    engineerPercentage?: string;
+    
     startDate?:          Date;
     endDate?:            Date;
     deviceReturnedDate?: Date;

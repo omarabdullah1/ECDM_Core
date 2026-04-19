@@ -43,7 +43,7 @@ interface EditFollowUpDialogProps {
   onOpenFeedback?: (orderContext: OrderContext, customerOrderId: string, customerId: string) => void;
 }
 
-const iCls = 'w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-4 py-3 text-sm placeholder:text-[hsl(var(--muted-foreground))] focus:border-[hsl(var(--primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/20 transition-all disabled:opacity-60 disabled:cursor-not-allowed';
+const iCls = 'flex h-9 w-full rounded-md border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] px-3 py-1 text-sm shadow-sm transition-all placeholder:text-[hsl(var(--muted-foreground))] focus-visible:outline-none focus-visible:border-[hsl(var(--primary))]/50 focus-visible:ring-[3px] focus-visible:ring-[hsl(var(--primary))]/10';
 const labelCls = 'text-xs font-semibold text-[hsl(var(--muted-foreground))] uppercase tracking-wide mb-1.5 block';
 const readOnlyCls = 'text-sm px-3 py-2 bg-[hsl(var(--background))] rounded-md border border-[hsl(var(--border))] font-medium';
 
@@ -171,7 +171,7 @@ export default function EditFollowUpDialog({ followUp, onClose, onSuccess, onOpe
   return (
     <>
       <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
-        <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto overflow-x-hidden p-6 outline-none">
+        <DialogContent className="p-6 outline-none">
           <DialogHeader className="flex flex-row items-center justify-between border-b border-[hsl(var(--border))] pb-4 mb-4 space-y-0">
             <div>
               <DialogTitle className="text-xl font-bold">Edit Follow Up</DialogTitle>
@@ -366,7 +366,7 @@ export default function EditFollowUpDialog({ followUp, onClose, onSuccess, onOpe
 
       {showFeedbackPrompt && (
         <Dialog open={true} onOpenChange={() => handleFeedbackPrompt(false)}>
-          <DialogContent className="sm:max-w-md p-6 outline-none">
+          <DialogContent className="p-6 outline-none">
             <DialogHeader>
               <DialogTitle className="text-lg font-bold">Follow-up Resolved</DialogTitle>
             </DialogHeader>

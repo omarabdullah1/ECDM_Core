@@ -54,7 +54,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <Sidebar isCollapsed={isCollapsed} onToggle={handleToggle} />
             <div className={`flex-1 transition-all duration-300 ease-in-out ${sidebarMs}`}>
                 <Header />
-                <main className="p-3 animate-fade-in">
+                <main className="p-4 md:p-6 lg:p-8 animate-in-slide font-sans">
                     {children}
                 </main>
             </div>

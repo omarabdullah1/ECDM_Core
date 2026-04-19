@@ -20,7 +20,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
 
 /**
  * Edit Sales Order Dialog - CEO-Approved Advanced UX
@@ -96,7 +99,7 @@ type FormSchema = z.infer<typeof formSchema>;
 const QUOTATION_STATUSES = ['Accepted', 'Rejected', 'Negotiation', 'Pending', 'Expired'];
 const FINAL_STATUSES = ['Won', 'Lost', 'Pending'];
 
-const iCls = 'w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-4 py-3 text-sm placeholder:text-[hsl(var(--muted-foreground))] focus:border-[hsl(var(--primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/20 transition-all disabled:opacity-60 disabled:cursor-not-allowed';
+const iCls = 'flex h-9 w-full rounded-md border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] px-3 py-1 text-sm shadow-sm transition-all placeholder:text-[hsl(var(--muted-foreground))] focus-visible:outline-none focus-visible:border-[hsl(var(--primary))]/50 focus-visible:ring-[3px] focus-visible:ring-[hsl(var(--primary))]/10';
 const labelCls = 'text-xs font-semibold text-[hsl(var(--muted-foreground))] uppercase tracking-wide mb-1.5 block';
 const readOnlyCls = 'text-sm px-3 py-2 bg-[hsl(var(--muted))]/30 rounded-lg border border-[hsl(var(--border))]';
 
@@ -141,6 +144,16 @@ const formatDateDisplay = (isoDate: string | null | undefined): string => {
   } catch {
     return '-';
   }
+};
+
+/**
+ * Format Sales Person for display: "FirstName LastName" or string ID
+ */
+const formatSalesPerson = (sp: string | { firstName?: string; lastName?: string } | null | undefined): string => {
+  if (!sp) return '-';
+  if (typeof sp === 'string') return sp;
+  const name = `${sp.firstName || ''} ${sp.lastName || ''}`.trim();
+  return name || '-';
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -518,28 +531,20 @@ export default function EditSalesOrderDialog({ order, onClose, onSuccess, readOn
   return (
     <>
       <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
-        <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto overflow-x-hidden p-6 outline-none">
-          <DialogHeader className="mb-4 flex flex-row items-center justify-between space-y-0 border-b border-[hsl(var(--border))] pb-4">
-            <div>
-              <DialogTitle className="text-xl font-bold">
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+              <DialogTitle>
                 {isReadOnly ? 'View Sales Order (Read-Only)' : 'Edit Sales Order'}
               </DialogTitle>
               <p className="text-xs text-[hsl(var(--muted-foreground))] mt-0.5">
                 Order ID: {order.salesOrderId || order._id}
                 {isReadOnly && <span className="ml-2 text-amber-600 font-semibold">• Preview Mode</span>}
               </p>
-            </div>
-            <button
-              type="button"
-              onClick={onClose}
-              className="p-2 hover:bg-[hsl(var(--muted))] rounded-lg transition-colors"
-            >
-              <X className="h-5 w-5" />
-            </button>
           </DialogHeader>
 
-          <form onSubmit={form.handleSubmit(onSubmit, onError)}>
-            <div className="space-y-8">
+          <DialogBody>
+            <form id="edit-sales-order-form" onSubmit={form.handleSubmit(onSubmit, onError)}>
+              <div className="space-y-8">
 
               {/* ═══════════════════════════════════════════════════════════════
                 SECTION A: Lead & Customer Context (READ-ONLY)
@@ -608,7 +613,7 @@ export default function EditSalesOrderDialog({ order, onClose, onSuccess, readOn
 
                   <div>
                     <label className={labelCls}>SalesPerson</label>
-                    <div className={readOnlyCls}>{lead?.salesPerson || '-'}</div>
+                    <div className={readOnlyCls}>{formatSalesPerson(lead?.salesPerson)}</div>
                   </div>
 
                   <div>
@@ -1046,7 +1051,8 @@ export default function EditSalesOrderDialog({ order, onClose, onSuccess, readOn
               )}
             </div>
           </form>
-        </DialogContent>
+        </DialogBody>
+      </DialogContent>
       </Dialog>
 
       {/* ═══════════════════════════════════════════════════════════════════════

@@ -1,5 +1,5 @@
 import mongoose, { Schema, Model } from 'mongoose';
-import { ICustomerOrderDocument, DevicePickupType, DealStatus } from '../types/customer-order.types';
+import { ICustomerOrderDocument, DevicePickupType, DealStatus, PaymentMethod, ExtraExpenseType } from '../types/customer-order.types';
 
 /**
  * Customer Order Schema
@@ -23,6 +23,17 @@ const customerOrderSchema = new Schema<ICustomerOrderDocument>(
         devicePickupType:   { type: String, enum: Object.values(DevicePickupType), default: DevicePickupType.NotSet },
         deal:               { type: String, enum: Object.values(DealStatus), default: DealStatus.Pending },
         cost:               { type: Number, default: 0 },
+        
+        // Financial Tracking (New)
+        paidAmount:         { type: Number, default: 0 },
+        paymentMethod:      { type: String, enum: Object.values(PaymentMethod), default: PaymentMethod.NotSet },
+        spareParts:         { type: String, default: '' },
+        extraExpenseType:   { type: String, enum: Object.values(ExtraExpenseType), default: ExtraExpenseType.NotSet },
+        extraExpenseAmount: { type: Number, default: 0 },
+        salesPercentage:    { type: String, default: '0%' },
+        technicianPercentage: { type: String, default: '0%' },
+        engineerPercentage:  { type: String, default: '0%' },
+
         startDate:          { type: Date },
         endDate:            { type: Date },
         deviceReturnedDate: { type: Date },

@@ -24,52 +24,52 @@ html[dir="rtl"] * {
 
 @layer base {
   :root {
-    /* ── Light theme (default) ─────────────── */
+    /* ── Light theme (Premium ERP/CRM) ─────────────── */
     --background: 0 0% 98%;
-    --foreground: 222 47% 11%;
+    --foreground: 240 10% 8%;
     --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --card-foreground: 240 10% 8%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
-    --primary: 217 91% 60%;
+    --popover-foreground: 240 10% 8%;
+    --primary: 221 83% 53%; /* Strong, trustworthy professional blue */
     --primary-foreground: 0 0% 100%;
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 222 47% 11%;
-    --muted: 210 40% 96%;
-    --muted-foreground: 215 16% 47%;
-    --accent: 217 91% 60%;
-    --accent-foreground: 222 47% 11%;
-    --destructive: 0 72% 51%;
+    --secondary: 240 5% 96%;
+    --secondary-foreground: 240 5% 20%;
+    --muted: 240 5% 96%;
+    --muted-foreground: 240 4% 46%;
+    --accent: 240 5% 96%;
+    --accent-foreground: 240 5% 10%;
+    --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
-    --success: 142 76% 36%;
+    --success: 142 72% 29%;
     --success-foreground: 0 0% 100%;
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 217 91% 60%;
-    --radius: 0.75rem;
-    --sidebar-width: 220px;           /* Keep menubar at full size for visibility */
-    --sidebar-collapsed-width: 56px;  /* Collapsed sidebar width (fixed) */
-    --header-height: 64px;            /* Increased from 48px for better menubar item visibility */
+    --border: 240 6% 90%;
+    --input: 240 6% 90%;
+    --ring: 221 83% 53%;
+    --radius: 0.5rem; /* Sligthly sharper, more structural radius */
+    --sidebar-width: 250px;           /* Generous width for clear typography */
+    --sidebar-collapsed-width: 64px;  /* Comfortable collapsed target area */
+    --header-height: 56px;            /* Sleek, unobtrusive header */
   }
 
-  /* ── Dark theme ──────────────────────── */
+  /* ── Dark theme (Premium Enterprise Dark) ──────────────────────── */
   .dark {
-    --background: 0 0% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 0 0% 6%;
-    --card-foreground: 0 0% 98%;
-    --popover: 0 0% 6%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 217 91% 60%;
+    --background: 0 0% 6%; /* Deep, calm gray-black */
+    --foreground: 0 0% 90%;
+    --card: 0 0% 9%; /* Subtle elevation */
+    --card-foreground: 0 0% 90%;
+    --popover: 0 0% 9%;
+    --popover-foreground: 0 0% 90%;
+    --primary: 217 91% 60%; /* Vibrant, legible blue */
     --primary-foreground: 0 0% 100%;
     --secondary: 0 0% 12%;
-    --secondary-foreground: 0 0% 98%;
+    --secondary-foreground: 0 0% 90%;
     --muted: 0 0% 12%;
-    --muted-foreground: 0 0% 63.9%;
-    --accent: 217 91% 60%;
-    --accent-foreground: 0 0% 98%;
+    --muted-foreground: 0 0% 60%;
+    --accent: 0 0% 14%;
+    --accent-foreground: 0 0% 90%;
     --destructive: 0 62.8% 50.6%;
     --destructive-foreground: 0 0% 98%;
     --success: 142 76% 36%;
@@ -96,6 +96,18 @@ html[dir="rtl"] * {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    line-height: 1.5;
+    letter-spacing: -0.011em;
+  }
+
+  /* Typography Scale refinement */
+  h1 { font-size: 2rem; font-weight: 800; letter-spacing: -0.025em; }
+  h2 { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.02em; }
+  h3 { font-size: 1.25rem; font-weight: 600; letter-spacing: -0.015em; }
+
+  /* Dim secondary text globally */
+  .text-muted-foreground, .text-secondary-foreground {
+    opacity: 0.85;
   }
 
   /* ── Form element resets for Tailwind v4 ───────── */
@@ -242,6 +254,21 @@ html[dir="rtl"] .animate-slide-in-left {
   }
 }
 
+@keyframes drawer-in {
+  from {
+    transform: translateX(100%);
+    opacity: 0.5;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-drawer-in {
+  animation: drawer-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
 .animate-pulse-glow {
   animation: pulse-glow 2s infinite;
 }
@@ -252,4 +279,50 @@ html[dir="rtl"] .animate-slide-in-left {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+}
+
+/* ── Premium SaaS Utilities ────────────────────────────────── */
+
+.premium-shadow {
+  box-shadow: 0 4px 20px -4px hsla(0, 0%, 0%, 0.05), 0 2px 8px -2px hsla(0, 0%, 0%, 0.02);
+}
+
+.dark .premium-shadow {
+  box-shadow: 0 4px 20px -4px hsla(0, 0%, 0%, 0.7), 0 2px 8px -2px hsla(0, 0%, 0%, 0.4);
+}
+
+.modern-glass-card {
+  background: hsla(240, 0%, 100%, 0.7);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid hsla(240, 6%, 90%, 0.4);
+  box-shadow: 0 8px 32px -4px hsla(0, 0%, 0%, 0.04);
+}
+
+.dark .modern-glass-card {
+  background: hsla(240, 0%, 9%, 0.5);
+  border: 1px solid hsla(0, 0%, 14%, 0.4);
+  box-shadow: 0 8px 32px -4px hsla(0, 0%, 0%, 0.4);
+}
+
+/* ── Staggered Animations ────────────────────────────────── */
+.stagger-1 { animation-delay: 0.1s; animation-fill-mode: both; }
+.stagger-2 { animation-delay: 0.15s; animation-fill-mode: both; }
+.stagger-3 { animation-delay: 0.2s; animation-fill-mode: both; }
+.stagger-4 { animation-delay: 0.25s; animation-fill-mode: both; }
+.stagger-5 { animation-delay: 0.3s; animation-fill-mode: both; }
+
+@keyframes slide-up-fade {
+  0% {
+    opacity: 0;
+    transform: translateY(20px) scale(0.98);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-in-slide {
+  animation: slide-up-fade 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }

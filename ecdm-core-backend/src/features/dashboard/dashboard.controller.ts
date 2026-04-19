@@ -10,8 +10,9 @@ import WorkOrder from '../operations/models/work-order.model';
 import FollowUp from '../customer/models/follow-up.model';
 import Feedback from '../customer/models/feedback.model';
 import Campaign from '../marketing/models/campaign.model';
-import Invoice from '../erp/invoice/invoice.model';
+import Invoice from '../finance/models/invoice.model';
 import Product from '../operations/models/product.model';
+
 import InventoryItem from '../operations/models/inventory-item.model';
 import { InventoryFinance } from '../finance/models/inventory-finance.model';
 import User from '../auth/auth.model';
@@ -64,15 +65,15 @@ export const getStats = async (_req: Request, res: Response, next: NextFunction)
             Customer.countDocuments({ status: 'VIP' }),
 
             Invoice.aggregate([
-                { $match: { status: 'Paid', issueDate: { $gte: startOfMonth } } },
-                { $group: { _id: null, total: { $sum: '$total' } } },
+                { $match: { status: 'Approved', createdAt: { $gte: startOfMonth } } },
+                { $group: { _id: null, total: { $sum: '$grandTotal' } } },
             ]),
             Invoice.aggregate([
-                { $match: { status: 'Paid', issueDate: { $gte: startOfPrevMonth, $lte: endOfPrevMonth } } },
-                { $group: { _id: null, total: { $sum: '$total' } } },
+                { $match: { status: 'Approved', createdAt: { $gte: startOfPrevMonth, $lte: endOfPrevMonth } } },
+                { $group: { _id: null, total: { $sum: '$grandTotal' } } },
             ]),
 
-            WorkOrder.countDocuments({ endMaintenanceDate: null }),
+            WorkOrder.countDocuments({ $or: [{ endMaintenanceDate: null }, { endMaintenanceDate: { $exists: false } }] }),
 
             Product.countDocuments({
                 $expr: { $lte: ['$currentStock', '$lowStockThreshold'] },
@@ -92,9 +93,9 @@ export const getStats = async (_req: Request, res: Response, next: NextFunction)
                 { $sort: { count: -1 } },
             ]),
 
-            // ── Chart: Punctuality ──────────────────────────────
+            // ── Chart: Punctuality ──────────────────────
             WorkOrder.aggregate([
-                { $match: { punctuality: { $in: ['On-Time', 'Late'] } } },
+                { $match: { punctuality: { $in: ['Same time', 'Late'] } } },
                 { $group: { _id: '$punctuality', count: { $sum: 1 } } },
             ]),
 
@@ -117,15 +118,14 @@ export const getStats = async (_req: Request, res: Response, next: NextFunction)
             // ── List: Delayed work orders ───────────────────────
             WorkOrder.find({
                 punctuality: 'Late',
-                endMaintenanceDate: null,
+                $or: [{ endMaintenanceDate: null }, { endMaintenanceDate: { $exists: false } }],
             })
                 .populate({
                     path: 'customerOrderId',
-                    select: 'customerId',
+                    select: 'customerId issue typeOfOrder',
                     populate: { path: 'customerId', select: 'name phone' }
                 })
-                .populate('assignedEngineer', 'firstName lastName')
-                .select('typeOfOrder issue visitSiteDate startMaintenanceDate lateDuration lateDurationType reasonForDelay createdAt')
+                .select('maintenanceEngineer reasonForDelay createdAt startMaintenanceDate taskDate notes')
                 .sort({ createdAt: 1 })
                 .limit(10)
                 .lean(),
@@ -133,11 +133,6 @@ export const getStats = async (_req: Request, res: Response, next: NextFunction)
             // ── List: Recent feedback ───────────────────────────
             Feedback.find()
                 .populate('customerId', 'name')
-                .populate({
-                    path: 'customerOrderId',
-                    select: 'assignedEngineer typeOfOrder',
-                    populate: { path: 'assignedEngineer', select: 'firstName lastName' }
-                })
                 .sort({ createdAt: -1 })
                 .limit(10)
                 .lean(),
@@ -157,9 +152,9 @@ export const getStats = async (_req: Request, res: Response, next: NextFunction)
         const totalLowStock = lowStockProducts + lowStockItems;
 
         // ── Shape punctuality ────────────────────────────────────────
-        const onTimeCount = punctualityStats.find((p: { _id: string; count: number }) => p._id === 'On-Time')?.count ?? 0;
-        const lateCount = punctualityStats.find((p: { _id: string; count: number }) => p._id === 'Late')?.count ?? 0;
-        const punctualityTotal = onTimeCount + lateCount;
+        const onTimeCount = punctualityStats.find((p: { _id: string; count: number }) => p._id === 'Same time')?.count ?? 0;
+        const lateCount2  = punctualityStats.find((p: { _id: string; count: number }) => p._id === 'Late')?.count ?? 0;
+        const punctualityTotal = onTimeCount + lateCount2;
 
         // ── Response ────────────────────────────────────────────────
         sendSuccess(res, {
@@ -185,10 +180,10 @@ export const getStats = async (_req: Request, res: Response, next: NextFunction)
                 })),
                 punctuality: {
                     onTime: onTimeCount,
-                    late: lateCount,
+                    late: lateCount2,
                     total: punctualityTotal,
                     onTimePct: punctualityTotal > 0 ? Math.round((onTimeCount / punctualityTotal) * 100) : 0,
-                    latePct: punctualityTotal > 0 ? Math.round((lateCount / punctualityTotal) * 100) : 0,
+                    latePct: punctualityTotal > 0 ? Math.round((lateCount2 / punctualityTotal) * 100) : 0,
                 },
                 campaigns: campaignData,
             },
@@ -228,12 +223,12 @@ export const getSummary = async (_req: Request, res: Response, next: NextFunctio
             totalCompanyMarketingBudget,
         ] = await Promise.all([
             Invoice.aggregate([
-                { $match: { status: 'Paid', issueDate: { $gte: startOfMonth } } },
-                { $group: { _id: null, total: { $sum: '$total' } } },
+                { $match: { status: 'Approved', createdAt: { $gte: startOfMonth } } },
+                { $group: { _id: null, total: { $sum: '$grandTotal' } } },
             ]),
             Invoice.aggregate([
-                { $match: { status: { $in: ['Sent', 'Overdue'] }, issueDate: { $gte: startOfMonth } } },
-                { $group: { _id: null, total: { $sum: '$total' } } },
+                { $match: { status: 'Pending', createdAt: { $gte: startOfMonth } } },
+                { $group: { _id: null, total: { $sum: '$grandTotal' } } },
             ]),
             Product.aggregate([
                 { $match: { isActive: true } },
@@ -242,7 +237,7 @@ export const getSummary = async (_req: Request, res: Response, next: NextFunctio
                 { $group: { _id: null, count: { $sum: 1 }, items: { $push: { name: '$name', sku: '$sku', stock: '$currentStock', threshold: '$lowStockThreshold' } } } },
             ]),
             FollowUp.countDocuments({ solvedIssue: false }),
-            WorkOrder.countDocuments({ endMaintenanceDate: null }),
+            WorkOrder.countDocuments({ $or: [{ endMaintenanceDate: null }, { endMaintenanceDate: { $exists: false } }] }),
             InventoryFinance.aggregate([
                 { $match: { status: { $ne: 'Sold out' } } },
                 { $group: { _id: null, totalValue: { $sum: { $multiply: ['$stockNumber', '$price'] } } } },

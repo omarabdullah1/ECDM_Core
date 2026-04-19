@@ -267,7 +267,7 @@ export default function EmployeeProfilePage() {
     const { employee, attendance, workOrders } = profile;
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 pb-8">
             {/* Back button */}
             <Link
                 href="/hr/users"
@@ -392,7 +392,7 @@ export default function EmployeeProfilePage() {
             <div className="rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6">
                 {/* Profile Info Tab */}
                 {activeTab === 'info' && (
-                    <div className="space-y-6">
+                    <div className="space-y-6 pb-8">
                         <h2 className="text-lg font-bold flex items-center gap-2">
                             <User className="h-5 w-5 text-[hsl(var(--primary))]" />
                             Employee Information
@@ -445,8 +445,8 @@ export default function EmployeeProfilePage() {
 
                 {/* Attendance Tab */}
                 {activeTab === 'attendance' && (
-                    <div className="space-y-6">
-                        <div className="flex items-center justify-between">
+                    <div className="space-y-6 pb-8">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-in-slide stagger-1">
                             <h2 className="text-lg font-bold flex items-center gap-2">
                                 <Calendar className="h-5 w-5 text-[hsl(var(--primary))]" />
                                 Attendance History
@@ -545,8 +545,8 @@ export default function EmployeeProfilePage() {
 
                 {/* Tasks Tab */}
                 {activeTab === 'tasks' && (
-                    <div className="space-y-6">
-                        <div className="flex items-center justify-between">
+                    <div className="space-y-6 pb-8">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-in-slide stagger-1">
                             <h2 className="text-lg font-bold flex items-center gap-2">
                                 <Briefcase className="h-5 w-5 text-[hsl(var(--primary))]" />
                                 Tasks & Performance
@@ -917,8 +917,8 @@ export default function EmployeeProfilePage() {
 
                 {/* Documents Tab */}
                 {activeTab === 'documents' && (
-                    <div className="space-y-6">
-                        <div className="flex items-center justify-between">
+                    <div className="space-y-6 pb-8">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-in-slide stagger-1">
                             <h2 className="text-lg font-bold flex items-center gap-2">
                                 <FileText className="h-5 w-5 text-[hsl(var(--primary))]" />
                                 Documents

@@ -68,7 +68,6 @@ const NAV: NavItem[] = [
             { labelKey: 'marketingLeads', href: '/marketing/leads', icon: 'TrendingUp' },
             { labelKey: 'contentTracker', href: '/marketing/content', icon: 'FileText' },
             { labelKey: 'campaignResults', href: '/marketing/campaigns', icon: 'Activity' },
-            { labelKey: 'marketingInsights', href: '/marketing/insights', icon: 'TrendingUp' },
         ]
     },
     {
@@ -77,7 +76,6 @@ const NAV: NavItem[] = [
             { labelKey: 'salesData', href: '/sales/data', icon: 'FileText' },
             { labelKey: 'salesOrders', href: '/sales/order', icon: 'ClipboardList' },
             { labelKey: 'nonPotential', href: '/sales/non-potential', icon: 'Archive' },
-            { labelKey: 'salesInsights', href: '/sales/insights', icon: 'Briefcase' },
         ]
     },
     {
@@ -88,14 +86,15 @@ const NAV: NavItem[] = [
             { labelKey: 'customerFeedback', href: '/customer/feedback', icon: 'MessageSquare' },
         ]
     },
-{
-    labelKey: 'finance', icon: 'DollarSign', children: [
-        { labelKey: 'orderFinance', href: '/finance/orders', icon: 'DollarSign' },
-        { labelKey: 'inventoryFinance', href: '/finance/inventory', icon: 'Package' },
-        { labelKey: 'generalExpenses', href: '/finance/expenses', icon: 'CreditCard' },
-        { labelKey: 'salaries', href: '/finance/salaries', icon: 'Banknote' },
-    ]
-},
+    {
+        labelKey: 'finance', icon: 'DollarSign', children: [
+            { labelKey: 'invoices', href: '/finance/invoices', icon: 'FileText' },
+            { labelKey: 'orderFinance', href: '/finance/order-finance', icon: 'DollarSign' },
+            { labelKey: 'inventoryFinance', href: '/finance/inventory', icon: 'Package' },
+            { labelKey: 'generalExpenses', href: '/finance/expenses', icon: 'CreditCard' },
+            { labelKey: 'salaries', href: '/finance/salaries', icon: 'Banknote' },
+        ]
+    },
     {
         labelKey: 'operations', icon: 'Wrench', children: [
             { labelKey: 'workOrder', href: '/operations/work-order', icon: 'Wrench' },
@@ -150,12 +149,7 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
         }
 
         if (role === 'Sales') {
-            return NAV
-                .filter(item => item.labelKey === 'sales')
-                .map(item => ({
-                    ...item,
-                    children: item.children?.filter(child => child.labelKey !== 'salesInsights')
-                }));
+            return NAV.filter(item => item.labelKey === 'sales');
         }
 
         if (role === 'Marketing') {
@@ -193,11 +187,11 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
 
     return (
         <aside className={cn(
-            'fixed inset-inline-start-0 top-0 z-40 flex h-screen flex-col border-e border-[hsl(var(--border))] bg-[hsl(var(--card))] transition-all duration-300 ease-in-out',
+            'fixed inset-inline-start-0 top-0 z-40 flex h-screen flex-col border-e border-[hsl(var(--border))]/30 bg-[hsl(var(--background))]/60 backdrop-blur-3xl transition-all duration-300 ease-in-out shadow-[4px_0_24px_rgba(0,0,0,0.02)]',
             isCollapsed ? 'w-[var(--sidebar-collapsed-width)]' : 'w-[var(--sidebar-width)]'
         )}>
             {/* Logo + Toggle */}
-            <div className="flex h-[var(--header-height)] items-center border-b border-[hsl(var(--border))] px-2">
+            <div className="flex h-[var(--header-height)] items-center border-b border-[hsl(var(--border))]/40 px-3">
                 {!isCollapsed && (
                     <div className="flex items-center gap-2.5 flex-1 min-w-0 ps-1">
                         <Image src="/logo.png" alt="ECDM" width={28} height={28} className="rounded-md shrink-0" />
@@ -222,7 +216,7 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
             </div>
 
             {/* Nav */}
-            <nav className="flex-1 overflow-y-auto overflow-x-hidden px-1.5 py-2 space-y-0.5">
+            <nav className="flex-1 overflow-y-auto overflow-x-hidden px-3 py-4 space-y-1">
                 {filteredNav.map((item) => {
                     const Icon = iconMap[item.icon];
 
@@ -232,13 +226,13 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
                             <Link key={item.labelKey} href={item.href}
                                 title={isCollapsed ? label(item.labelKey) : undefined}
                                 className={cn(
-                                    'flex items-center rounded-lg py-1.5 text-[13px] font-medium transition-all',
-                                    isCollapsed ? 'justify-center px-0' : 'gap-2 px-2',
+                                    'group flex items-center rounded-xl py-2 text-[12px] font-semibold transition-all duration-200',
+                                    isCollapsed ? 'justify-center px-0' : 'gap-3 px-3',
                                     isActive
-                                        ? 'bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))]'
+                                        ? 'bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] shadow-md shadow-[hsl(var(--primary))]/20'
                                         : 'text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--secondary))] hover:text-[hsl(var(--foreground))]',
                                 )}>
-                                {Icon && <Icon size={15} className="shrink-0" />}
+                                {Icon && <Icon size={16} className={cn("shrink-0 transition-transform duration-200", !isActive && "group-hover:scale-110")} />}
                                 {!isCollapsed && <span className="truncate">{label(item.labelKey)}</span>}
                             </Link>
                         );
@@ -253,13 +247,13 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
                                 onClick={() => !isCollapsed && toggle(item.labelKey)}
                                 title={isCollapsed ? label(item.labelKey) : undefined}
                                 className={cn(
-                                    'flex w-full items-center rounded-lg py-1.5 text-[13px] font-medium transition-all',
+                                    'group flex w-full items-center rounded-lg py-1.5 text-[13px] font-medium transition-all duration-200',
                                     isCollapsed ? 'justify-center px-0' : 'gap-2 px-2',
                                     anyChildActive
                                         ? 'text-[hsl(var(--primary))]'
-                                        : 'text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--secondary))] hover:text-[hsl(var(--foreground))]'
+                                        : 'text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--secondary))]/80 hover:text-[hsl(var(--foreground))]'
                                 )}>
-                                {Icon && <Icon size={15} className="shrink-0" />}
+                                {Icon && <Icon size={15} className={cn("shrink-0 transition-transform duration-200", !anyChildActive && "group-hover:scale-110")} />}
                                 {!isCollapsed && (
                                     <>
                                         <span className="flex-1 text-start truncate">{label(item.labelKey)}</span>
@@ -269,19 +263,19 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
                             </button>
 
                             {!isCollapsed && isOpen && item.children && (
-                                <div className="ms-3 mt-0.5 space-y-0.5 border-s border-[hsl(var(--border))] ps-2">
+                                <div className="ms-3 mt-1 space-y-0.5 border-s border-[hsl(var(--border))]/30 ps-3">
                                     {item.children.map((child) => {
                                         const ChildIcon = iconMap[child.icon];
                                         const isActive = pathname === child.href;
                                         return (
                                             <Link key={child.href} href={child.href}
                                                 className={cn(
-                                                    'flex items-center gap-2 rounded-md px-2 py-1 text-[12px] transition-all',
+                                                    'group flex items-center gap-2 rounded-md px-2 py-1.5 text-[12px] transition-all duration-200 hover:translate-x-1',
                                                     isActive
-                                                        ? 'bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))] font-medium'
-                                                        : 'text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--secondary))] hover:text-[hsl(var(--foreground))]',
+                                                        ? 'bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))] font-medium shadow-sm'
+                                                        : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]',
                                                 )}>
-                                                {ChildIcon && <ChildIcon size={13} className="shrink-0" />}
+                                                {ChildIcon && <ChildIcon size={13} className="shrink-0 transition-colors duration-200 group-hover:text-[hsl(var(--primary))]" />}
                                                 <span className="truncate">{label(child.labelKey)}</span>
                                             </Link>
                                         );
@@ -389,15 +383,15 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
             </nav>
 
             {/* User Footer with Dropdown */}
-            <div className="border-t border-[hsl(var(--border))] px-1.5 py-2">
+            <div className="border-t border-[hsl(var(--border))]/40 px-3 py-3">
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <button className={cn(
-                            'flex w-full items-center rounded-lg p-1.5 text-left transition-all hover:bg-[hsl(var(--secondary))]',
-                            isCollapsed ? 'justify-center' : 'gap-2'
+                            'flex w-full items-center rounded-md p-2 text-left transition-all hover:bg-[hsl(var(--secondary))]/80',
+                            isCollapsed ? 'justify-center' : 'gap-3'
                         )}>
                             {/* Avatar */}
-                            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-purple-500 text-xs font-bold text-white">
+                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-gradient-to-br from-[hsl(var(--primary))] to-purple-500 text-xs font-bold text-white shadow-sm">
                                 {initials}
                             </div>
                             {!isCollapsed && (

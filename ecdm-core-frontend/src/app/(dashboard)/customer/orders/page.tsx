@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import api from '@/lib/axios';
 import { Package } from 'lucide-react';
 import DataTable from '@/components/ui/DataTable';
+import { PageHeader } from '@/components/layout/PageHeader';
 import { columns, CustomerOrder } from './columns';
 import EditCustomerOrderDialog from './EditCustomerOrderDialog';
 import toast from 'react-hot-toast';
@@ -83,22 +84,20 @@ export default function CustomerOrdersPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Package className="h-7 w-7 text-[hsl(var(--primary))]" />
-          <h1 className="text-2xl font-bold">Customer Orders</h1>
-        </div>
-      </div>
+      <PageHeader 
+        title="Customer Orders"
+        icon={Package}
+      />
 
       {/* Filters */}
       <div className="flex gap-3 flex-wrap items-center">
-        <select value={fDeal} onChange={e => { setFDeal(e.target.value); setPage(1); }} className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2 text-sm">
+        <select value={fDeal} onChange={e => { setFDeal(e.target.value); setPage(1); }} className="h-9 rounded-md border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] px-3 py-1 text-sm shadow-sm transition-all focus-visible:outline-none focus-visible:border-[hsl(var(--primary))]/50 focus-visible:ring-[3px] focus-visible:ring-[hsl(var(--primary))]/10">
           <option value="">All Deal Statuses</option>
           {DEAL_OPTIONS.map(d => <option key={d} value={d}>{d}</option>)}
         </select>
-        <select value={fTypeOfOrder} onChange={e => { setFTypeOfOrder(e.target.value); setPage(1); }} className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2 text-sm">
+        <select value={fTypeOfOrder} onChange={e => { setFTypeOfOrder(e.target.value); setPage(1); }} className="h-9 rounded-md border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] px-3 py-1 text-sm shadow-sm transition-all focus-visible:outline-none focus-visible:border-[hsl(var(--primary))]/50 focus-visible:ring-[3px] focus-visible:ring-[hsl(var(--primary))]/10">
           <option value="">All Order Types</option>
           {TYPE_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
         </select>
@@ -110,6 +109,7 @@ export default function CustomerOrdersPage() {
           data={filteredOrders}
           columns={columns}
           loading={loading}
+          onRowClick={handleEdit}
           emptyMessage="No customer orders found."
           page={page}
           totalPages={totalPages}
