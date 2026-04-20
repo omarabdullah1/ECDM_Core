@@ -91,6 +91,7 @@ export default function SalesLeadsPageV2() {
     {
       key: 'customerId.customerId',
       header: 'ID',
+      className: 'md:w-[1%] md:whitespace-nowrap',
       render: (row: SalesLead) => (
         <span className="font-mono text-xs">{row.customerId?.customerId || '-'}</span>
       ),
@@ -98,6 +99,7 @@ export default function SalesLeadsPageV2() {
     {
       key: 'customerId.name',
       header: 'Customer',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: SalesLead) => (
         <div>
           <p className="font-medium">{row.customerId?.name || '-'}</p>
@@ -108,16 +110,19 @@ export default function SalesLeadsPageV2() {
     {
       key: 'customerId.type',
       header: 'Type',
+      className: 'md:w-[1%] md:whitespace-nowrap',
       render: (row: SalesLead) => row.customerId?.type || '-',
     },
     {
       key: 'customerId.sector',
       header: 'Sector',
+      className: 'hidden xl:table-cell md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: SalesLead) => row.customerId?.sector || '-',
     },
     {
       key: 'issue',
       header: 'Issue',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: SalesLead) => (
         <span className="max-w-[150px] truncate block" title={row.issue}>
           {row.issue || '-'}
@@ -127,6 +132,7 @@ export default function SalesLeadsPageV2() {
     {
       key: 'order',
       header: 'Order',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: SalesLead) => {
         if (!row.order) return '-';
         const color = row.order === 'Yes' ? 'text-green-600' : 'text-red-600';
@@ -136,16 +142,19 @@ export default function SalesLeadsPageV2() {
     {
       key: 'salesPerson',
       header: 'Sales Rep',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: SalesLead) => row.salesPerson || '-',
     },
     {
       key: 'status',
       header: 'Status',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: SalesLead) => <StatusBadge status={row.status} />,
     },
     {
       key: 'date',
       header: 'Date',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: SalesLead) => 
         row.date ? new Date(row.date).toLocaleDateString() : '-',
     },
@@ -153,7 +162,7 @@ export default function SalesLeadsPageV2() {
 
   // ─── Row Actions ──────────────────────────────────────────────────────────────
   const renderActions = (row: SalesLead) => (
-    <div className="flex items-center gap-2">
+    <div className="flex flex-wrap items-center gap-2">
       <button
         className="p-1.5 rounded-lg hover:bg-[hsl(var(--muted))] transition-colors"
         title="View Details"

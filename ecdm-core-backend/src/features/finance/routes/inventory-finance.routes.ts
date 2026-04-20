@@ -1,13 +1,13 @@
 import { Router } from 'express';
 import * as ctrl from '../controllers/inventory-finance.controller';
-import { authenticate, authorise } from '../../../middlewares/auth.middleware';
 import { validate } from '../../../middlewares/validate.middleware';
-import { createInventoryFinanceSchema, updateInventoryFinanceSchema } from '../validation/inventory-finance.validation';
+import { authenticate, authorise } from '../../../middlewares/auth.middleware';
 import { UserRole } from '../../auth/auth.types';
+import { createInventoryFinanceSchema, updateInventoryFinanceSchema } from '../validation/inventory-finance.validation';
 
 const router = Router();
 
-// Apply authentication to all routes
+// Apply authentication to all routes in this feature
 router.use(authenticate);
 
 // GET all inventory finance records - Admin, Manager, SuperAdmin only
@@ -24,5 +24,8 @@ router.put('/:id', authorise(UserRole.SuperAdmin, UserRole.Manager, UserRole.Adm
 
 // DELETE inventory finance record - Manager, SuperAdmin only
 router.delete('/:id', authorise(UserRole.SuperAdmin, UserRole.Manager), ctrl.remove);
+
+// POST generate invoice from Work Order - Admin, Manager, SuperAdmin only
+router.post('/generate-invoice/:id', authorise(UserRole.SuperAdmin, UserRole.Manager, UserRole.Admin), ctrl.generateInvoice);
 
 export default router;

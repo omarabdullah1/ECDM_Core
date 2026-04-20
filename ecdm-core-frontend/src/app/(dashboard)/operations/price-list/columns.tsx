@@ -8,15 +8,6 @@ import toast from 'react-hot-toast';
  *
  * Column shape expected by <DataTable>:
  *   { key: string; header: string; render?: (row, meta?) => ReactNode }
- *
- * Columns:
- *   1. Spare Parts ID
- *   2. Item Name
- *   3. Specification
- *   4. Data Sheets  (PDF view / download)
- *   5. Category     (colour-coded badge)
- *   6. Unit Price
- *   7. Notes
  */
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -30,6 +21,8 @@ export interface PriceListItem {
     dataSheetFileName: string;
     category: string;
     unitPrice: number;
+    availableQuantity: number;
+    minStockLevel: number;
     notes: string;
     createdAt: string;
     updatedAt: string;
@@ -74,12 +67,9 @@ const handleDownload = async (url: string, filename: string) => {
 // ─── Category colour map ──────────────────────────────────────────────────────
 
 const categoryColour: Record<string, string> = {
-    'Maintenance':
-        'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
-    'General supply':
-        'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
-    'Supply and installation':
-        'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400',
+    'Maintenance': 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
+    'General supply': 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
+    'Supply and installation': 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400',
 };
 
 // ─── Column Definitions ───────────────────────────────────────────────────────
@@ -87,85 +77,54 @@ const categoryColour: Record<string, string> = {
 export const priceListColumns = [
     {
         key: 'sparePartsId',
-        header: 'Spare Parts ID',
+        header: 'ID',
+        className: 'md:w-[1%] md:whitespace-nowrap',
         render: (row: PriceListItem) => (
-            <span className="font-bold text-[hsl(var(--primary))]">{row.sparePartsId}</span>
+            <span className="font-bold text-[hsl(var(--primary))] text-xs">{row.sparePartsId}</span>
         ),
     },
     {
         key: 'itemName',
         header: 'Item Name',
+        className: 'md:w-auto md:max-w-[180px] md:truncate',
         render: (row: PriceListItem) => (
-            <span className="font-medium">{row.itemName}</span>
+            <span className="font-semibold text-sm">{row.itemName}</span>
         ),
     },
     {
         key: 'specification',
         header: 'Specification',
+        className: 'md:w-1/6 md:max-w-[150px] md:truncate',
         render: (row: PriceListItem) => (
-            <span
-                className="truncate max-w-[200px] inline-block"
-                title={row.specification}
-            >
+            <span className="truncate max-w-[200px] inline-block text-xs text-[hsl(var(--muted-foreground))]" title={row.specification}>
                 {row.specification || '-'}
             </span>
         ),
     },
     {
-        key: 'dataSheet',
-        header: 'Data Sheets',
+        key: 'availableQuantity',
+        header: 'Qty',
+        className: 'md:w-1/6 md:max-w-[80px] md:truncate text-center',
         render: (row: PriceListItem) => {
-            if (!row.dataSheetUrl) {
-                return <span className="text-[hsl(var(--muted-foreground))] text-xs">No File</span>;
-            }
-            const url = getFileUrl(row.dataSheetUrl);
-            const name = row.dataSheetFileName || 'datasheet.pdf';
+            const isLow = (row.availableQuantity || 0) <= (row.minStockLevel || 5);
             return (
-                <div className="flex items-center gap-2">
-                    <a
-                        href={url}
-                        target="_blank"
-                        rel="noreferrer"
-                        title="View Data Sheet"
-                        className="p-1 rounded hover:bg-[hsl(var(--muted))] transition-colors"
-                    >
-                        <Eye className="w-4 h-4 text-blue-500" />
-                    </a>
-                    <button
-                        onClick={() => handleDownload(url, name)}
-                        title="Download Data Sheet"
-                        className="p-1 rounded hover:bg-[hsl(var(--muted))] transition-colors"
-                    >
-                        <Download className="w-4 h-4 text-green-500" />
-                    </button>
-                    <span
-                        className="text-xs text-[hsl(var(--muted-foreground))] truncate max-w-[100px] inline-flex items-center gap-1"
-                        title={name}
-                    >
-                        <FileText className="w-3 h-3 shrink-0" />
-                        {name}
+                <div className="flex flex-col items-center">
+                    <span className={`font-black text-sm ${isLow ? 'text-red-500 animate-pulse' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                        {row.availableQuantity || 0}
                     </span>
+                    {isLow && (
+                        <span className="text-[9px] uppercase font-black text-red-500 tracking-tighter leading-none">
+                            Low
+                        </span>
+                    )}
                 </div>
             );
         },
     },
     {
-        key: 'category',
-        header: 'Category',
-        render: (row: PriceListItem) => (
-            <span
-                className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    categoryColour[row.category] ??
-                    'bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]'
-                }`}
-            >
-                {row.category || '-'}
-            </span>
-        ),
-    },
-    {
         key: 'unitPrice',
-        header: 'Unit Price',
+        header: 'Price',
+        className: 'md:w-1/6 md:max-w-[100px] md:truncate font-mono text-xs',
         render: (row: PriceListItem) =>
             row.unitPrice != null && row.unitPrice !== 0
                 ? `$${Number(row.unitPrice).toLocaleString(undefined, {
@@ -175,10 +134,41 @@ export const priceListColumns = [
                 : '-',
     },
     {
+        key: 'dataSheet',
+        header: 'Docs',
+        className: 'md:w-1/6 md:max-w-[100px] md:truncate',
+        render: (row: PriceListItem) => {
+            if (!row.dataSheetUrl) return <span className="text-[hsl(var(--muted-foreground))] text-[10px] uppercase">None</span>;
+            const url = getFileUrl(row.dataSheetUrl);
+            const name = row.dataSheetFileName || 'datasheet.pdf';
+            return (
+                <div className="flex items-center gap-1.5 justify-center">
+                    <a href={url} target="_blank" rel="noreferrer" title="View" className="p-1 rounded hover:bg-blue-50 transition-colors">
+                        <Eye className="w-3.5 h-3.5 text-blue-500" />
+                    </a>
+                    <button onClick={() => handleDownload(url, name)} title="Download" className="p-1 rounded hover:bg-green-50 transition-colors">
+                        <Download className="w-3.5 h-3.5 text-green-500" />
+                    </button>
+                </div>
+            );
+        },
+    },
+    {
+        key: 'category',
+        header: 'Category',
+        className: 'md:w-1/6 md:max-w-[120px] md:truncate',
+        render: (row: PriceListItem) => (
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-tight ${categoryColour[row.category] ?? 'bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]'}`}>
+                {row.category || '-'}
+            </span>
+        ),
+    },
+    {
         key: 'notes',
         header: 'Notes',
+        className: 'md:w-1/6 md:max-w-[120px] md:truncate',
         render: (row: PriceListItem) => (
-            <span className="truncate max-w-[150px] inline-block" title={row.notes}>
+            <span className="truncate max-w-[150px] inline-block text-[10px]" title={row.notes}>
                 {row.notes || '-'}
             </span>
         ),
@@ -195,20 +185,12 @@ interface ActionsConfig {
 export const createActionsRenderer =
     ({ onEdit, onDelete }: ActionsConfig) =>
     (row: PriceListItem) => (
-        <div className="flex items-center gap-2">
-            <button
-                onClick={() => onEdit(row)}
-                className="p-1.5 rounded-lg hover:bg-[hsl(var(--muted))] transition-colors"
-                title="Edit"
-            >
-                <Edit2 className="w-4 h-4 text-[hsl(var(--primary))]" />
+        <div className="flex items-center gap-1 justify-end">
+            <button onClick={() => onEdit(row)} className="p-1.5 rounded-lg hover:bg-primary/10 transition-colors" title="Edit">
+                <Edit2 className="w-3.5 h-3.5 text-primary" />
             </button>
-            <button
-                onClick={() => onDelete(row)}
-                className="p-1.5 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
-                title="Delete"
-            >
-                <Trash2 className="w-4 h-4 text-red-500" />
+            <button onClick={() => onDelete(row)} className="p-1.5 rounded-lg hover:bg-red-50 transition-colors" title="Delete">
+                <Trash2 className="w-3.5 h-3.5 text-red-500" />
             </button>
         </div>
     );

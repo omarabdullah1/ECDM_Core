@@ -26,6 +26,9 @@ export const createUserSchema = z.object({
     targetBudget: z.number().optional().default(0),
     targetSales: z.number().optional().default(0),
     maxDiscountPercentage: z.number().min(0).max(100).optional().default(0),
+    commissionPercentage: z.number().min(0).max(100).optional().default(0),
+    department: z.string().optional(),
+    salary: z.number().optional().default(0),
 });
 
 // Schema for updating user
@@ -40,6 +43,9 @@ export const updateUserSchema = z.object({
     targetBudget: z.number().optional(),
     targetSales: z.number().optional(),
     maxDiscountPercentage: z.number().min(0).max(100).optional(),
+    commissionPercentage: z.number().min(0).max(100).optional(),
+    department: z.string().optional(),
+    salary: z.number().optional(),
 });
 
 export type RegisterInput = z.infer<typeof registerSchema>;

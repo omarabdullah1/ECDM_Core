@@ -85,7 +85,7 @@ export default function SalesLeadsPage() {
   const [error, setError] = useState('');
   const [delId, setDelId] = useState<string | null>(null);
   const [showApprovalAlert, setShowApprovalAlert] = useState(false);
-  const lim = 1000;
+  const lim = 10;
   const tp = Math.ceil(total / lim);
 
   const fetch_ = useCallback(async () => {
@@ -221,6 +221,7 @@ export default function SalesLeadsPage() {
     {
       key: 'customerId.customerId',
       header: 'ID',
+      className: 'md:w-[1%] md:whitespace-nowrap',
       render: (row: SalesLead) => (
         <span className="font-mono text-xs text-[hsl(var(--muted-foreground))]">
           {row.customerId?.customerId || '-'}
@@ -230,6 +231,7 @@ export default function SalesLeadsPage() {
     {
       key: 'customerId.name',
       header: 'Name',
+      className: 'md:w-auto md:max-w-[150px] md:truncate',
       render: (row: SalesLead) => (
         <span className="font-medium">{row.customerId?.name || '-'}</span>
       ),
@@ -237,21 +239,25 @@ export default function SalesLeadsPage() {
     {
       key: 'customerId.phone',
       header: 'Phone',
+      className: 'hidden xl:table-cell md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: SalesLead) => row.customerId?.phone || '-',
     },
     {
       key: 'customerId.type',
       header: 'Type',
+      className: 'md:w-[1%] md:whitespace-nowrap',
       render: (row: SalesLead) => row.customerId?.type || '-',
     },
     {
       key: 'customerId.sector',
       header: 'Sector',
+      className: 'hidden xl:table-cell md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: SalesLead) => row.customerId?.sector || '-',
     },
     {
       key: 'customerId.address',
       header: 'Address',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: SalesLead) => (
         <div className="max-w-[150px] truncate text-sm" title={row.customerId?.address}>
           {row.customerId?.address || '-'}
@@ -261,11 +267,13 @@ export default function SalesLeadsPage() {
     {
       key: 'customerId.region',
       header: 'Region',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: SalesLead) => row.customerId?.region || '-',
     },
     {
       key: 'issue',
       header: 'Issue',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: SalesLead) => (
         <div className="max-w-[150px] truncate font-medium" title={row.issue}>
           {row.issue || '-'}
@@ -275,6 +283,7 @@ export default function SalesLeadsPage() {
     {
       key: 'order',
       header: 'Order',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: SalesLead) => {
         if (!row.order) return '-';
         const color = row.order === 'Yes' ? 'text-green-600 font-semibold' : 'text-gray-600';
@@ -284,6 +293,7 @@ export default function SalesLeadsPage() {
     {
       key: 'reason',
       header: 'Reason',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: SalesLead) => (
         <div className="max-w-[150px] truncate font-medium" title={row.reason}>
           {row.reason || '-'}
@@ -293,6 +303,7 @@ export default function SalesLeadsPage() {
     {
       key: 'salesPerson',
       header: 'SalesPerson',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: SalesLead) => (
         <span className="text-xs">{row.salesPerson || <span className="text-[hsl(var(--muted-foreground))]">—</span>}</span>
       ),
@@ -300,16 +311,19 @@ export default function SalesLeadsPage() {
     {
       key: 'date',
       header: 'Date',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: SalesLead) => <span className="text-xs">{formatDate(row.date)}</span>,
     },
     {
       key: 'status',
       header: 'Status',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: SalesLead) => <StatusBadge status={row.status} />,
     },
     {
       key: 'notes',
       header: 'Notes',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: SalesLead) => (
         <div className="max-w-[120px] truncate text-gray-500" title={row.notes}>
           {row.notes || '-'}
@@ -328,7 +342,7 @@ export default function SalesLeadsPage() {
     const canEdit = isAdmin || !row.salesPerson || isOwner;
 
     return (
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         <button
           onClick={() => openE(row)}
           className={`p-1 transition-colors ${canEdit ? 'hover:text-[hsl(var(--primary))]' : 'hover:text-blue-500'}`}

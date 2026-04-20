@@ -51,6 +51,7 @@ const en: Translations = {
     operations: 'Operations',
     workOrder: 'Work Orders',
     priceList: 'Price List',
+    purchaseOrder: 'Purchase Orders',
     reportOperation: 'Performance Reports',
     hr: 'HR',
     hrEmployees: 'Employees',

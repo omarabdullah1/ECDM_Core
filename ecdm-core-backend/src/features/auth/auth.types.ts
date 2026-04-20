@@ -15,6 +15,7 @@ export enum UserRole {
     Admin = 'Admin',
     Marketing = 'Marketing',
     RND = 'R&D',
+    Finance = 'Finance',
 }
 
 // ── HR Document type for employee profile ──────────────────────────
@@ -37,11 +38,14 @@ export interface IUser {
     avatarUrl?: string;              // HR: Profile picture URL
     phone?: string;
     address?: string;                // HR: Employee address
+    department?: string;             // HR: Employee department
+    salary?: number;                 // HR: Basic Salary
     employeeId?: string;             // HR: External employee ID for linking with attendance
     documents?: IEmployeeDocument[]; // HR: Employee documents (contracts, IDs, etc.)
     targetBudget?: number;           // Target budget for marketing
     targetSales?: number;            // Target sales for sales reps
     maxDiscountPercentage?: number;   // Max allowed discount percentage
+    commissionPercentage?: number;    // Default commission % for this employee (used in Order Finance)
     refreshToken?: string;           // JWT refresh token for session management
     createdAt: Date;
     updatedAt: Date;

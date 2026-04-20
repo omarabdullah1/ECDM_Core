@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { PageHeader } from '@/components/layout/PageHeader';
 import api from '@/lib/axios';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
     Users, Search, Eye, Shield, CheckCircle, XCircle,
     Phone, Mail
@@ -72,6 +73,7 @@ const StatusBadge = ({ isActive }: { isActive: boolean }) => (
 const inputClass = 'w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-4 py-3 text-sm placeholder:text-[hsl(var(--muted-foreground))] focus:border-[hsl(var(--primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/20 transition-all';
 
 export default function EmployeesPage() {
+    const router = useRouter();
     const [rows, setRows] = useState<Employee[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -146,6 +148,7 @@ export default function EmployeesPage() {
         {
             key: 'fullName',
             header: 'Employee',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
             render: (row: Employee) => (
                 <div className="flex items-center gap-3">
                     <div className="h-10 w-10 rounded-full bg-[hsl(var(--primary))]/10 flex items-center justify-center overflow-hidden">
@@ -171,6 +174,7 @@ export default function EmployeesPage() {
         {
             key: 'email',
             header: 'Contact',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
             render: (row: Employee) => (
                 <div className="space-y-1">
                     <span className="flex items-center gap-1 text-sm">
@@ -189,11 +193,13 @@ export default function EmployeesPage() {
         {
             key: 'role',
             header: 'Role',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
             render: (row: Employee) => <RoleBadge role={row.role} />,
         },
         {
             key: 'isActive',
             header: 'Status',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
             render: (row: Employee) => <StatusBadge isActive={row.isActive} />,
         },
     ];
@@ -208,6 +214,10 @@ export default function EmployeesPage() {
             View Profile
         </Link>
     );
+
+    const handleRowClick = (row: Employee & { userId?: string }) => {
+        router.push(`/hr/users/${row.userId || row._id}`);
+    };
 
     return (
         <div className="space-y-6 pb-8">
@@ -272,6 +282,7 @@ export default function EmployeesPage() {
                 columns={columns}
                 loading={loading}
                 emptyMessage="No employees found."
+                onRowClick={handleRowClick}
                 renderActions={renderActions}
                 selectionDisabled
                 defaultVisibility={{

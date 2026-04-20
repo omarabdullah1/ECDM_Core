@@ -22,6 +22,12 @@ export const createWorkOrderSchema = z.object({
     sparePartsId:          z.string().optional().default(''),
     sparePartsAvailability: z.nativeEnum(SparePartsAvailability).optional().default(SparePartsAvailability.Empty),
     notes:                 z.string().optional().default(''),
+    partsUsed:             z.array(z.object({
+        priceListId:     z.string().optional(),
+        inventoryItemId: z.string().optional(),
+        quantity:        z.number().min(1),
+        unitCost:        z.number().min(0),
+    })).optional(),
     updatedBy:             z.string().optional(),
 });
 

@@ -78,6 +78,7 @@ export const getColumns = ({ onEdit, onDelete }: ColumnProps) => [
     {
         key: 'contentId',
         header: 'ID',
+      className: 'md:w-[1%] md:whitespace-nowrap',
         render: (row: ContentTracker) => (
             <span className="font-mono text-xs">{row.contentId || '-'}</span>
         ),
@@ -85,6 +86,7 @@ export const getColumns = ({ onEdit, onDelete }: ColumnProps) => [
     {
         key: 'contentTitle',
         header: 'Content Title',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
         render: (row: ContentTracker) => (
             <span className="font-medium">{row.contentTitle}</span>
         ),
@@ -92,11 +94,13 @@ export const getColumns = ({ onEdit, onDelete }: ColumnProps) => [
     {
         key: 'type',
         header: 'Type',
+      className: 'md:w-[1%] md:whitespace-nowrap',
         render: (row: ContentTracker) => row.type || '-',
     },
     {
         key: 'details',
         header: 'Details',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
         render: (row: ContentTracker) => (
             <span className="truncate max-w-[150px] inline-block" title={row.details}>
                 {row.details || '-'}
@@ -106,11 +110,13 @@ export const getColumns = ({ onEdit, onDelete }: ColumnProps) => [
     {
         key: 'owner',
         header: 'Owner',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
         render: (row: ContentTracker) => row.owner || '-',
     },
     {
         key: 'status',
         header: 'Status',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
         render: (row: ContentTracker) => {
             const status = row.status;
             const statusColors: Record<string, string> = {
@@ -131,6 +137,7 @@ export const getColumns = ({ onEdit, onDelete }: ColumnProps) => [
     {
         key: 'postDate',
         header: 'Post Date',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
         render: (row: ContentTracker) => {
             if (!row.postDate) return '-';
             try {
@@ -147,6 +154,7 @@ export const getColumns = ({ onEdit, onDelete }: ColumnProps) => [
     {
         key: 'file',
         header: 'File',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
         render: (row: ContentTracker) => {
             const fileUrl = row.fileUrl;
             const fileName = row.fileName;
@@ -156,7 +164,7 @@ export const getColumns = ({ onEdit, onDelete }: ColumnProps) => [
             const fullUrl = getFileUrl(fileUrl);
             
             return (
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                     <a
                         href={fullUrl}
                         target="_blank"
@@ -181,6 +189,7 @@ export const getColumns = ({ onEdit, onDelete }: ColumnProps) => [
     {
         key: 'notes',
         header: 'Notes',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
         render: (row: ContentTracker) => (
             <span className="truncate max-w-[120px] inline-block" title={row.notes}>
                 {row.notes || '-'}
@@ -190,8 +199,9 @@ export const getColumns = ({ onEdit, onDelete }: ColumnProps) => [
     {
         key: 'actions',
         header: 'Actions',
+      className: 'md:w-[1%] md:whitespace-nowrap',
         render: (row: ContentTracker) => (
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
                 <button
                     onClick={() => onEdit(row)}
                     className="text-blue-500 hover:text-blue-700 transition-colors"

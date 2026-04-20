@@ -1,6 +1,7 @@
 import WorkOrder from '../models/work-order.model';
 import { AppError } from '../../../utils/apiError';
 import { CreateWorkOrderInput, UpdateWorkOrderInput } from '../validation/work-order.validation';
+import * as priceListService from './price-list.service';
 
 /**
  * Escape special regex characters to prevent ReDoS/injection attacks.
@@ -64,8 +65,52 @@ export const getById = async (id: string) => {
 };
 
 export const update = async (id: string, data: UpdateWorkOrderInput) => {
+    // ─── Inventory Check: Prevent adding parts with 0 stock ───
+    if ((data as any).partsUsed && (data as any).partsUsed.length > 0) {
+        const previousOrder = await WorkOrder.findById(id);
+        const existingPartsMap = new Map();
+        previousOrder?.partsUsed?.forEach(p => existingPartsMap.set(p.priceListId.toString(), p.quantity));
+
+        const itemsToDeduct: { priceListId: string, quantity: number }[] = [];
+
+        // ─── Map inventoryItemId to priceListId for compatibility ───
+        (data as any).partsUsed = (data as any).partsUsed.map((p: any) => ({
+            ...p,
+            priceListId: p.priceListId || p.inventoryItemId
+        })).filter((p: any) => p.priceListId);
+
+        for (const part of (data as any).partsUsed) {
+            const requestedQty = part.quantity;
+            const previousQty = existingPartsMap.get(part.priceListId.toString()) || 0;
+            const diff = requestedQty - previousQty;
+
+            if (diff > 0) {
+                // We only need to check availability for the "extra" quantity requested
+                itemsToDeduct.push({
+                    priceListId: part.priceListId.toString(),
+                    quantity: diff
+                });
+            }
+        }
+
+        if (itemsToDeduct.length > 0) {
+            console.log('🛡️ Inventory: Validating availability for Work Order parts diff...');
+            await priceListService.checkAvailability(itemsToDeduct);
+            
+            // Deduct the stock
+            for (const item of itemsToDeduct) {
+                await priceListService.adjustStock(item.priceListId, -item.quantity);
+            }
+        }
+    }
+
     const item = await WorkOrder.findByIdAndUpdate(id, data, { new: true, runValidators: true });
     if (!item) throw new AppError('Work order not found', 404);
+
+    // ℹ️ NOTE: Invoice generation is intentionally NOT triggered here.
+    // Invoices must be created/updated explicitly by the user via the
+    // Inventory Finance or Order Finance UI (manual action only).
+
     return item;
 };
 

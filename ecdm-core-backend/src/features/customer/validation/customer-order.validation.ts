@@ -23,9 +23,13 @@ export const createCustomerOrderSchema = z.object({
     spareParts:           z.string().optional(),
     extraExpenseType:     z.nativeEnum(ExtraExpenseType).optional(),
     extraExpenseAmount:   z.number().optional(),
-    salesPercentage:      z.string().optional(),
-    technicianPercentage: z.string().optional(),
-    engineerPercentage:   z.string().optional(),
+    salesPercentage:      z.number().min(0).max(100).optional(),
+    technicianPercentage: z.number().min(0).max(100).optional(),
+    engineerPercentage:   z.number().min(0).max(100).optional(),
+    // Personnel references
+    salesPersonId:        z.string().optional().nullable(),
+    technicianId:         z.string().optional().nullable(),
+    engineerId:           z.string().optional().nullable(),
     
     startDate:            z.string().or(z.date()).optional(),
     endDate:              z.string().or(z.date()).optional(),

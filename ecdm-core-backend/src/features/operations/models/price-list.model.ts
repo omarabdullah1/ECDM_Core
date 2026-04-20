@@ -21,6 +21,8 @@ export interface IPriceListDocument extends Document {
     dataSheetFileName: string;
     category: 'Maintenance' | 'General supply' | 'Supply and installation';
     unitPrice: number;
+    availableQuantity: number;
+    minStockLevel: number;
     notes: string;
     updatedBy: mongoose.Types.ObjectId;
     createdAt: Date;
@@ -78,6 +80,18 @@ const priceListSchema = new Schema<IPriceListDocument>(
             type: Number,
             default: 0,
             min: [0, 'Unit price cannot be negative'],
+        },
+        
+        availableQuantity: {
+            type: Number,
+            default: 0,
+            min: [0, 'Quantity cannot be negative'],
+        },
+
+        minStockLevel: {
+            type: Number,
+            default: 5,
+            min: [0, 'Minimum stock level cannot be negative'],
         },
 
         notes: {

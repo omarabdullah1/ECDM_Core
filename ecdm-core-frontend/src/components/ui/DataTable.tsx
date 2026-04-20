@@ -35,14 +35,14 @@ import { TableSkeleton } from './skeleton';
  * />
  */
 
-interface Column<T> {
+export interface Column<T> {
   key: keyof T | string;
   header: string;
   render?: (row: T, meta?: any) => React.ReactNode;
   className?: string;
 }
 
-interface DataTableProps<T extends { _id: string }> {
+export interface DataTableProps<T extends { _id: string }> {
   data: T[];
   columns: Column<T>[];
   loading?: boolean;
@@ -99,6 +99,7 @@ export function DataTable<T extends { _id: string }>({
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [clientPagination, setClientPagination] = useState({ pageIndex: 0, pageSize: itemsPerPage });
 
   // Column visibility state and dropdown management
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(defaultVisibility);
@@ -135,13 +136,16 @@ export function DataTable<T extends { _id: string }>({
     state: {
       columnVisibility,
       globalFilter,
-      // When using server-side pagination (onPageChange provided), set large page size
-      // to avoid client-side pagination hiding rows that the server already returned
-      pagination: {
-        pageIndex: 0,
-        pageSize: onPageChange ? 9999 : 10,
-      },
+      ...(onPageChange ? {
+        pagination: {
+          pageIndex: 0,
+          pageSize: 9999,
+        }
+      } : {
+        pagination: clientPagination
+      }),
     },
+    onPaginationChange: setClientPagination,
   });
 
   const visibleColumns = columns.filter(col => {
@@ -256,7 +260,7 @@ export function DataTable<T extends { _id: string }>({
         <div className="relative" ref={dropdownRef}>
           <button
             onClick={() => setShowColumnDropdown(!showColumnDropdown)}
-            className="ml-auto hidden h-9 lg:flex items-center justify-center rounded-md border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] px-4 text-sm font-medium shadow-sm hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--accent-foreground))] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[hsl(var(--primary))]/10 transition-colors"
+            className="ml-auto flex h-9 items-center justify-center rounded-md border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] px-4 text-sm font-medium shadow-sm hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--accent-foreground))] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[hsl(var(--primary))]/10 transition-colors"
           >
             <Settings2 className="mr-2 h-4 w-4" />
             View Columns
@@ -287,12 +291,12 @@ export function DataTable<T extends { _id: string }>({
       </div>
 
       {/* Data Table */}
-      <div className="relative w-full overflow-x-auto custom-table-scrollbar modern-glass-card premium-shadow rounded-xl border border-[hsl(var(--border))]/40 max-h-[65vh]">
+      <div className="relative w-full max-w-full overflow-x-auto custom-table-scrollbar modern-glass-card premium-shadow rounded-xl border border-[hsl(var(--border))]/40">
         {loading ? (
           <TableSkeleton rows={10} columns={visibleColumns.length + (renderActions ? 1 : 0)} height="h-10" />
         ) : (
-          <table className="w-full text-sm whitespace-nowrap min-w-max border-collapse">
-            <thead className="sticky top-0 z-40 bg-[hsl(var(--card))] shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
+          <table className="w-full text-sm border-collapse">
+            <thead className="hidden md:table-header-group sticky top-0 z-40 bg-[hsl(var(--card))] shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
               <tr>
                 {/* Checkbox column - only show if user is admin and bulk delete is enabled */}
                 {canBulkDelete && (
@@ -312,7 +316,7 @@ export function DataTable<T extends { _id: string }>({
                     <th
                       key={String(col.key)}
                       className={[
-                        `p-4 text-left text-[10px] font-bold text-[hsl(var(--muted-foreground))] uppercase tracking-wider whitespace-nowrap border-b border-[hsl(var(--border))]/30 bg-[hsl(var(--muted))]/5`,
+                        `p-4 text-left text-[10px] font-bold text-[hsl(var(--muted-foreground))] uppercase tracking-wider truncate border-b border-[hsl(var(--border))]/30 bg-[hsl(var(--muted))]/5 min-w-0`,
                         col.className || '',
                         isFirstDataCol
                           ? 'sticky left-0 z-50 bg-[hsl(var(--card))] shadow-[1px_0_0_0_hsl(var(--border))]'
@@ -321,6 +325,7 @@ export function DataTable<T extends { _id: string }>({
                           ? 'sticky right-0 z-50 bg-[hsl(var(--card))] shadow-[-1px_0_0_0_hsl(var(--border))]'
                           : '',
                       ].join(' ')}
+                      title={col.header}
                     >
                       {col.header}
                     </th>
@@ -333,14 +338,14 @@ export function DataTable<T extends { _id: string }>({
                 )}
               </tr>
             </thead>
-            <tbody>
+            <tbody className="block md:table-row-group p-4 md:p-0">
               {table.getRowModel().rows.map(tableRow => {
                 const row = tableRow.original;
                 const customRowClass = rowClassName ? rowClassName(row) : '';
                 return (
                   <tr
                     key={row._id}
-                    className={`border-b border-[hsl(var(--border))]/50 transition-colors hover:bg-[hsl(var(--muted))]/50 ${selectedRows.has(row._id) ? 'bg-[hsl(var(--primary))]/5' : ''} ${customRowClass} cursor-pointer group`}
+                    className={`flex flex-col mb-4 p-4 border border-[hsl(var(--border))]/50 rounded-lg bg-[hsl(var(--card))] shadow-sm md:table-row md:mb-0 md:p-0 md:border-x-0 md:border-t-0 md:border-b md:rounded-none md:shadow-none md:bg-transparent transition-colors hover:bg-[hsl(var(--muted))]/50 ${selectedRows.has(row._id) ? 'bg-[hsl(var(--primary))]/5' : ''} ${customRowClass} cursor-pointer group`}
                     onClick={(e) => {
                       // 1. Prevent action if user is currently selecting text
                       const selection = window.getSelection();
@@ -388,7 +393,8 @@ export function DataTable<T extends { _id: string }>({
                   >
                     {/* Checkbox cell */}
                     {canBulkDelete && (
-                      <td className="sticky left-0 z-30 p-3 bg-[hsl(var(--card))] border-r border-[hsl(var(--border))]/50 group-hover:bg-[hsl(var(--muted))]/50 transition-colors">
+                      <td className="flex justify-between items-center py-2 md:table-cell md:p-3 md:sticky md:left-0 z-30 md:bg-[hsl(var(--card))] md:border-r border-[hsl(var(--border))]/50 group-hover:bg-[hsl(var(--muted))]/50 transition-colors border-b border-[hsl(var(--border))]/20 md:border-b-0">
+                        <span className="md:hidden font-bold text-xs uppercase text-[hsl(var(--muted-foreground))]">Select</span>
                         <input
                           type="checkbox"
                           checked={selectedRows.has(row._id)}
@@ -400,28 +406,50 @@ export function DataTable<T extends { _id: string }>({
                     {visibleColumns.map((col, colIndex) => {
                       const isFirstDataCol = colIndex === 0 && !canBulkDelete;
                       const isLastDataCol = colIndex === visibleColumns.length - 1 && !renderActions;
+                      
+                      // Safely serialize text value for tooltip title
+                      let titleContent = '';
+                      try {
+                        const val = getCellValue(row, col.key);
+                        if (typeof val === 'string' || typeof val === 'number') {
+                          titleContent = String(val);
+                        } else if (val && typeof val === 'object') {
+                          // Avoid Object [object]
+                          titleContent = '';
+                        }
+                      } catch (e) {
+                         // ignore
+                      }
+                      
                       return (
                         <td
                           key={String(col.key)}
                           className={[
-                            `p-3 text-[12px] font-medium`,
+                            `flex justify-between items-center py-2 md:table-cell md:p-3 text-[12px] font-medium truncate overflow-hidden whitespace-nowrap w-full md:w-auto min-w-0`,
                             col.className || '',
                             isFirstDataCol
-                              ? 'sticky left-0 z-30 bg-[hsl(var(--card))] border-r border-[hsl(var(--border))]/50 group-hover:bg-[hsl(var(--muted))]/50 transition-colors'
+                              ? 'md:sticky md:left-0 z-30 md:bg-[hsl(var(--card))] md:border-r border-[hsl(var(--border))]/50 group-hover:bg-[hsl(var(--muted))]/50 transition-colors'
                               : '',
                             isLastDataCol
-                              ? 'sticky right-0 z-30 bg-[hsl(var(--card))] border-l border-[hsl(var(--border))]/50 group-hover:bg-[hsl(var(--muted))]/50 transition-colors'
+                              ? 'md:sticky md:right-0 z-30 md:bg-[hsl(var(--card))] md:border-l border-[hsl(var(--border))]/50 group-hover:bg-[hsl(var(--muted))]/50 transition-colors'
                               : '',
+                            'border-b border-[hsl(var(--border))]/20 md:border-b-0 last:border-b-0'
                           ].join(' ')}
+                          title={titleContent}
                         >
-                          {col.render
-                            ? col.render(row, meta)
-                            : <span className="text-[hsl(var(--foreground))]">{String(getCellValue(row, col.key) ?? '-')}</span>}
+                          <span className="md:hidden font-bold text-xs uppercase text-[hsl(var(--muted-foreground))] mr-4 flex-shrink-0">
+                            {col.header}
+                          </span>
+                          <div className="truncate overflow-hidden whitespace-nowrap flex-1 text-right md:text-left">
+                            {col.render
+                              ? col.render(row, meta)
+                              : <span className="text-[hsl(var(--foreground))]">{String(getCellValue(row, col.key) ?? '-')}</span>}
+                          </div>
                         </td>
                       );
                     })}
                     {renderActions && (
-                      <td className="sticky right-0 z-30 p-3 bg-[hsl(var(--card))] border-l border-[hsl(var(--border))]/50 group-hover:bg-[hsl(var(--muted))]/50 transition-colors">
+                      <td className="flex justify-end items-center py-2 md:table-cell md:p-3 md:sticky md:right-0 z-30 md:bg-[hsl(var(--card))] md:border-l border-[hsl(var(--border))]/50 group-hover:bg-[hsl(var(--muted))]/50 transition-colors pt-4 mt-2 border-t md:border-t-0 md:mt-0 border-[hsl(var(--border))]/30">
                         {renderActions(row)}
                       </td>
                     )}
@@ -457,6 +485,13 @@ export function DataTable<T extends { _id: string }>({
           totalItems={totalPages * itemsPerPage}
           itemsPerPage={itemsPerPage}
           onPageChange={handlePageChange}
+        />
+      ) : data.length > 0 ? (
+        <Pagination
+          currentPage={clientPagination.pageIndex + 1}
+          totalItems={data.length}
+          itemsPerPage={itemsPerPage}
+          onPageChange={(p) => setClientPagination(prev => ({ ...prev, pageIndex: p - 1 }))}
         />
       ) : null}
 

@@ -7,8 +7,20 @@ const invoiceItemSchema = new Schema(
         quantity:    { type: Number, required: true, min: 1 },
         unitPrice:   { type: Number, required: true, min: 0 },
         inventoryItemId: { type: Schema.Types.ObjectId, ref: 'InventoryFinance' },
+        priceListId:     { type: Schema.Types.ObjectId, ref: 'PriceList' },
     },
     { _id: false },
+);
+
+const paymentSchema = new Schema(
+    {
+        amount: { type: Number, required: true, min: 0 },
+        date:   { type: Date, default: Date.now },
+        method: { type: String, required: true },
+        notes:  { type: String, trim: true },
+        recordedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    },
+    { timestamps: true }
 );
 
 const invoiceSchema = new Schema<IInvoiceDocument>(
@@ -20,6 +32,9 @@ const invoiceSchema = new Schema<IInvoiceDocument>(
         subTotal:      { type: Number, default: 0 },
         tax:           { type: Number, default: 0 },
         grandTotal:    { type: Number, default: 0 },
+        paidAmount:    { type: Number, default: 0 },
+        payments:      { type: [paymentSchema], default: [] },
+        isStockDeducted: { type: Boolean, default: false },
         status: {
             type:    String,
             enum:    Object.values(InvoiceStatus),

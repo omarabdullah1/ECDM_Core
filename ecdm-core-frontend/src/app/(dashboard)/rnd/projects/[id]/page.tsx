@@ -345,11 +345,11 @@ export default function ProjectDetailPage({ params }: PageProps) {
             {/* Tabs */}
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
                 <TabsList className="grid w-full max-w-md grid-cols-2">
-                    <TabsTrigger value="board" className="flex items-center gap-2">
+                    <TabsTrigger value="board" className="flex flex-wrap items-center gap-2">
                         <Kanban size={16} />
                         Project Board
                     </TabsTrigger>
-                    <TabsTrigger value="docs" className="flex items-center gap-2">
+                    <TabsTrigger value="docs" className="flex flex-wrap items-center gap-2">
                         <FileText size={16} />
                         Documents
                     </TabsTrigger>

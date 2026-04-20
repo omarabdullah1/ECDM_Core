@@ -397,7 +397,7 @@ export default function CustomerReportPage() {
                 />
               </div>
             </div>
-            <div className="overflow-x-auto">
+            <div className="w-full overflow-x-auto custom-table-scrollbar">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-[hsl(var(--border))]">
@@ -466,7 +466,7 @@ export default function CustomerReportPage() {
                 />
               </div>
             </div>
-            <div className="overflow-x-auto">
+            <div className="w-full overflow-x-auto custom-table-scrollbar">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-[hsl(var(--border))]">
@@ -522,7 +522,7 @@ export default function CustomerReportPage() {
 
         {/* Sales Orders Tab */}
         {activeTab === 'sales' && (
-          <div className="overflow-x-auto">
+          <div className="w-full overflow-x-auto custom-table-scrollbar">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-[hsl(var(--border))]">
@@ -564,7 +564,7 @@ export default function CustomerReportPage() {
 
         {/* Follow-Ups Tab */}
         {activeTab === 'followups' && (
-          <div className="overflow-x-auto">
+          <div className="w-full overflow-x-auto custom-table-scrollbar">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-[hsl(var(--border))]">
@@ -612,7 +612,7 @@ export default function CustomerReportPage() {
 
         {/* Feedbacks Tab */}
         {activeTab === 'feedbacks' && (
-          <div className="overflow-x-auto">
+          <div className="w-full overflow-x-auto custom-table-scrollbar">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-[hsl(var(--border))]">

@@ -179,6 +179,7 @@ export const createColumns = (
   {
     key: 'customerId',
     header: 'Customer ID',
+      className: 'md:w-[1%] md:whitespace-nowrap',
     render: (row) => (
       <span className="font-mono text-xs text-[hsl(var(--muted-foreground))] whitespace-nowrap">
         {row.orderContext?.customerId || row.customer?.customerId || '-'}
@@ -190,6 +191,7 @@ export const createColumns = (
   {
     key: 'name',
     header: 'Name',
+      className: 'md:w-auto md:max-w-[150px] md:truncate',
     render: (row) => (
       <span className="font-medium whitespace-nowrap">
         {row.orderContext?.customerName || row.customer?.name || '-'}
@@ -201,6 +203,7 @@ export const createColumns = (
   {
     key: 'phone',
     header: 'Phone',
+      className: 'hidden xl:table-cell md:w-1/6 md:max-w-[120px] md:truncate',
     render: (row) => (
       <span className="font-mono text-sm whitespace-nowrap">
         {row.orderContext?.customerPhone || row.customer?.phone || '-'}
@@ -212,6 +215,7 @@ export const createColumns = (
   {
     key: 'issue',
     header: 'Issue',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
     render: (row) => {
       const issue = row.customerOrderId?.issue || row.salesDataId?.issue || row.leadId?.issue || '';
       return (
@@ -226,6 +230,7 @@ export const createColumns = (
   {
     key: 'visitSite',
     header: 'Visit Site',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
     render: (row) => (
       <span className="text-sm whitespace-nowrap">
         {formatDate(row.customerOrderId?.scheduledVisitDate)}
@@ -237,6 +242,7 @@ export const createColumns = (
   {
     key: 'engineerName',
     header: 'Engineer Name',
+      className: 'md:w-auto md:max-w-[150px] md:truncate',
     render: (row) => (
       <span className="font-medium whitespace-nowrap">
         {row.orderContext?.engineerName || row.customerOrderId?.engineerName || '-'}
@@ -248,6 +254,7 @@ export const createColumns = (
   {
     key: 'visitDate',
     header: 'Visit Date',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
     render: (row) => (
       <span className="text-sm whitespace-nowrap">
         {formatDate(row.orderContext?.actualVisitDate || row.orderContext?.visitDate || row.customerOrderId?.actualVisitDate)}
@@ -259,6 +266,7 @@ export const createColumns = (
   {
     key: 'deal',
     header: 'Deal',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
     render: (row) => {
       const deal = row.orderContext?.dealStatus || row.customerOrderId?.deal;
       return deal ? <Badge>{deal}</Badge> : <span>-</span>;
@@ -269,6 +277,7 @@ export const createColumns = (
   {
     key: 'startDate',
     header: 'Start Date',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
     render: (row) => (
       <span className="text-sm whitespace-nowrap">
         {formatDate(row.orderContext?.startDate || row.customerOrderId?.startDate)}
@@ -280,6 +289,7 @@ export const createColumns = (
   {
     key: 'endDate',
     header: 'End Date',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
     render: (row) => (
       <span className="text-sm whitespace-nowrap">
         {formatDate(row.orderContext?.endDate || row.customerOrderId?.endDate)}
@@ -291,6 +301,7 @@ export const createColumns = (
   {
     key: 'deviceReturnedDate',
     header: 'Device Returned',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
     render: (row) => (
       <span className="text-sm whitespace-nowrap">
         {formatDate(row.customerOrderId?.deviceReturnedDate)}
@@ -302,6 +313,7 @@ export const createColumns = (
   {
     key: 'punctuality',
     header: 'Punctuality',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
     render: (row) => (
       <span className="text-sm whitespace-nowrap">
         {row.punctuality || '-'}
@@ -313,6 +325,7 @@ export const createColumns = (
   {
     key: 'lateDifference',
     header: 'Late (Days)',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
     render: (row) => (
       <span className="text-sm whitespace-nowrap">
         {calculateLateDays(
@@ -327,6 +340,7 @@ export const createColumns = (
   {
     key: 'reasonForDelay',
     header: 'Reason for Delay',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
     render: (row) => (
       <span className="text-sm max-w-[120px] truncate block" title={row.reasonForDelay}>
         {row.reasonForDelay || '-'}
@@ -338,6 +352,7 @@ export const createColumns = (
   {
     key: 'solvedIssue',
     header: 'Solved Issue?',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
     render: (row) => (
       <span className="text-sm whitespace-nowrap">
         {row.solvedIssue != null && row.solvedIssue !== '' ? row.solvedIssue : '-'}
@@ -349,6 +364,7 @@ export const createColumns = (
   {
     key: 'followUp',
     header: 'Follow Up',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
     render: (row) => {
       if (row.followUp === true) return <span className="text-green-600 font-medium">Yes</span>;
       if (row.followUp === false) return <span className="text-red-600 font-medium">No</span>;
@@ -360,6 +376,7 @@ export const createColumns = (
   {
     key: 'followUpDate',
     header: 'Follow up Date',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
     render: (row) => (
       <span className="text-sm whitespace-nowrap">
         {formatDate(row.followUpDate)}
@@ -371,6 +388,7 @@ export const createColumns = (
   {
     key: 'userEmail',
     header: 'User Email',
+      className: 'md:w-auto md:max-w-[150px] md:truncate',
     render: (row) => (
       <span className="text-sm text-[hsl(var(--muted-foreground))] whitespace-nowrap">
         {row.updatedBy?.email || '-'}
@@ -382,6 +400,7 @@ export const createColumns = (
   {
     key: 'notes',
     header: 'Notes',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
     render: (row) => (
       <span className="text-sm max-w-[120px] truncate block" title={row.notes}>
         {row.notes || '-'}
@@ -393,12 +412,13 @@ export const createColumns = (
   {
     key: 'actions',
     header: 'Actions',
+      className: 'md:w-[1%] md:whitespace-nowrap',
     render: (row) => {
       const status = row.status;
       const id = row._id;
 
       return (
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {status === 'Pending' && (
             <button
               onClick={() => onStatusUpdate(id, 'Contacted')}

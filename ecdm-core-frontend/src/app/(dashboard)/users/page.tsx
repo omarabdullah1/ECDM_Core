@@ -5,6 +5,7 @@ import { Users, Edit2, Trash2, X, AlertCircle, UserPlus, Shield, CheckCircle, XC
 import toast from 'react-hot-toast';
 import { DataTable } from '@/components/ui/DataTable';
 import AddUserDialog from '@/components/users/AddUserDialog';
+import EditUserDialog from '@/components/users/EditUserDialog';
 import { useAuthStore } from '@/features/auth/useAuth';
 
 interface User {
@@ -81,32 +82,6 @@ const StatusBadge = ({ isActive }: { isActive: boolean }) => {
     );
 };
 
-type EditForm = {
-    firstName: string;
-    lastName: string;
-    email: string;
-    password: string;
-    role: string;
-    phone: string;
-    isActive: boolean;
-    targetBudget?: number;
-    targetSales?: number;
-    maxDiscountPercentage?: number;
-};
-
-const blankEdit: EditForm = {
-    firstName: '',
-    lastName: '',
-    email: '',
-    password: '',
-    role: '',
-    phone: '',
-    isActive: true,
-    targetBudget: 0,
-    targetSales: 0,
-    maxDiscountPercentage: 0,
-};
-
 export default function UsersPage() {
     const { user: currentUser } = useAuthStore();
     const [rows, setRows] = useState<User[]>([]);
@@ -122,19 +97,8 @@ export default function UsersPage() {
     // Edit Dialog
     const [editModal, setEditModal] = useState(false);
     const [editing, setEditing] = useState<User | null>(null);
-    const [form, setForm] = useState<EditForm>(blankEdit);
-    const [saving, setSaving] = useState(false);
-    const [error, setError] = useState('');
-
     // Delete Dialog
     const [delId, setDelId] = useState<string | null>(null);
-
-    // Target Dialog
-    const [targetModal, setTargetModal] = useState(false);
-    const [selectedUser, setSelectedUser] = useState<User | null>(null);
-    const [targetAmount, setTargetAmount] = useState('');
-    const [settingTarget, setSettingTarget] = useState(false);
-    const [loadingTarget, setLoadingTarget] = useState(false);
 
     const limit = 10;
     const totalPages = Math.ceil(total / limit);
@@ -162,61 +126,7 @@ export default function UsersPage() {
 
     const openEdit = (user: User) => {
         setEditing(user);
-        setForm({
-            firstName: user.firstName || '',
-            lastName: user.lastName || '',
-            email: user.email || '',
-            password: '', // Don't pre-fill password
-            role: user.role || '',
-            phone: user.phone || '',
-            isActive: user.isActive ?? true,
-            targetBudget: user.targetBudget || 0,
-            targetSales: user.targetSales || 0,
-            maxDiscountPercentage: user.maxDiscountPercentage || 0,
-        });
         setEditModal(true);
-    };
-
-    const closeEdit = () => {
-        setEditModal(false);
-        setEditing(null);
-        setForm(blankEdit);
-        setError('');
-    };
-
-    const handleUpdate = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!editing) return;
-
-        setSaving(true);
-        setError('');
-
-        try {
-            // Only send password if it was changed
-            const payload: Partial<EditForm> = {
-                firstName: form.firstName,
-                lastName: form.lastName,
-                email: form.email,
-                role: form.role,
-                phone: form.phone,
-                isActive: form.isActive,
-                targetBudget: form.targetBudget,
-                targetSales: form.targetSales,
-                maxDiscountPercentage: form.maxDiscountPercentage,
-            };
-            if (form.password) {
-                payload.password = form.password;
-            }
-
-            await api.put(`/auth/users/${editing._id}`, payload);
-            toast.success('User updated successfully');
-            closeEdit();
-            fetchUsers();
-        } catch (err: unknown) {
-            const error = err as { response?: { data?: { message?: string } } };
-            setError(error.response?.data?.message || 'Failed to update user');
-        }
-        setSaving(false);
     };
 
     const handleDelete = async () => {
@@ -233,55 +143,11 @@ export default function UsersPage() {
         }
     };
 
-    const openTargetDialog = async (user: User) => {
-        setSelectedUser(user);
-        setTargetModal(true);
-        setLoadingTarget(true);
-
-        try {
-            const existingTarget = user.role === 'Marketing' || user.role === 'marketing'
-                ? user.targetBudget
-                : user.targetSales;
-            
-            setTargetAmount(existingTarget ? String(existingTarget) : '');
-        } catch (err) {
-            console.error('Failed to load target:', err);
-            setTargetAmount('');
-        } finally {
-            setLoadingTarget(false);
-        }
-    };
-
-    const handleSetTarget = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!selectedUser) return;
-
-        setSettingTarget(true);
-        try {
-            const targetValue = Number(targetAmount);
-            
-            const updateData = selectedUser.role === 'Marketing' || selectedUser.role === 'marketing'
-                ? { targetBudget: targetValue }
-                : { targetSales: targetValue };
-
-            await api.put(`/auth/users/${selectedUser._id}`, updateData);
-
-            toast.success(`Target set for ${selectedUser.firstName} ${selectedUser.lastName}`);
-            setTargetModal(false);
-            setSelectedUser(null);
-            setTargetAmount('');
-            fetchUsers();
-        } catch (err: unknown) {
-            const error = err as { response?: { data?: { message?: string } } };
-            toast.error(error.response?.data?.message || 'Failed to set target');
-        }
-        setSettingTarget(false);
-    };
-
     const columns = [
         {
             key: 'employeeId',
             header: 'Employee ID',
+            className: 'md:w-[1%] md:whitespace-nowrap',
             render: (row: User) => (
                 <span className="font-bold text-blue-600 dark:text-blue-400">
                     {row.employeeId || '-'}
@@ -291,6 +157,7 @@ export default function UsersPage() {
         {
             key: 'fullName',
             header: 'Name',
+            className: 'md:w-auto md:max-w-[150px] md:truncate',
             render: (row: User) => (
                 <div className="flex flex-col">
                     <span className="font-medium">{row.fullName}</span>
@@ -301,21 +168,25 @@ export default function UsersPage() {
         {
             key: 'role',
             header: 'Role',
+            className: 'md:w-1/6 md:max-w-[120px] md:truncate',
             render: (row: User) => <RoleBadge role={row.role} />,
         },
         {
             key: 'isActive',
             header: 'Status',
+            className: 'md:w-1/6 md:max-w-[120px] md:truncate',
             render: (row: User) => <StatusBadge isActive={row.isActive} />,
         },
         {
             key: 'createdAt',
             header: 'Created',
+            className: 'md:w-1/6 md:max-w-[120px] md:truncate',
             render: (row: User) => new Date(row.createdAt).toLocaleDateString(),
         },
         {
             key: 'maxDiscountPercentage',
             header: 'Discount Limit',
+            className: 'md:w-1/6 md:max-w-[120px] md:truncate',
             render: (row: User) => row.role === 'Sales' ? (
                 <span className="font-medium text-orange-600 dark:text-orange-400">
                     {row.maxDiscountPercentage || 0}%
@@ -389,19 +260,10 @@ export default function UsersPage() {
                 itemsPerPage={limit}
                 onPageChange={setPage}
                 selectionDisabled={!isSuperAdmin}
+                onRowClick={isSuperAdmin ? openEdit : undefined}
                 renderActions={(row: User) => (
                     isSuperAdmin && row._id !== currentUser?._id ? (
-                        <div className="flex items-center gap-2">
-                            {/* Set Target button - only for Sales and Marketing roles */}
-                            {(row.role === 'Sales' || row.role === 'Marketing') && (
-                                <button
-                                    onClick={() => openTargetDialog(row)}
-                                    className="p-1.5 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/30 text-green-600 dark:text-green-400 transition-colors"
-                                    title={row.role === 'Marketing' ? "Set marketing budget" : "Set sales target"}
-                                >
-                                    <Target className="h-4 w-4" />
-                                </button>
-                            )}
+                        <div className="flex flex-wrap items-center gap-2">
                             <button
                                 onClick={() => openEdit(row)}
                                 className="p-1.5 rounded-lg hover:bg-[hsl(var(--muted))] transition-colors"
@@ -432,147 +294,17 @@ export default function UsersPage() {
             />
 
             {/* Edit User Dialog */}
-            {
-                editModal && editing && (
-                    <div className="fixed inset-0 z-[100] flex overflow-y-auto bg-black/60 backdrop-blur-sm p-4 sm:p-6 animate-in fade-in transition-all">
-                        <div className="w-full max-w-lg rounded-2xl border border-[hsl(var(--border))] modern-glass-card m-auto relative premium-shadow animate-in-slide p-6 shadow-2xl">
-                            {/* Header */}
-                            <div className="flex items-center justify-between mb-6">
-                                <div className="flex items-center gap-3">
-                                    <Edit2 className="h-6 w-6 text-[hsl(var(--primary))]" />
-                                    <h2 className="text-lg font-bold">Edit Employee</h2>
-                                </div>
-                                <button onClick={closeEdit} className="hover:opacity-70">
-                                    <X className="h-5 w-5" />
-                                </button>
-                            </div>
-
-                            {/* Form */}
-                            <form onSubmit={handleUpdate} className="space-y-4">
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-sm font-medium mb-1.5">First Name</label>
-                                        <input
-                                            type="text"
-                                            value={form.firstName}
-                                            onChange={(e) => setForm(prev => ({ ...prev, firstName: e.target.value }))}
-                                            className={inputClass}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium mb-1.5">Last Name</label>
-                                        <input
-                                            type="text"
-                                            value={form.lastName}
-                                            onChange={(e) => setForm(prev => ({ ...prev, lastName: e.target.value }))}
-                                            className={inputClass}
-                                        />
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium mb-1.5">Email</label>
-                                    <input
-                                        type="email"
-                                        value={form.email}
-                                        onChange={(e) => setForm(prev => ({ ...prev, email: e.target.value }))}
-                                        className={inputClass}
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium mb-1.5">
-                                        Password <span className="text-[hsl(var(--muted-foreground))]">(leave blank to keep current)</span>
-                                    </label>
-                                    <input
-                                        type="password"
-                                        value={form.password}
-                                        onChange={(e) => setForm(prev => ({ ...prev, password: e.target.value }))}
-                                        placeholder="Enter new password"
-                                        className={inputClass}
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium mb-1.5">Role</label>
-                                    <select
-                                        value={form.role}
-                                        onChange={(e) => setForm(prev => ({ ...prev, role: e.target.value }))}
-                                        className={inputClass}
-                                    >
-                                        {ROLES.map(role => (
-                                            <option key={role.value} value={role.value}>
-                                                {role.label}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-
-                                <div>
-                                        <label className="block text-sm font-medium mb-1.5">Phone</label>
-                                        <input
-                                            type="text"
-                                            value={form.phone}
-                                            onChange={(e) => setForm(prev => ({ ...prev, phone: e.target.value }))}
-                                            className={inputClass}
-                                        />
-                                    </div>
-
-                                {form.role === 'Sales' && (
-                                    <div>
-                                        <label className="block text-sm font-medium mb-1.5">Max Discount %</label>
-                                        <input
-                                            type="number"
-                                            value={form.maxDiscountPercentage}
-                                            onChange={(e) => setForm(prev => ({ ...prev, maxDiscountPercentage: Number(e.target.value) }))}
-                                            min="0"
-                                            max="100"
-                                            className={inputClass}
-                                        />
-                                    </div>
-                                )}
-
-                                <div className="flex items-center gap-3">
-                                    <input
-                                        type="checkbox"
-                                        id="isActive"
-                                        checked={form.isActive}
-                                        onChange={(e) => setForm(prev => ({ ...prev, isActive: e.target.checked }))}
-                                        className="h-4 w-4 rounded border-[hsl(var(--border))]"
-                                    />
-                                    <label htmlFor="isActive" className="text-sm font-medium">
-                                        Active Account
-                                    </label>
-                                </div>
-
-                                {error && (
-                                    <div className="flex items-start gap-2 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 rounded-xl p-3">
-                                        <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
-                                        <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
-                                    </div>
-                                )}
-
-                                <div className="flex gap-3 pt-2">
-                                    <button
-                                        type="submit"
-                                        disabled={saving}
-                                        className="flex-1 flex-1 rounded-md bg-[hsl(var(--primary))] py-2 text-sm font-medium text-[hsl(var(--primary-foreground))] shadow-sm hover:opacity-90 transition-all focus-visible:outline-none disabled:opacity-50 hover:opacity-90 transition-opacity"
-                                    >
-                                        {saving ? 'Saving...' : 'Update Employee'}
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={closeEdit}
-                                        className="px-6 flex-1 rounded-md border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] py-2 text-sm font-medium shadow-sm transition-all hover:bg-[hsl(var(--accent))] focus-visible:outline-none font-semibold hover:bg-[hsl(var(--muted))]/50 transition-colors"
-                                    >
-                                        Cancel
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                )
-            }
+            {editing && (
+                <EditUserDialog
+                    isOpen={editModal}
+                    user={editing}
+                    onClose={() => {
+                        setEditModal(false);
+                        setEditing(null);
+                    }}
+                    onSuccess={fetchUsers}
+                />
+            )}
 
             {/* Delete Confirmation Dialog */}
             {
@@ -602,76 +334,6 @@ export default function UsersPage() {
                                     </button>
                                 </div>
                             </div>
-                        </div>
-                    </div>
-                )
-            }
-
-            {/* Set Target Dialog */}
-            {
-                targetModal && selectedUser && (
-                    <div className="fixed inset-0 z-[100] flex overflow-y-auto bg-black/60 backdrop-blur-sm p-4 sm:p-6 animate-in fade-in transition-all">
-                        <div className="w-full max-w-md rounded-2xl border border-[hsl(var(--border))] modern-glass-card m-auto relative premium-shadow animate-in-slide p-6 shadow-2xl">
-                            <div className="flex items-center justify-between mb-6">
-                                <div className="flex items-center gap-3">
-                                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
-                                        <Target className="h-5 w-5 text-green-600 dark:text-green-400" />
-                                    </div>
-                                    <div>
-                                        <h3 className="text-lg font-bold">
-                                            {selectedUser.role === 'Marketing' ? 'Set Monthly Marketing Budget' : 'Set Monthly Sales Target'}
-                                        </h3>
-                                        <p className="text-xs text-[hsl(var(--muted-foreground))]">
-                                            {selectedUser.firstName} {selectedUser.lastName}
-                                        </p>
-                                    </div>
-                                </div>
-                                <button 
-                                    onClick={() => setTargetModal(false)} 
-                                    className="hover:opacity-70"
-                                >
-                                    <X className="h-5 w-5" />
-                                </button>
-                            </div>
-
-                            <form onSubmit={handleSetTarget} className="space-y-4">
-                                <div>
-                                    <label className="block text-sm font-medium mb-2">
-                                        {selectedUser.role === 'Marketing' ? 'Target Budget ($/EGP)' : 'Target Amount ($/EGP)'}
-                                    </label>
-                                    <input
-                                        type="number"
-                                        min="0"
-                                        step="0.01"
-                                        value={targetAmount}
-                                        onChange={(e) => setTargetAmount(e.target.value)}
-                                        placeholder={loadingTarget ? "Loading existing target..." : "Enter monthly target amount..."}
-                                        disabled={loadingTarget}
-                                        className={inputClass}
-                                        required
-                                    />
-                                    <p className="text-xs text-[hsl(var(--muted-foreground))] mt-1.5">
-                                        This will set the target for {new Date().toLocaleString('default', { month: 'long' })} {new Date().getFullYear()}
-                                    </p>
-                                </div>
-
-                                <div className="flex gap-3 pt-2">
-                                    <button
-                                        type="button"
-                                        onClick={() => setTargetModal(false)}
-                                        className="flex-1 flex-1 rounded-md border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] py-2 text-sm font-medium shadow-sm transition-all hover:bg-[hsl(var(--accent))] focus-visible:outline-none font-semibold hover:bg-[hsl(var(--muted))]/50 transition-colors"
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        type="submit"
-                                        disabled={settingTarget}
-                                        className="flex-1 rounded-xl bg-green-600 py-2.5 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-50 transition-colors"
-                                    >
-                                        {settingTarget ? 'Setting...' : 'Set Target'}
-                                    </button>
-                                </div>
-                            </form>
                         </div>
                     </div>
                 )

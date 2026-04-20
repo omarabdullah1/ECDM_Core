@@ -12,7 +12,7 @@ export enum AttendanceStatus {
 
 // ── Base interface (plain data shape) ───────────────────────────────
 export interface IAttendance {
-    employeeId: Types.ObjectId;          // Reference to Employee
+    employeeId: string;          // Business ID from Excel (e.g., EMP-1001)
     userId?: Types.ObjectId;     // Linked internal user if exists
     name: string;
     department: string;

@@ -83,3 +83,22 @@ export const generateFromOrder = async (req: Request, res: Response, next: NextF
         next(err);
     }
 };
+
+export const addPayment = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const userId = (req as any).user?.userId;
+        const role = (req as any).user?.role;
+        const { id } = req.params;
+
+        // AUTH CHECK: only Admin, SuperAdmin, and Manager can record payments
+        const authorizedRoles = ['Admin', 'SuperAdmin', 'Manager', 'Finance'];
+        if (!authorizedRoles.includes(role)) {
+            throw new AppError('Only authorized personnel can record payments', 403);
+        }
+
+        const data = await invoiceService.addPaymentToInvoice(id, req.body, userId);
+        sendSuccess(res, data, 'Payment recorded successfully');
+    } catch (err) {
+        next(err);
+    }
+};

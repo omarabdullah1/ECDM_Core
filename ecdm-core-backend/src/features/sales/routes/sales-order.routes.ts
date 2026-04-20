@@ -2,7 +2,7 @@ import { Router } from 'express';
 import * as ctrl from '../controllers/sales-order.controller';
 import { authenticate, authorise, isAdmin } from '../../../middlewares/auth.middleware';
 import { validate } from '../../../middlewares/validate.middleware';
-import { createSalesOrderSchema, updateSalesOrderSchema } from '../validation/sales-order.validation';
+import { createSalesOrderSchema } from '../validation/sales-order.validation';
 import { UserRole } from '../../auth/auth.types';
 import { uploadQuotation, handleQuotationUpload } from '../../../middlewares/upload.middleware';
 

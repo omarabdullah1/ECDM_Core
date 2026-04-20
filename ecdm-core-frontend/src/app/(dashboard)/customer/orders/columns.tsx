@@ -1,6 +1,7 @@
 'use client';
 
 import { Edit, Trash2 } from 'lucide-react';
+import { Column } from '@/components/ui/DataTable';
 
 /**
  * Customer Orders Data Table - Column Definitions
@@ -132,11 +133,7 @@ const Badge = ({ children, variant = 'outline' }: { children: React.ReactNode; v
 // Column Definitions (19 Columns + Actions)
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const columns: Array<{
-  key: string;
-  header: string;
-  render: (row: CustomerOrder, meta?: any) => React.ReactNode;
-}> = [
+export const columns: Column<CustomerOrder>[] = [
 
     // ═════════════════════════════════════════════════════════════════════════
     // SECTION 1: Customer Info (SSOT from Customer Population) - 6 Columns
@@ -148,6 +145,7 @@ export const columns: Array<{
     {
       key: 'customerId',
       header: 'Customer ID',
+      className: 'md:w-[1%] md:whitespace-nowrap',
       render: (row: CustomerOrder) => {
         const custId = row.customerId?.customerId;
         return (
@@ -164,6 +162,7 @@ export const columns: Array<{
     {
       key: 'customer.name',
       header: 'Name',
+      className: 'md:w-auto md:max-w-[150px] md:truncate',
       render: (row: CustomerOrder) => {
         const name = row.customerId?.name;
         return (
@@ -180,6 +179,7 @@ export const columns: Array<{
     {
       key: 'customer.phone',
       header: 'Phone',
+      className: 'hidden xl:table-cell md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: CustomerOrder) => {
         const phone = row.customerId?.phone;
         return (
@@ -196,6 +196,7 @@ export const columns: Array<{
     {
       key: 'customer.address',
       header: 'Address',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: CustomerOrder) => {
         const address = row.customerId?.address;
         return (
@@ -212,6 +213,7 @@ export const columns: Array<{
     {
       key: 'customer.region',
       header: 'Region',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: CustomerOrder) => {
         const region = row.customerId?.region;
         return (
@@ -228,6 +230,7 @@ export const columns: Array<{
     {
       key: 'customer.sector',
       header: 'Sector',
+      className: 'hidden xl:table-cell md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: CustomerOrder) => {
         const sector = row.customerId?.sector;
         return (
@@ -248,6 +251,7 @@ export const columns: Array<{
     {
       key: 'typeOfOrder',
       header: 'Type Of Order',
+      className: 'hidden xl:table-cell md:w-[1%] md:whitespace-nowrap',
       render: (row: CustomerOrder) => {
         return (
           <span className="text-sm">
@@ -263,6 +267,7 @@ export const columns: Array<{
     {
       key: 'issue',
       header: 'Issue',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: CustomerOrder) => {
         const issue = row.issue || '-';
         return (
@@ -279,6 +284,7 @@ export const columns: Array<{
     {
       key: 'scheduledVisitDate',
       header: 'Visit Site Date',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: CustomerOrder) => {
         return <span className="text-sm font-mono">{formatDateTime(row.scheduledVisitDate)}</span>;
       },
@@ -294,6 +300,7 @@ export const columns: Array<{
     {
       key: 'engineerName',
       header: 'Engineer Name',
+      className: 'md:w-auto md:max-w-[150px] md:truncate',
       render: (row: CustomerOrder) => {
         return (
           <span className="text-sm">
@@ -309,6 +316,7 @@ export const columns: Array<{
     {
       key: 'actualVisitDate',
       header: 'Visit Date (Actual)',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: CustomerOrder) => {
         return <span className="text-sm font-mono">{formatDateTime(row.actualVisitDate)}</span>;
       },
@@ -320,6 +328,7 @@ export const columns: Array<{
     {
       key: 'devicePickupType',
       header: 'Device Pickup Type',
+      className: 'md:w-[1%] md:whitespace-nowrap',
       render: (row: CustomerOrder) => {
         return (
           <span className="text-sm">
@@ -335,6 +344,7 @@ export const columns: Array<{
     {
       key: 'deal',
       header: 'Deal',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: CustomerOrder) => {
         return <Badge variant="outline">{row.deal || 'Pending'}</Badge>;
       },
@@ -346,6 +356,7 @@ export const columns: Array<{
     {
       key: 'cost',
       header: 'Cost',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: CustomerOrder) => {
         const quotationTotal = row.salesOrderId?.quotation?.grandTotal;
         const displayCost = quotationTotal !== undefined ? quotationTotal : row.cost;
@@ -364,6 +375,7 @@ export const columns: Array<{
     {
       key: 'startDate',
       header: 'Start Date',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: CustomerOrder) => {
         return <span className="text-sm font-mono">{formatDate(row.startDate)}</span>;
       },
@@ -375,6 +387,7 @@ export const columns: Array<{
     {
       key: 'endDate',
       header: 'End Date',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: CustomerOrder) => {
         return <span className="text-sm font-mono">{formatDate(row.endDate)}</span>;
       },
@@ -386,6 +399,7 @@ export const columns: Array<{
     {
       key: 'deviceReturnedDate',
       header: 'Device Returned Date',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: CustomerOrder) => {
         return <span className="text-sm font-mono">{formatDate(row.deviceReturnedDate)}</span>;
       },
@@ -401,6 +415,7 @@ export const columns: Array<{
     {
       key: 'updatedBy',
       header: 'User ID (Updater)',
+      className: 'md:w-[1%] md:whitespace-nowrap',
       render: (row: CustomerOrder) => {
         const updater = row.updatedBy?.name || row.updatedBy?.email || '-';
         return (
@@ -417,6 +432,7 @@ export const columns: Array<{
     {
       key: 'notes',
       header: 'Notes',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: CustomerOrder) => {
         const notes = row.notes || '-';
         return (
@@ -437,6 +453,7 @@ export const columns: Array<{
     {
       key: 'actions',
       header: 'Actions',
+      className: 'md:w-[1%] md:whitespace-nowrap',
       render: (row: CustomerOrder, meta?: any) => {
         return (
           <div className="flex items-center gap-1">

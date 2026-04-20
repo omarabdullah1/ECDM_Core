@@ -226,6 +226,7 @@ export default function AuditLogsPage() {
         {
             key: 'createdAt',
             header: 'Timestamp',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
             render: (row: AuditLog) => (
                 <span className="text-sm font-mono">{formatDate(row.createdAt)}</span>
             ),
@@ -233,6 +234,7 @@ export default function AuditLogsPage() {
         {
             key: 'userId',
             header: 'User',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
             render: (row: AuditLog) => (
                 <div className="flex flex-col">
                     <span className="font-medium text-sm">
@@ -247,6 +249,7 @@ export default function AuditLogsPage() {
         {
             key: 'role',
             header: 'Role',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
             render: (row: AuditLog) => (
                 <span className="inline-flex items-center rounded-md bg-[hsl(var(--muted))] px-2 py-1 text-xs font-medium text-[hsl(var(--foreground))]">
                     {row.userId?.role || '-'}
@@ -256,16 +259,19 @@ export default function AuditLogsPage() {
         {
             key: 'action',
             header: 'Action',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
             render: (row: AuditLog) => <ActionBadge action={row.action} />,
         },
         {
             key: 'moduleName',
             header: 'Module',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
             render: (row: AuditLog) => <ModuleBadge moduleName={row.moduleName} />,
         },
         {
             key: 'recordId',
             header: 'Record ID',
+      className: 'md:w-[1%] md:whitespace-nowrap',
             render: (row: AuditLog) => (
                 <span className="text-xs font-mono text-[hsl(var(--muted-foreground))]" title={row.recordId}>
                     {row.recordId ? `${row.recordId.substring(0, 8)}...` : '-'}
@@ -275,6 +281,7 @@ export default function AuditLogsPage() {
         {
             key: 'ipAddress',
             header: 'IP',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
             render: (row: AuditLog) => (
                 <span className="text-xs font-mono text-[hsl(var(--muted-foreground))]">
                     {row.ipAddress || '-'}
@@ -351,7 +358,7 @@ export default function AuditLogsPage() {
             </div>
 
             {/* Data Table */}
-            <div className="overflow-x-auto">
+            <div className="w-full">
                 {loading ? (
                     <div className="flex items-center justify-center py-20">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -390,3 +397,4 @@ export default function AuditLogsPage() {
         </div>
     );
 }
+

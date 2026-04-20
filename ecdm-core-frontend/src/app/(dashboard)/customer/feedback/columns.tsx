@@ -1,6 +1,7 @@
 'use client';
 
 import { Edit, Trash2 } from 'lucide-react';
+import { Column } from '@/components/ui/DataTable';
 
 /**
  * Feedback Data Table - Column Definitions
@@ -38,6 +39,7 @@ interface Customer {
   phone: string;
   address?: string;
   region?: string;
+  sector?: string;
 }
 
 interface CustomerOrder {
@@ -114,11 +116,7 @@ const Badge = ({ children, variant = 'outline' }: { children: React.ReactNode; v
 // Column Definitions (13 Columns + Actions)
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const columns: Array<{
-  key: string;
-  header: string;
-  render: (row: Feedback, meta?: any) => React.ReactNode;
-}> = [
+export const columns: Column<Feedback>[] = [
     
     // ═════════════════════════════════════════════════════════════════════════
     // SECTION 1: Customer Info (SSOT from Customer Population) - 3 Columns
@@ -130,6 +128,7 @@ export const columns: Array<{
     {
       key: 'customerId',
       header: 'Customer ID',
+      className: 'md:w-[1%] md:whitespace-nowrap',
       render: (row: Feedback) => {
         const custId = row.orderContext?.customerId || row.customerId?.customerId;
         return (
@@ -146,6 +145,7 @@ export const columns: Array<{
     {
       key: 'customer.name',
       header: 'Name',
+      className: 'md:w-auto md:max-w-[150px] md:truncate',
       render: (row: Feedback) => {
         const name = row.orderContext?.customerName || row.customerId?.name;
         return (
@@ -162,6 +162,7 @@ export const columns: Array<{
     {
       key: 'customer.phone',
       header: 'Phone',
+      className: 'hidden xl:table-cell md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: Feedback) => {
         const phone = row.orderContext?.customerPhone || row.customerId?.phone;
         return (
@@ -182,6 +183,7 @@ export const columns: Array<{
     {
       key: 'engineerName',
       header: 'Engineer Name',
+      className: 'md:w-auto md:max-w-[150px] md:truncate',
       render: (row: Feedback) => {
         const engineerName = row.orderContext?.engineerName || row.customerOrderId?.engineerName;
         return (
@@ -198,6 +200,7 @@ export const columns: Array<{
     {
       key: 'visitDate',
       header: 'Visit Engineer Date',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: Feedback) => {
         const visitDate = row.orderContext?.actualVisitDate || row.orderContext?.visitDate || row.customerOrderId?.actualVisitDate;
         return (
@@ -214,6 +217,7 @@ export const columns: Array<{
     {
       key: 'startDate',
       header: 'Start Date',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: Feedback) => {
         const startDate = row.orderContext?.startDate || row.customerOrderId?.startDate;
         return (
@@ -230,6 +234,7 @@ export const columns: Array<{
     {
       key: 'endDate',
       header: 'End Date',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: Feedback) => {
         const endDate = row.orderContext?.endDate || row.customerOrderId?.endDate;
         return (
@@ -250,6 +255,7 @@ export const columns: Array<{
     {
       key: 'solvedIssue',
       header: 'Solved Issue',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: Feedback) => {
         const solved = row.solvedIssue;
         if (!solved || solved === '') return <span>-</span>;
@@ -265,6 +271,7 @@ export const columns: Array<{
     {
       key: 'ratingOperation',
       header: 'Rating Operation (Tech/Eng)',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: Feedback) => {
         const rating = row.ratingOperation;
         return (
@@ -281,6 +288,7 @@ export const columns: Array<{
     {
       key: 'followUp',
       header: 'Follow Up',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: Feedback) => {
         const followUp = row.followUp;
         if (!followUp || followUp === '') return <span>-</span>;
@@ -296,6 +304,7 @@ export const columns: Array<{
     {
       key: 'ratingCustomerService',
       header: 'Rating Customer Service',
+      className: 'md:w-1/6 md:max-w-[120px) md:truncate',
       render: (row: Feedback) => {
         const rating = row.ratingCustomerService;
         return (
@@ -316,6 +325,7 @@ export const columns: Array<{
     {
       key: 'userEmail',
       header: 'User Email',
+      className: 'md:w-auto md:max-w-[150px] md:truncate',
       render: (row: Feedback) => {
         const email = row.updatedBy?.email;
         return (
@@ -332,6 +342,7 @@ export const columns: Array<{
     {
       key: 'notes',
       header: 'Notes',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: Feedback) => {
         const notes = row.notes;
         return (
@@ -355,9 +366,10 @@ export const columns: Array<{
     {
       key: 'actions',
       header: 'Actions',
+      className: 'md:w-[1%] md:whitespace-nowrap',
       render: (row: Feedback, meta?: any) => {
         return (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {/* Edit Button */}
             {meta?.onEdit && (
               <button

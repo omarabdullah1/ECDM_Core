@@ -20,7 +20,7 @@ import {
 
 const workOrderPartSchema = new Schema(
     {
-        inventoryItemId: { type: Schema.Types.ObjectId, ref: 'InventoryFinance', required: true },
+        priceListId: { type: Schema.Types.ObjectId, ref: 'PriceList', required: true },
         quantity: { type: Number, required: true, min: 1 },
         unitCost: { type: Number, required: true, min: 0 },
     },
@@ -79,6 +79,13 @@ const workOrderSchema = new Schema<IWorkOrderDocument>(
         actualCost: { type: Number, default: 0 },  // Calculated actual cost of parts used
 
         // Tracking
+        invoiceId:     { type: String, default: '' },
+        invoiceStatus: { type: String, default: 'Pending' },
+
+        // Commission Tracking (Match Order Finance)
+        engineerId:           { type: Schema.Types.ObjectId, ref: 'User' },
+        commissionPercentage: { type: Number, default: 0 },
+
         updatedBy: { type: Schema.Types.ObjectId, ref: 'User' },
     },
     {

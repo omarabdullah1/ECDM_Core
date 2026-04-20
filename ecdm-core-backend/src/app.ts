@@ -43,6 +43,7 @@ import inventoryPlusRoutes from './features/operations/routes/inventory-plus.rou
 import priceListRoutes from './features/operations/routes/price-list.routes';
 import reportRoutes from './features/operations/routes/report.routes';
 import workOrderRoutes from './features/operations/routes/work-order.routes';
+import purchaseOrderRoutes from './features/operations/routes/purchase-order.routes';
 
 // ── Dashboard ───────────────────────────────────────────────────────
 import dashboardRoutes from './features/dashboard/dashboard.routes';
@@ -161,6 +162,7 @@ app.use('/api/operations/work-orders',    workOrderRoutes);
 app.use('/api/operations/inventory-plus',  inventoryPlusRoutes);
 app.use('/api/operations/report',          reportRoutes);
 app.use('/api/operations/price-list',      priceListRoutes);
+app.use('/api/operations/purchase-orders', purchaseOrderRoutes);
 
 // Dashboard
 app.use('/api/dashboard', dashboardRoutes);

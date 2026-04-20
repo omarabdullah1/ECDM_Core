@@ -71,6 +71,7 @@ interface EditFeedbackDialogProps {
   };
   onClose: () => void;
   onSuccess: () => void;
+  readOnly?: boolean;
 }
 
 const iCls = 'flex h-9 w-full rounded-md border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] px-3 py-1 text-sm shadow-sm transition-all placeholder:text-[hsl(var(--muted-foreground))] focus-visible:outline-none focus-visible:border-[hsl(var(--primary))]/50 focus-visible:ring-[3px] focus-visible:ring-[hsl(var(--primary))]/10';
@@ -91,8 +92,11 @@ const formatDate = (dateValue: string | Date | null | undefined): string => {
   }
 };
 
-export default function EditFeedbackDialog({ feedback, isNew, prefillData, onClose, onSuccess }: EditFeedbackDialogProps) {
+export default function EditFeedbackDialog({ feedback, isNew, prefillData, onClose, onSuccess, readOnly = false }: EditFeedbackDialogProps) {
+  const [internalPreviewMode, setInternalPreviewMode] = useState(!isNew);
   const [saving, setSaving] = useState(false);
+
+  const effectivelyReadOnly = readOnly || (internalPreviewMode && !isNew);
 
   const orderContext = (feedback?.orderContext || prefillData?.orderContext) as OrderContext || {};
   const customer = (feedback?.customerId as Customer) || (prefillData?.customerId ? { _id: prefillData.customerId } : undefined);
@@ -159,11 +163,12 @@ export default function EditFeedbackDialog({ feedback, isNew, prefillData, onClo
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>
-            {isNew ? 'Create Feedback' : 'Edit Feedback'}
+            {isNew ? 'Create Feedback' : (effectivelyReadOnly ? 'Feedback Preview' : 'Edit Feedback')}
           </DialogTitle>
           {!isNew && feedback && (
             <p className="text-[11px] text-[hsl(var(--muted-foreground))] font-medium mt-0.5">
               Feedback ID: {feedback._id}
+              {effectivelyReadOnly && <span className="ml-2 text-amber-600 font-semibold">• Preview Mode</span>}
             </p>
           )}
         </DialogHeader>
@@ -217,7 +222,7 @@ export default function EditFeedbackDialog({ feedback, isNew, prefillData, onClo
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className={labelCls}>Solved Issue?</label>
-                  <select {...form.register('solvedIssue')} className={iCls}>
+                  <select {...form.register('solvedIssue')} className={iCls} disabled={effectivelyReadOnly}>
                     <option value="">Not Set</option>
                     <option value="Yes">Yes</option>
                     <option value="No">No</option>
@@ -226,7 +231,7 @@ export default function EditFeedbackDialog({ feedback, isNew, prefillData, onClo
 
                 <div className="space-y-1">
                   <label className={labelCls}>Follow Up Required?</label>
-                  <select {...form.register('followUp')} className={iCls}>
+                  <select {...form.register('followUp')} className={iCls} disabled={effectivelyReadOnly}>
                     <option value="">Not Set</option>
                     <option value="Yes">Yes</option>
                     <option value="No">No</option>
@@ -235,12 +240,12 @@ export default function EditFeedbackDialog({ feedback, isNew, prefillData, onClo
 
                 <div className="space-y-1">
                   <label className={labelCls}>Operation Rating</label>
-                  <input type="text" placeholder="e.g., 5/5, Excellent" {...form.register('ratingOperation')} className={iCls} />
+                  <input type="text" placeholder="e.g., 5/5, Excellent" {...form.register('ratingOperation')} className={iCls} disabled={effectivelyReadOnly} />
                 </div>
 
                 <div className="space-y-1">
                   <label className={labelCls}>Support Rating</label>
-                  <input type="text" placeholder="e.g., 5/5, Excellent" {...form.register('ratingCustomerService')} className={iCls} />
+                  <input type="text" placeholder="e.g., 5/5, Excellent" {...form.register('ratingCustomerService')} className={iCls} disabled={effectivelyReadOnly} />
                 </div>
               </div>
 
@@ -250,20 +255,44 @@ export default function EditFeedbackDialog({ feedback, isNew, prefillData, onClo
                   placeholder="Additional feedback details..."
                   {...form.register('notes')}
                   rows={4}
-                  className="flex min-h-[100px] w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm shadow-sm transition-all focus-visible:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                  disabled={effectivelyReadOnly}
+                  className="flex min-h-[100px] w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm shadow-sm transition-all focus-visible:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary disabled:opacity-50"
                 />
               </div>
             </div>
           </form>
         </DialogBody>
 
-        <DialogFooter>
-          <Button type="button" variant="ghost" onClick={onClose} disabled={saving}>
-            Cancel
-          </Button>
-          <Button type="submit" form="edit-feedback-form" disabled={saving}>
-            {saving ? 'Saving...' : isNew ? 'Create Feedback' : 'Save Changes'}
-          </Button>
+        <DialogFooter className="bg-white/50 backdrop-blur-md border-t border-[hsl(var(--border))]/30">
+          <div className="flex gap-3 w-full">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={onClose}
+              disabled={saving}
+              className="flex-1 px-6 rounded-xl hover:bg-gray-100 transition-colors"
+            >
+              {effectivelyReadOnly ? 'Close' : 'Cancel'}
+            </Button>
+            {effectivelyReadOnly ? (
+              <Button
+                type="button"
+                onClick={() => setInternalPreviewMode(false)}
+                className="flex-1 px-8 rounded-xl bg-[hsl(var(--primary))] hover:opacity-90 transition-all shadow-md active:scale-95"
+              >
+                Edit Feedback
+              </Button>
+            ) : (
+              <Button
+                type="submit"
+                form="edit-feedback-form"
+                disabled={saving}
+                className="flex-1 px-8 rounded-xl bg-[hsl(var(--primary))] hover:opacity-90 transition-all shadow-md active:scale-95"
+              >
+                {saving ? 'Saving...' : isNew ? 'Create Feedback' : 'Save Changes'}
+              </Button>
+            )}
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>

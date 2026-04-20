@@ -376,7 +376,7 @@ export default function ProfilePage() {
                                 className="flex items-center gap-2 rounded-xl bg-[hsl(var(--primary))] px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[hsl(var(--primary))]/90 disabled:opacity-60 disabled:cursor-not-allowed transition-all"
                             >
                                 {saving ? (
-                                    <span className="flex items-center gap-2">
+                                    <span className="flex flex-wrap items-center gap-2">
                                         <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />
                                         Saving…
                                     </span>

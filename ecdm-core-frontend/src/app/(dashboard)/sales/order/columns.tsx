@@ -591,6 +591,7 @@ export const createSalesOrderColumns = (config?: SalesOrderColumnsConfig) => {
     {
       key: 'customer.customerId',
       header: 'Customer ID',
+      className: 'md:w-[1%] md:whitespace-nowrap',
       render: (row: SalesOrder) => {
         const customer = row.customer || row.customerId;
         const custId = customer?.customerId;
@@ -608,6 +609,7 @@ export const createSalesOrderColumns = (config?: SalesOrderColumnsConfig) => {
     {
       key: 'customer.name',
       header: 'Name',
+      className: 'md:w-auto md:max-w-[150px] md:truncate',
       render: (row: SalesOrder) => {
         const customer = row.customer || row.customerId;
         const name = customer?.name;
@@ -625,6 +627,7 @@ export const createSalesOrderColumns = (config?: SalesOrderColumnsConfig) => {
     {
       key: 'customer.phone',
       header: 'Phone',
+      className: 'hidden xl:table-cell md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: SalesOrder) => {
         const customer = row.customer || row.customerId;
         const phone = customer?.phone;
@@ -642,6 +645,7 @@ export const createSalesOrderColumns = (config?: SalesOrderColumnsConfig) => {
     {
       key: 'customer.address',
       header: 'Address',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: SalesOrder) => {
         const customer = row.customer || row.customerId;
         const address = customer?.address;
@@ -659,6 +663,7 @@ export const createSalesOrderColumns = (config?: SalesOrderColumnsConfig) => {
     {
       key: 'customer.sector',
       header: 'Sector',
+      className: 'hidden xl:table-cell md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: SalesOrder) => {
         const customer = row.customer || row.customerId;
         const sector = customer?.sector;
@@ -676,6 +681,7 @@ export const createSalesOrderColumns = (config?: SalesOrderColumnsConfig) => {
     {
       key: 'initialIssue',
       header: 'Initial Issue',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: SalesOrder) => {
         const issue = row.salesLead?.issue || row.salesData?.issue || '-';
         return (
@@ -692,6 +698,7 @@ export const createSalesOrderColumns = (config?: SalesOrderColumnsConfig) => {
     {
       key: 'orderIssue',
       header: 'Order Issue',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: SalesOrder) => {
         const issue = row.issue || '-';
         return (
@@ -708,6 +715,7 @@ export const createSalesOrderColumns = (config?: SalesOrderColumnsConfig) => {
     {
       key: 'createdAt',
       header: 'Date',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: SalesOrder) => (
         <span className="text-xs font-mono whitespace-nowrap">
           {formatDateTime(row.createdAt)}
@@ -721,6 +729,7 @@ export const createSalesOrderColumns = (config?: SalesOrderColumnsConfig) => {
     {
       key: 'typeOfOrder',
       header: 'Type of Order',
+      className: 'hidden xl:table-cell md:w-[1%] md:whitespace-nowrap',
       render: (row: SalesOrder) => {
         const type = row.typeOfOrder || row.salesLead?.typeOfOrder || row.salesData?.typeOfOrder || '-';
         return (
@@ -737,6 +746,7 @@ export const createSalesOrderColumns = (config?: SalesOrderColumnsConfig) => {
     {
       key: 'totalAmount',
       header: 'Total Amount',
+      className: 'md:w-[1%] md:whitespace-nowrap',
       render: (row: SalesOrder) => {
         const amount = row.quotation?.grandTotal || row.totalAmount || row.price || 0;
         return (
@@ -753,6 +763,7 @@ export const createSalesOrderColumns = (config?: SalesOrderColumnsConfig) => {
     {
       key: 'salesPlatform',
       header: 'Platform',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: SalesOrder) => {
         const platform = row.salesPlatform || row.salesLead?.salesPlatform || row.salesData?.salesPlatform || '-';
         return (
@@ -769,6 +780,7 @@ export const createSalesOrderColumns = (config?: SalesOrderColumnsConfig) => {
     {
       key: 'siteInspectionDate',
       header: 'Site Inspections',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: SalesOrder) => (
         <span className="text-xs font-mono whitespace-nowrap">
           {formatDateTime(row.siteInspectionDate)}
@@ -782,6 +794,7 @@ export const createSalesOrderColumns = (config?: SalesOrderColumnsConfig) => {
     {
       key: 'isTechnicalInspectionRequired',
       header: 'Technical Inspection',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: SalesOrder) => (
         <span className={`text-xs font-medium px-2 py-1 rounded-full ${row.isTechnicalInspectionRequired
           ? 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400'
@@ -798,12 +811,13 @@ export const createSalesOrderColumns = (config?: SalesOrderColumnsConfig) => {
     {
       key: 'quotationFileUrl',
       header: 'Quotation',
+      className: 'hidden xl:table-cell md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: SalesOrder) => {
         const { isOwner, isAdmin } = getOwnershipStatus(row);
         const canModify = isOwner || isAdmin;
         
         return (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <div className={!canModify ? 'opacity-30 pointer-events-none' : ''}>
               <QuotationCell
                 fileUrl={row.quotationFileUrl}
@@ -844,6 +858,7 @@ export const createSalesOrderColumns = (config?: SalesOrderColumnsConfig) => {
     {
       key: 'quotationActions',
       header: 'Quotation PDF',
+      className: 'md:w-[1%] md:whitespace-nowrap',
       render: (row: SalesOrder) => {
         const { isOwner, isAdmin } = getOwnershipStatus(row);
         const canModify = isOwner || isAdmin;
@@ -851,7 +866,7 @@ export const createSalesOrderColumns = (config?: SalesOrderColumnsConfig) => {
 
         if (hasQuotation) {
           return (
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <button
                 onClick={() => {
                   try {
@@ -931,6 +946,7 @@ export const createSalesOrderColumns = (config?: SalesOrderColumnsConfig) => {
     {
       key: 'followUpFirst',
       header: 'Follow Up First',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: SalesOrder) => (
         <span className="text-xs font-mono whitespace-nowrap">
           {formatDateTime(row.followUpFirst)}
@@ -944,6 +960,7 @@ export const createSalesOrderColumns = (config?: SalesOrderColumnsConfig) => {
     {
       key: 'quotationStatusFirstFollowUp',
       header: 'Quotation Status (1st)',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: SalesOrder) => (
         <span className="text-xs px-2 py-1 rounded-full bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))]">
           {row.quotationStatusFirstFollowUp || '-'}
@@ -957,6 +974,7 @@ export const createSalesOrderColumns = (config?: SalesOrderColumnsConfig) => {
     {
       key: 'reasonOfQuotation',
       header: 'Reason of Quotation',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: SalesOrder) => (
         <span className="text-sm max-w-[200px] truncate block" title={row.reasonOfQuotation}>
           {row.reasonOfQuotation || '-'}
@@ -970,6 +988,7 @@ export const createSalesOrderColumns = (config?: SalesOrderColumnsConfig) => {
     {
       key: 'followUpSecond',
       header: 'Follow Up Second',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: SalesOrder) => (
         <span className="text-xs font-mono whitespace-nowrap">
           {formatDateTime(row.followUpSecond)}
@@ -983,6 +1002,7 @@ export const createSalesOrderColumns = (config?: SalesOrderColumnsConfig) => {
     {
       key: 'statusSecondFollowUp',
       header: 'Status (2nd Follow Up)',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: SalesOrder) => (
         <span className="text-xs px-2 py-1 rounded-full bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))]">
           {row.statusSecondFollowUp || '-'}
@@ -996,6 +1016,7 @@ export const createSalesOrderColumns = (config?: SalesOrderColumnsConfig) => {
     {
       key: 'followUpThird',
       header: 'Follow Up Third',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: SalesOrder) => (
         <span className="text-xs font-mono whitespace-nowrap">
           {formatDateTime(row.followUpThird)}
@@ -1009,6 +1030,7 @@ export const createSalesOrderColumns = (config?: SalesOrderColumnsConfig) => {
     {
       key: 'finalStatusThirdFollowUp',
       header: 'Final Status (3rd)',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: SalesOrder) => {
         const status = row.finalStatusThirdFollowUp;
         const getStatusColor = () => {
@@ -1036,6 +1058,7 @@ export const createSalesOrderColumns = (config?: SalesOrderColumnsConfig) => {
     {
       key: 'salesPersonId',
       header: 'Sales Person ID',
+      className: 'md:w-[1%] md:whitespace-nowrap md:w-auto md:max-w-[150px] md:truncate',
       render: (row: SalesOrder) => {
         const salesPersonId = row.salesPersonId
           || (typeof row.salesLead?.salesPerson === 'object' ? row.salesLead?.salesPerson?._id : row.salesLead?.salesPerson)
@@ -1056,6 +1079,7 @@ export const createSalesOrderColumns = (config?: SalesOrderColumnsConfig) => {
     {
       key: 'salesPersonEmail',
       header: 'Sales Person',
+      className: 'md:w-auto md:max-w-[150px] md:truncate',
       render: (row: SalesOrder) => {
         const salesPersonFromData = row.salesData?.salesPerson as any;
         const salesPersonDirect = row.salesPerson as any;
@@ -1076,6 +1100,7 @@ export const createSalesOrderColumns = (config?: SalesOrderColumnsConfig) => {
     {
       key: 'notes',
       header: 'Notes',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: SalesOrder) => (
         <div className="max-w-[120px] truncate text-gray-500 text-sm" title={row.notes}>
           {row.notes || '-'}

@@ -62,10 +62,16 @@ export default function ExpensesPage() {
   const itemsPerPage = 10;
 
   // Modal state
-  const [addModalOpen, setAddModalOpen] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedExpense, setSelectedExpense] = useState<any>(null);
+  const [internalPreviewMode, setInternalPreviewMode] = useState(true);
   const [formData, setFormData] = useState<ExpenseFormData>(initialFormData);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const effectivelyReadOnly = modalOpen && selectedExpense && internalPreviewMode;
+  const isEditing = modalOpen && selectedExpense && !internalPreviewMode;
+  const isAdding = modalOpen && !selectedExpense;
 
   // Inventory items for dropdown
   const [inventoryItems, setInventoryItems] = useState<any[]>([]);
@@ -73,7 +79,7 @@ export default function ExpensesPage() {
 
   // Fetch inventory items when modal opens
   useEffect(() => {
-    if (addModalOpen) {
+    if (modalOpen) {
       setLoadingInventory(true);
       api.get('/finance/inventory?limit=1000')
         .then(res => {
@@ -83,7 +89,7 @@ export default function ExpensesPage() {
         .catch(() => setInventoryItems([]))
         .finally(() => setLoadingInventory(false));
     }
-  }, [addModalOpen]);
+  }, [modalOpen]);
 
   const fetchExpensesData = async (isSync = false) => {
     if (isSync) {
@@ -110,7 +116,8 @@ export default function ExpensesPage() {
         amount: formatMoney(item.amount),
         paymentMethod: String(item.paymentMethod || '-'),
         paidBy: String(item.paidBy || '-'),
-        notes: String(item.notes || '-')
+        notes: String(item.notes || '-'),
+        _raw: item // Keep raw item for editing
       }));
 
       setExpensesData(rows);
@@ -153,6 +160,33 @@ export default function ExpensesPage() {
     );
   });
 
+  const openAdd = () => {
+    setSelectedExpense(null);
+    setFormData(initialFormData);
+    setInternalPreviewMode(false);
+    setModalOpen(true);
+  };
+
+  const openPreview = (expense: ExpenseRow) => {
+    // If it's a real item with _raw, use it
+    const raw = (expense as any)._raw || expense;
+    setSelectedExpense(raw);
+    setFormData({
+      sparePartsId: raw.sparePartsId || '',
+      expenseId: raw.expenseId || '',
+      expenseDate: raw.expenseDate ? new Date(raw.expenseDate).toISOString().split('T')[0] : '',
+      expenseType: raw.expenseType || '',
+      invoicesUrl: raw.invoicesUrl || '',
+      description: raw.description || '',
+      amount: raw.amount || '',
+      paymentMethod: raw.paymentMethod || 'Cash',
+      paidBy: raw.paidBy || '',
+      notes: raw.notes || ''
+    });
+    setInternalPreviewMode(true);
+    setModalOpen(true);
+  };
+
   const indexOfLastRow = currentPage * itemsPerPage;
   const indexOfFirstRow = indexOfLastRow - itemsPerPage;
   const currentRows = filteredData.slice(indexOfFirstRow, indexOfLastRow);
@@ -176,21 +210,38 @@ export default function ExpensesPage() {
     setSubmitError(null);
 
     try {
-      await api.post('/finance/expenses', {
-        sparePartsId: formData.sparePartsId || undefined,
-        expenseId: formData.expenseId,
-        expenseDate: formData.expenseDate ? new Date(formData.expenseDate).toISOString() : undefined,
-        expenseType: formData.expenseType,
-        invoicesUrl: formData.invoicesUrl || undefined,
-        description: formData.description,
-        amount: Number(formData.amount) || 0,
-        paymentMethod: formData.paymentMethod,
-        paidBy: formData.paidBy,
-        notes: formData.notes || undefined
-      });
+      if (isAdding) {
+        await api.post('/finance/expenses', {
+          sparePartsId: formData.sparePartsId || undefined,
+          expenseId: formData.expenseId,
+          expenseDate: formData.expenseDate ? new Date(formData.expenseDate).toISOString() : undefined,
+          expenseType: formData.expenseType,
+          invoicesUrl: formData.invoicesUrl || undefined,
+          description: formData.description,
+          amount: Number(formData.amount) || 0,
+          paymentMethod: formData.paymentMethod,
+          paidBy: formData.paidBy,
+          notes: formData.notes || undefined
+        });
+        toast.success('Expense added successfully');
+      } else {
+        await api.put(`/finance/expenses/${selectedExpense._id}`, {
+          sparePartsId: formData.sparePartsId || undefined,
+          expenseId: formData.expenseId,
+          expenseDate: formData.expenseDate ? new Date(formData.expenseDate).toISOString() : undefined,
+          expenseType: formData.expenseType,
+          invoicesUrl: formData.invoicesUrl || undefined,
+          description: formData.description,
+          amount: Number(formData.amount) || 0,
+          paymentMethod: formData.paymentMethod,
+          paidBy: formData.paidBy,
+          notes: formData.notes || undefined
+        });
+        toast.success('Expense updated successfully');
+      }
 
       setFormData(initialFormData);
-      setAddModalOpen(false);
+      setModalOpen(false);
       await fetchExpensesData(true); // Refresh data
     } catch (error: any) {
       console.error('Failed to add expense:', error);
@@ -221,7 +272,7 @@ export default function ExpensesPage() {
               {syncing ? 'Syncing...' : 'Sync Report'}
             </button>
             <button
-              onClick={() => setAddModalOpen(true)}
+              onClick={openAdd}
               className="flex items-center gap-2 rounded-md bg-[hsl(var(--primary))] px-4 py-2 text-sm font-medium text-[hsl(var(--primary-foreground))] shadow-sm hover:opacity-90 border-0 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[hsl(var(--primary))]/10 transition-all"
             >
               <UserPlus className="h-4 w-4" />
@@ -262,8 +313,8 @@ export default function ExpensesPage() {
           <TableSkeleton rows={10} columns={10} height="h-12" />
         ) : (
           <>
-            <div className="overflow-x-auto min-w-[1500px] rounded-md border">
-              <table className="w-full caption-bottom text-sm">
+            <div className="w-full overflow-x-auto custom-table-scrollbar">
+        <table className="w-full caption-bottom text-sm">
                 <thead className="bg-muted/50">
                   <tr>
                     <th className="border-b px-3 py-2 text-left font-medium">Spare Parts ID</th>
@@ -287,7 +338,7 @@ export default function ExpensesPage() {
                     </tr>
                   ) : (
                     currentRows.map((row) => (
-                      <tr key={row.expenseId} className="hover:bg-muted/50">
+                      <tr key={row.expenseId} className="hover:bg-muted/50 cursor-pointer" onClick={() => openPreview(row)}>
                         <td className="border-b px-3 py-2">{row.sparePartsId}</td>
                         <td className="border-b px-3 py-2 font-medium">{row.expenseId}</td>
                         <td className="border-b px-3 py-2">{row.expenseDate}</td>
@@ -295,15 +346,15 @@ export default function ExpensesPage() {
                         <td className="border-b px-3 py-2 text-center">
                           <FileSpreadsheet className="h-4 w-4 text-muted-foreground" />
                         </td>
-                        <td className="border-b px-3 py-2">{row.description}</td>
-                        <td className="border-b px-3 py-2">{row.amount}</td>
-                        <td className="border-b px-3 py-2">
+                        <td className="border-b px-3 py-2 text-sm truncate max-w-[150px]" title={row.description}>{row.description}</td>
+                        <td className="border-b px-3 py-2 font-bold">{row.amount}</td>
+                        <td className="border-b px-3 py-2 text-center">
                           <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${getPaymentMethodBadgeClass(row.paymentMethod)}`}>
                             {row.paymentMethod}
                           </span>
                         </td>
                         <td className="border-b px-3 py-2">{row.paidBy}</td>
-                        <td className="border-b px-3 py-2 text-muted-foreground">{row.notes}</td>
+                        <td className="border-b px-3 py-2 text-muted-foreground text-sm truncate max-w-[100px]" title={row.notes}>{row.notes}</td>
                       </tr>
                     ))
                   )}
@@ -321,19 +372,24 @@ export default function ExpensesPage() {
         )}
       </div>
 
-      {addModalOpen && (
-        /* Add Expense Modal */
+      {modalOpen && (
+        /* Expense Modal */
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm transition-opacity">
         <div className="rounded-2xl border border-[hsl(var(--border))] modern-glass-card premium-shadow animate-in-slide m-auto relative shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
 
           {/* Modal Header */}
           <div className="px-6 py-4 border-b border-[hsl(var(--border))] flex justify-between items-center bg-[hsl(var(--muted))]/50">
             <div>
-              <h3 className="text-xl font-bold text-[hsl(var(--foreground))]">Add New Expense</h3>
-              <p className="text-sm text-[hsl(var(--muted-foreground))] mt-1">Fill out the details below to record a general expense.</p>
+              <h3 className="text-xl font-bold text-[hsl(var(--foreground))]">
+                {isAdding ? 'Add New Expense' : (effectivelyReadOnly ? 'Expense Preview' : 'Edit Expense')}
+              </h3>
+              <p className="text-sm text-[hsl(var(--muted-foreground))] mt-1">
+                {isAdding ? 'Fill out the details below to record a general expense.' : (effectivelyReadOnly ? 'Viewing expense details in read-only mode.' : 'Modify the details of this expense below.')}
+                {effectivelyReadOnly && <span className="ml-2 text-amber-600 font-semibold">• Preview Mode</span>}
+              </p>
             </div>
             <button
-              onClick={() => setAddModalOpen(false)}
+              onClick={() => setModalOpen(false)}
               className="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] transition-colors p-2 rounded-full hover:bg-[hsl(var(--muted))]"
             >
               <X className="h-4 w-4" />
@@ -362,6 +418,7 @@ export default function ExpensesPage() {
                     className={iCls}
                     placeholder="e.g. EXP-001"
                     required
+                    disabled={effectivelyReadOnly || !isAdding} // ID usually shouldn't change
                   />
                 </div>
                 <div>
@@ -372,6 +429,7 @@ export default function ExpensesPage() {
                     onChange={(e) => setFormData({ ...formData, expenseDate: e.target.value })}
                     className={iCls}
                     required
+                    disabled={effectivelyReadOnly}
                   />
                 </div>
               </div>
@@ -387,6 +445,7 @@ export default function ExpensesPage() {
                     className={iCls}
                     placeholder="e.g. Utility, Maintenance"
                     required
+                    disabled={effectivelyReadOnly}
                   />
                 </div>
                 <div>
@@ -400,6 +459,7 @@ export default function ExpensesPage() {
                     className={iCls}
                     placeholder="0.00"
                     required
+                    disabled={effectivelyReadOnly}
                   />
                 </div>
               </div>
@@ -413,6 +473,7 @@ export default function ExpensesPage() {
                     onChange={(e) => setFormData({ ...formData, paymentMethod: e.target.value })}
                     className={iCls}
                     required
+                    disabled={effectivelyReadOnly}
                   >
                     <option value="Cash">Cash</option>
                     <option value="Bank Transfer">Bank Transfer</option>
@@ -429,6 +490,7 @@ export default function ExpensesPage() {
                     className={iCls}
                     placeholder="Name of payer"
                     required
+                    disabled={effectivelyReadOnly}
                   />
                 </div>
               </div>
@@ -443,6 +505,7 @@ export default function ExpensesPage() {
                   className={iCls}
                   placeholder="Brief description of the expense"
                   required
+                  disabled={effectivelyReadOnly}
                 />
               </div>
 
@@ -454,6 +517,7 @@ export default function ExpensesPage() {
                     value={formData.sparePartsId}
                     onChange={(e) => setFormData({ ...formData, sparePartsId: e.target.value })}
                     className={iCls}
+                    disabled={effectivelyReadOnly}
                   >
                     <option value="">Select Spare Part (Optional)</option>
                     {loadingInventory ? (
@@ -462,7 +526,7 @@ export default function ExpensesPage() {
                       <option disabled>No items available</option>
                     ) : (
                       inventoryItems
-                        .filter(item => item.stockNumber > 0) // Only show items in stock
+                        .filter(item => item.stockNumber > 0 || (selectedExpense && item._id === formData.sparePartsId)) // Show if in stock OR already selected
                         .map(item => (
                           <option key={item._id} value={item._id}>
                             {item.itemName} (Stock: {item.stockNumber})
@@ -479,6 +543,7 @@ export default function ExpensesPage() {
                     onChange={(e) => setFormData({ ...formData, invoicesUrl: e.target.value })}
                     className={iCls}
                     placeholder="Link to invoice..."
+                    disabled={effectivelyReadOnly}
                   />
                 </div>
               </div>
@@ -492,6 +557,7 @@ export default function ExpensesPage() {
                   className={iCls}
                   placeholder="Any additional notes..."
                   rows={3}
+                  disabled={effectivelyReadOnly}
                 />
               </div>
 
@@ -499,28 +565,38 @@ export default function ExpensesPage() {
               <div className="pt-4 mt-2 border-t border-[hsl(var(--border))] flex justify-end gap-3">
                 <button
                   type="button"
-                  onClick={() => setAddModalOpen(false)}
+                  onClick={() => setModalOpen(false)}
                   className="px-5 py-2.5 text-sm font-medium rounded-xl border border-[hsl(var(--border))] hover:bg-[hsl(var(--muted))] transition-colors"
                 >
-                  Cancel
+                  {effectivelyReadOnly ? 'Close' : 'Cancel'}
                 </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="px-5 py-2.5 text-sm font-medium rounded-xl bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] hover:opacity-90 transition-opacity flex items-center gap-2 disabled:opacity-50"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Adding...
-                    </>
-                  ) : (
-                    <>
-                      <UserPlus className="h-4 w-4" />
-                      Add Expense
-                    </>
-                  )}
-                </button>
+                {effectivelyReadOnly ? (
+                  <button
+                    type="button"
+                    onClick={() => setInternalPreviewMode(false)}
+                    className="px-8 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition-all shadow-lg flex items-center gap-2"
+                  >
+                    Edit Expense
+                  </button>
+                ) : (
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="px-5 py-2.5 text-sm font-medium rounded-xl bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] hover:opacity-90 transition-opacity flex items-center gap-2 disabled:opacity-50"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        {isAdding ? 'Adding...' : 'Saving...'}
+                      </>
+                    ) : (
+                      <>
+                        <UserPlus className="h-4 w-4" />
+                        {isAdding ? 'Add Expense' : 'Save Changes'}
+                      </>
+                    )}
+                  </button>
+                )}
               </div>
 
             </form>

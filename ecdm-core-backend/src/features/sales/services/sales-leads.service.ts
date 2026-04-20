@@ -86,7 +86,7 @@ export const update = async (id: string, data: UpdateSalesLeadInput, userInfo?: 
     // ══════════════════════════════════════════════════════════════════════════
     // DUAL UPDATE: Separate Customer fields from SalesLead fields
     // ══════════════════════════════════════════════════════════════════════════
-    const { address, region, ...salesLeadData } = data;
+    const { address, region, status: _s, salesPerson: _sp } = data;
 
     // Update Customer (SSOT) if address or region provided
     if (address !== undefined || region !== undefined) {
@@ -101,20 +101,20 @@ export const update = async (id: string, data: UpdateSalesLeadInput, userInfo?: 
 
     // Store the previous order value to detect changes
     const previousOrder = doc.order;
-    const newOrder = salesLeadData.order;
+    const newOrder = data.order;
 
     // Auto-tracking: if sales rep is adding issue, order, or reason
-    const isAddingWorkData = salesLeadData.issue || salesLeadData.order || salesLeadData.reason;
+    const isAddingWorkData = data.issue || data.order || data.reason;
 
     // Set salesPerson from user info if adding work data and not already assigned
     // This tracks who first started working on this lead
     if (isAddingWorkData && userInfo && !doc.salesPerson) {
-        salesLeadData.salesPerson = userInfo.email || userInfo.name || '';
+        (data as any).salesPerson = userInfo.email || userInfo.name || '';
     }
 
     // Auto-set status from New to Contacted if updating work fields
     if (doc.status === SalesLeadStatus.New && isAddingWorkData) {
-        salesLeadData.status = SalesLeadStatus.Contacted;
+        (data as any).status = SalesLeadStatus.Contacted;
     }
 
     // ═══════════════════════════════════════════════════════════════════
@@ -217,10 +217,8 @@ export const update = async (id: string, data: UpdateSalesLeadInput, userInfo?: 
     // ══════════════════════════════════════════════════════════════════════════
 
     // Apply SalesLead-specific updates
-    doc.order = newOrder;
-    doc.status = status as SalesLeadStatus;
-    doc.salesPerson = salesPerson;
-    Object.assign(doc, salesLeadData);
+    Object.assign(doc, data);
+    if (newOrder !== undefined) doc.order = newOrder;
     
     await doc.save();
 

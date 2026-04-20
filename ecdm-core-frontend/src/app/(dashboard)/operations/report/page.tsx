@@ -77,24 +77,31 @@ export default function ReportPage() {
         }
       />
 
-      <div className="overflow-x-auto">
+      <div className="w-full">
         <DataTable
           data={reports}
           columns={[
-            { key: "employee.firstName", header: "Employee", render: (row: any) => <span className="font-medium">{row.employee ? `${row.employee.firstName} ${row.employee.lastName}` : '—'}</span> },
+            { key: "employee.firstName", header: "Employee",
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate', render: (row: any) => <span className="font-medium">{row.employee ? `${row.employee.firstName} ${row.employee.lastName}` : '—'}</span> },
             {
-              key: "evaluationPeriod", header: "Period", render: (row: any) => (
+              key: "evaluationPeriod", header: "Period",
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate', render: (row: any) => (
                 <span className="text-[hsl(var(--muted-foreground))]">
                   <div>{new Date(row.evaluationPeriod.startDate).toLocaleDateString()}</div>
                   <div className="text-xs">→ {new Date(row.evaluationPeriod.endDate).toLocaleDateString()}</div>
                 </span>
               )
             },
-            { key: "punctualityScore", header: "Punctuality", render: (row: any) => <span><ScoreBadge val={row.punctualityScore} /></span> },
-            { key: "completionRate", header: "Completion", render: (row: any) => <span><ScoreBadge val={row.completionRate} /></span> },
-            { key: "taskQualityScore", header: "Quality", render: (row: any) => <span className="text-sm font-medium">{row.taskQualityScore} / 5</span> },
-            { key: "overallPerformanceScore", header: "Overall Score", render: (row: any) => <span className="min-w-[160px] block"><ScoreBar val={row.overallPerformanceScore} /></span> },
-            { key: "notes", header: "Notes", render: (row: any) => <span className="max-w-[200px] truncate block" title={row.notes}>{row.notes || '—'}</span> },
+            { key: "punctualityScore", header: "Punctuality",
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate', render: (row: any) => <span><ScoreBadge val={row.punctualityScore} /></span> },
+            { key: "completionRate", header: "Completion",
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate', render: (row: any) => <span><ScoreBadge val={row.completionRate} /></span> },
+            { key: "taskQualityScore", header: "Quality",
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate', render: (row: any) => <span className="text-sm font-medium">{row.taskQualityScore} / 5</span> },
+            { key: "overallPerformanceScore", header: "Overall Score",
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate', render: (row: any) => <span className="min-w-[160px] block"><ScoreBar val={row.overallPerformanceScore} /></span> },
+            { key: "notes", header: "Notes",
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate', render: (row: any) => <span className="max-w-[200px] truncate block" title={row.notes}>{row.notes || '—'}</span> },
           ]}
           loading={loading}
           emptyMessage="No reports found."
@@ -149,3 +156,4 @@ export default function ReportPage() {
     </div>
   );
 }
+

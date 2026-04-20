@@ -2,16 +2,27 @@ import { Document, Types } from 'mongoose';
 
 export enum InvoiceStatus {
     Pending = 'Pending',
+    PartiallyPaid = 'Partially Paid',
     Paid = 'Paid',
     Unpaid = 'Unpaid',
     Canceled = 'Canceled',
+}
+
+export interface IPayment {
+    _id?: Types.ObjectId;
+    amount: number;
+    date: Date;
+    method: string;
+    notes?: string;
+    recordedBy: Types.ObjectId;
 }
 
 export interface IInvoiceItem {
     description: string;
     quantity: number;
     unitPrice: number;
-    inventoryItemId?: Types.ObjectId; // Link to inventory for stock deduction
+    inventoryItemId?: Types.ObjectId; // Link to inventory for stock deduction (Legacy)
+    priceListId?: Types.ObjectId;     // Link to PriceList for stock deduction
 }
 
 export interface IInvoice {
@@ -22,6 +33,9 @@ export interface IInvoice {
     subTotal: number;
     tax: number;
     grandTotal: number;
+    paidAmount: number;
+    payments: IPayment[];
+    isStockDeducted: boolean;
     status: InvoiceStatus;
     approvedBy?: Types.ObjectId;
     approvalDate?: Date;

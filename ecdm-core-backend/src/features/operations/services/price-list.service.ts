@@ -81,3 +81,44 @@ export const bulkDelete = async (ids: string[]): Promise<{ deletedCount: number 
     const result = await PriceList.deleteMany({ _id: { $in: ids } });
     return { deletedCount: result.deletedCount };
 };
+
+// ─── STOCK MANAGEMENT HELPERS ────────────────────────────────────────────────
+
+/**
+ * Checks if requested quantities are available in stock.
+ * Throws AppError if any item is insufficient.
+ */
+export const checkAvailability = async (items: { priceListId: string, quantity: number, itemName?: string }[]) => {
+    for (const item of items) {
+        const product = await PriceList.findById(item.priceListId);
+        if (!product) {
+            throw new AppError(`Item ${item.itemName || item.priceListId} not found in price list`, 404);
+        }
+        if (product.availableQuantity < item.quantity) {
+            throw new AppError(
+                `Insufficient stock for ${product.itemName}. Available: ${product.availableQuantity}, Requested: ${item.quantity}`,
+                400
+            );
+        }
+    }
+};
+
+/**
+ * Adjusts stock quantity (increment or decrement).
+ * Use negative quantity for decrementing.
+ */
+export const adjustStock = async (itemId: string, quantityChange: number) => {
+    const item = await PriceList.findById(itemId);
+    if (!item) throw new AppError('Price list item not found', 404);
+
+    const newQuantity = item.availableQuantity + quantityChange;
+    
+    // Safety check for negative stock (though checkAvailability should prevent this for orders)
+    if (newQuantity < 0) {
+        throw new AppError(`Cannot reduce stock below zero for ${item.itemName}`, 400);
+    }
+
+    item.availableQuantity = newQuantity;
+    await item.save();
+    return item;
+};

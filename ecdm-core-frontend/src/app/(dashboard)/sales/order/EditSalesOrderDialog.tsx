@@ -165,6 +165,11 @@ export default function EditSalesOrderDialog({ order, onClose, onSuccess, readOn
   const [saving, setSaving] = useState(false);
   const [showApprovalAlert, setShowApprovalAlert] = useState(false);
   const [showQuotationBuilder, setShowQuotationBuilder] = useState(false);
+  const [internalPreviewMode, setInternalPreviewMode] = useState(true);
+
+  useEffect(() => {
+    setInternalPreviewMode(true);
+  }, [order]);
 
   // ═══════════════════════════════════════════════════════════════════
   // OWNERSHIP & READ-ONLY LOGIC
@@ -186,6 +191,7 @@ export default function EditSalesOrderDialog({ order, onClose, onSuccess, readOn
   
   // Read-only mode: explicit readOnly prop OR (NOT admin AND NOT owner)
   const isReadOnly = readOnly || (!isAdmin && !isOwner);
+  const effectivelyReadOnly = isReadOnly || internalPreviewMode;
   
   console.log('🔒 EditSalesOrderDialog - Access Control:', {
     currentUserId,
@@ -295,8 +301,8 @@ export default function EditSalesOrderDialog({ order, onClose, onSuccess, readOn
   // ─── Submit Handler (API Request with FormData) ────────────────────────────
   const onSubmit = async (values: FormSchema) => {
     // Additional safety check: prevent submission in read-only mode
-    if (isReadOnly) {
-      toast.error('You cannot modify this order.');
+    if (effectivelyReadOnly) {
+      toast.error('You cannot modify this order in preview mode.');
       return;
     }
     
@@ -538,7 +544,7 @@ export default function EditSalesOrderDialog({ order, onClose, onSuccess, readOn
               </DialogTitle>
               <p className="text-xs text-[hsl(var(--muted-foreground))] mt-0.5">
                 Order ID: {order.salesOrderId || order._id}
-                {isReadOnly && <span className="ml-2 text-amber-600 font-semibold">• Preview Mode</span>}
+                {effectivelyReadOnly && <span className="ml-2 text-amber-600 font-semibold">• Preview Mode</span>}
               </p>
           </DialogHeader>
 
@@ -722,7 +728,7 @@ export default function EditSalesOrderDialog({ order, onClose, onSuccess, readOn
                     <input
                       type="datetime-local"
                       {...form.register('siteInspectionDate')}
-                      disabled={isReadOnly}
+                      disabled={effectivelyReadOnly}
                       className={iCls}
                     />
                   </div>
@@ -735,7 +741,7 @@ export default function EditSalesOrderDialog({ order, onClose, onSuccess, readOn
                         <input
                           type="checkbox"
                           {...form.register('isTechnicalInspectionRequired')}
-                          disabled={isReadOnly}
+                          disabled={effectivelyReadOnly}
                           className="w-4 h-4 rounded border-[hsl(var(--border))] text-[hsl(var(--primary))] focus:ring-2 focus:ring-[hsl(var(--primary))]/20"
                         />
                         <span className="text-sm font-medium">Yes, technical inspection is required</span>
@@ -751,7 +757,7 @@ export default function EditSalesOrderDialog({ order, onClose, onSuccess, readOn
                         <input
                           type="datetime-local"
                           {...form.register('technicalInspectionDate')}
-                          disabled={isReadOnly}
+                          disabled={effectivelyReadOnly}
                           className={iCls}
                         />
                       </div>
@@ -761,7 +767,7 @@ export default function EditSalesOrderDialog({ order, onClose, onSuccess, readOn
                         <textarea
                           placeholder="Details about the technical inspection..."
                           {...form.register('technicalInspectionDetails')}
-                          disabled={isReadOnly}
+                          disabled={effectivelyReadOnly}
                           rows={3}
                           className={iCls}
                         />
@@ -786,7 +792,7 @@ export default function EditSalesOrderDialog({ order, onClose, onSuccess, readOn
                       {/* CONDITIONAL RENDERING HERE */}
                       {(order as any).quotation?.items?.length > 0 ? (
                         // What to show if Quotation EXISTS
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                           <button
                             type="button"
                             onClick={() => generateQuotationPDF(order as any, 'view')}
@@ -898,7 +904,7 @@ export default function EditSalesOrderDialog({ order, onClose, onSuccess, readOn
                       <label className={labelCls}>Quotation Status (1st)</label>
                       <select
                         {...form.register('quotationStatusFirstFollowUp')}
-                        disabled={isReadOnly}
+                        disabled={effectivelyReadOnly}
                         className={iCls}
                       >
                         <option value="">Select Status</option>
@@ -950,7 +956,7 @@ export default function EditSalesOrderDialog({ order, onClose, onSuccess, readOn
                       <label className={`${labelCls} ${disableSecondFollowUp ? "text-gray-400" : ""}`}>Status (2nd Follow Up)</label>
                       <select
                         {...form.register('statusSecondFollowUp')}
-                        disabled={disableSecondFollowUp || isReadOnly}
+                        disabled={disableSecondFollowUp || effectivelyReadOnly}
                         className={`${iCls} ${disableSecondFollowUp ? "bg-gray-100 cursor-not-allowed opacity-70" : ""}`}
                       >
                         <option value="">Select Status</option>
@@ -987,7 +993,7 @@ export default function EditSalesOrderDialog({ order, onClose, onSuccess, readOn
                       <label className={`${labelCls} ${disableThirdFollowUp ? "text-gray-400" : ""}`}>Final Status (3rd)</label>
                       <select
                         {...form.register('finalStatusThirdFollowUp')}
-                        disabled={disableThirdFollowUp || isReadOnly}
+                        disabled={disableThirdFollowUp || effectivelyReadOnly}
                         className={`${iCls} ${disableThirdFollowUp ? "bg-gray-100 cursor-not-allowed opacity-70" : ""}`}
                       >
                         <option value="">Select Final Status</option>
@@ -1004,38 +1010,40 @@ export default function EditSalesOrderDialog({ order, onClose, onSuccess, readOn
                   <textarea
                     placeholder="Additional notes about this order..."
                     {...form.register('notes')}
-                    disabled={isReadOnly}
+                    disabled={effectivelyReadOnly}
                     rows={4}
                     className={iCls}
                   />
                 </div>
               </div>
-
-              {/* Error Display - Validation errors are handled via toast in onError */}
-              {form.formState.errors && Object.keys(form.formState.errors).length > 0 && (
-                <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-sm">
-                  Please check the form for errors.
-                </div>
-              )}
             </div>
 
             {/* ─── Footer Actions ─────────────────────────────────────────────── */}
             <div className="flex gap-3 pt-4 border-t border-[hsl(var(--border))] mt-6">
-              {isReadOnly ? (
-                // Read-Only Mode: Only show close button
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="w-full rounded-xl border border-[hsl(var(--border))] py-3 text-sm font-semibold hover:bg-[hsl(var(--muted))]/50 transition-colors"
-                >
-                  Close Preview
-                </button>
-              ) : (
-                // Edit Mode: Show cancel and save buttons
-                <>
+              {effectivelyReadOnly ? (
+                <div className="flex gap-3 w-full">
                   <button
                     type="button"
                     onClick={onClose}
+                    className="flex-1 rounded-xl border border-[hsl(var(--border))] py-3 text-sm font-semibold hover:bg-[hsl(var(--muted))]/50 transition-colors"
+                  >
+                    Close
+                  </button>
+                  {!isReadOnly && (
+                    <button
+                      type="button"
+                      onClick={() => setInternalPreviewMode(false)}
+                      className="flex-1 rounded-xl bg-[hsl(var(--primary))] py-3 text-sm font-semibold text-[hsl(var(--primary-foreground))] hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+                    >
+                      <Edit className="w-4 h-4" /> Edit Order
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="flex gap-3 w-full">
+                  <button
+                    type="button"
+                    onClick={() => setInternalPreviewMode(true)}
                     className="flex-1 rounded-xl border border-[hsl(var(--border))] py-3 text-sm font-semibold hover:bg-[hsl(var(--muted))]/50 transition-colors"
                   >
                     Cancel
@@ -1047,7 +1055,7 @@ export default function EditSalesOrderDialog({ order, onClose, onSuccess, readOn
                   >
                     {saving ? 'Saving...' : 'Save Changes'}
                   </button>
-                </>
+                </div>
               )}
             </div>
           </form>

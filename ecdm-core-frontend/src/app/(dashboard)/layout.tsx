@@ -50,12 +50,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     const sidebarMs = isCollapsed ? 'ms-[var(--sidebar-collapsed-width)]' : 'ms-[var(--sidebar-width)]';
 
     return (
-        <div className="flex min-h-screen">
+        <div className="flex h-screen bg-[#f9fafb] text-[#111111] overflow-hidden">
             <Sidebar isCollapsed={isCollapsed} onToggle={handleToggle} />
-            <div className={`flex-1 transition-all duration-300 ease-in-out ${sidebarMs}`}>
+            <div className={`flex flex-1 flex-col transition-all duration-300 ease-in-out min-w-0 ${sidebarMs}`}>
                 <Header />
-                <main className="p-4 md:p-6 lg:p-8 animate-in-slide font-sans">
-                    {children}
+                <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 animate-in-slide font-sans custom-scrollbar">
+                    <div className="max-w-[1600px] mx-auto w-full">
+                        {children}
+                    </div>
                 </main>
             </div>
         </div>

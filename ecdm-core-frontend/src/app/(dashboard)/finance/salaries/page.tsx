@@ -1,6 +1,5 @@
 'use client';
 
-import { Pagination } from '@/components/shared/Pagination';
 import { useAuthStore } from '@/features/auth/useAuth';
 import api from '@/lib/axios';
 import toast from 'react-hot-toast';
@@ -9,7 +8,6 @@ import {
   Banknote,
   Loader2,
   RefreshCw,
-  Search,
   ShieldAlert,
   Trash2,
   UserPlus,
@@ -18,63 +16,27 @@ import {
 import { PageHeader } from '@/components/layout/PageHeader';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { DataTable } from '@/components/ui/DataTable';
+import { columns, SalaryRow } from './columns';
 
 const iCls = 'flex h-9 w-full rounded-md border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] px-3 py-1 text-sm shadow-sm transition-all placeholder:text-[hsl(var(--muted-foreground))] focus-visible:outline-none focus-visible:border-[hsl(var(--primary))]/50 focus-visible:ring-[3px] focus-visible:ring-[hsl(var(--primary))]/10';
 const iClsRo = 'w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--muted))]/50 px-4 py-3 text-sm text-[hsl(var(--muted-foreground))] cursor-not-allowed';
 const labelCls = 'block text-sm font-medium text-[hsl(var(--foreground))] mb-1';
 
-interface SalaryRow {
-  _id: string;
-  employeeId: string;
-  employeeName: string;
-  department: string;
-  basicSalary: string;
-  allowances: string;
-  overtime: string;
-  bonuses: string;
-  percentage: string;
-  tax: string;
-  insurance: string;
-  absenceDeduction: string;
-  otherDeductions: string;
-  notes: string;
-}
-
-const universalExtract = (rawData: any): any[] => {
-  if (!rawData) return [];
-  if (Array.isArray(rawData)) return rawData;
-  if (rawData.data && Array.isArray(rawData.data)) return rawData.data;
-  if (rawData.data?.data && Array.isArray(rawData.data.data)) return rawData.data.data;
-  const possibleArray = Object.values(rawData).find(val => Array.isArray(val));
-  return (possibleArray as any[]) || [];
-};
-
-const DEPARTMENTS = ['Marketing', 'R&D', 'Operation', 'HR', 'Finance', 'Customer Service', 'IT'];
-
-const getDepartmentBadgeClass = (dept: string) => {
-  switch (dept) {
-    case 'Marketing':
-      return 'bg-red-100 text-red-800';
-    case 'R&D':
-      return 'bg-red-700 text-white';
-    case 'Operation':
-      return 'bg-green-100 text-green-800';
-    case 'HR':
-      return 'bg-sky-100 text-sky-800';
-    case 'Finance':
-      return 'bg-purple-100 text-purple-800';
-    case 'Customer Service':
-      return 'bg-teal-100 text-teal-800';
-    case 'IT':
-      return 'bg-amber-100 text-amber-800';
-    default:
-      return 'bg-gray-100 text-gray-800';
-  }
-};
-
-const formatMoney = (val: any) => {
-  const num = Number(val);
-  return isNaN(num) ? 'EGP 0.00' : `EGP ${num.toFixed(2)}`;
+const initialFormData: SalaryFormData = {
+  employeeId: '',
+  employeeName: '',
+  department: '',
+  basicSalary: '',
+  allowances: '',
+  overtime: '',
+  bonuses: '',
+  percentage: '0%',
+  tax: '',
+  insurance: '',
+  absenceDeduction: '',
+  otherDeductions: '',
+  notes: ''
 };
 
 export default function SalariesPage() {
@@ -88,28 +50,61 @@ export default function SalariesPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  const [addModalOpen, setAddModalOpen] = useState(false);
+  // Default Visibility: Only ID, Name, Dept, Basic Salary by default
+  const DEFAULT_VISIBILITY = {
+    allowances: false,
+    overtime: false,
+    bonuses: false,
+    percentage: false,
+    tax: false,
+    insurance: false,
+    absenceDeduction: false,
+    otherDeductions: false,
+    notes: false,
+  };
+
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedSalary, setSelectedSalary] = useState<any>(null);
+  const [internalPreviewMode, setInternalPreviewMode] = useState(true);
   const [formData, setFormData] = useState<SalaryFormData>(initialFormData);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const effectivelyReadOnly = modalOpen && selectedSalary && internalPreviewMode;
+  const isActuallyEditing = modalOpen && selectedSalary && !internalPreviewMode;
+  const isAdding = modalOpen && !selectedSalary;
 
   // Employees for dropdown
   const [employees, setEmployees] = useState<any[]>([]);
   const [loadingEmployees, setLoadingEmployees] = useState(false);
 
+  const universalExtract = (rawData: any): any[] => {
+    if (!rawData) return [];
+    if (Array.isArray(rawData)) return rawData;
+    if (rawData.data && Array.isArray(rawData.data)) return rawData.data;
+    if (rawData.data?.data && Array.isArray(rawData.data.data)) return rawData.data.data;
+    const possibleArray = Object.values(rawData).find(val => Array.isArray(val));
+    return (possibleArray as any[]) || [];
+  };
+
+  const formatMoney = (val: any) => {
+    const num = Number(val);
+    return isNaN(num) ? 'EGP 0.00' : `EGP ${num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
+
   // Fetch employees when modal opens
   useEffect(() => {
-    if (addModalOpen) {
+    if (modalOpen) {
       setLoadingEmployees(true);
       api.get('/hr/users?limit=1000')
         .then(res => {
-          const emps = res.data?.data || [];
+          const emps = universalExtract(res.data);
           setEmployees(Array.isArray(emps) ? emps : []);
         })
         .catch(() => setEmployees([]))
         .finally(() => setLoadingEmployees(false));
     }
-  }, [addModalOpen]);
+  }, [modalOpen]);
 
   const fetchSalariesData = async (isSync = false) => {
     if (isSync) {
@@ -140,7 +135,8 @@ export default function SalariesPage() {
         insurance: formatMoney(item.insurance),
         absenceDeduction: formatMoney(item.absenceDeduction),
         otherDeductions: formatMoney(item.otherDeductions),
-        notes: String(item.notes || '-')
+        notes: String(item.notes || '-'),
+        _raw: item // Keep raw item for editing
       }));
 
       setSalariesData(rows);
@@ -194,9 +190,34 @@ export default function SalariesPage() {
     );
   });
 
-  const indexOfLastRow = currentPage * itemsPerPage;
-  const indexOfFirstRow = indexOfLastRow - itemsPerPage;
-  const currentRows = filteredData.slice(indexOfFirstRow, indexOfLastRow);
+  const openAdd = () => {
+    setSelectedSalary(null);
+    setFormData(initialFormData);
+    setInternalPreviewMode(false);
+    setModalOpen(true);
+  };
+
+  const openPreview = (salary: SalaryRow) => {
+    const raw = (salary as any)._raw || salary;
+    setSelectedSalary(raw);
+    setFormData({
+      employeeId: raw.employeeId?._id || raw.employeeId || '',
+      employeeName: raw.employeeName || '',
+      department: raw.department || '',
+      basicSalary: raw.basicSalary || '',
+      allowances: raw.allowances || '',
+      overtime: raw.overtime || '',
+      bonuses: raw.bonuses || '',
+      percentage: raw.percentage || '0%',
+      tax: raw.tax || '',
+      insurance: raw.insurance || '',
+      absenceDeduction: raw.absenceDeduction || '',
+      otherDeductions: raw.otherDeductions || '',
+      notes: raw.notes || ''
+    });
+    setInternalPreviewMode(true);
+    setModalOpen(true);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -204,7 +225,7 @@ export default function SalariesPage() {
     setSubmitError(null);
 
     try {
-      await api.post('/finance/salaries', {
+      const payload = {
         employeeId: formData.employeeId,
         employeeName: formData.employeeName,
         department: formData.department,
@@ -218,14 +239,21 @@ export default function SalariesPage() {
         absenceDeduction: Number(formData.absenceDeduction) || 0,
         otherDeductions: Number(formData.otherDeductions) || 0,
         notes: formData.notes || undefined
-      });
+      };
+
+      if (isAdding) {
+        await api.post('/finance/salaries', payload);
+        toast.success('Salary record added successfully');
+      } else {
+        await api.put(`/finance/salaries/${selectedSalary._id}`, payload);
+        toast.success('Salary record updated successfully');
+      }
 
       setFormData(initialFormData);
-      setAddModalOpen(false);
+      setModalOpen(false);
       await fetchSalariesData(true);
     } catch (error: any) {
       console.error('Failed to add salary:', error);
-      console.error('Error response:', error.response);
       const msg = error.response?.data?.message || error.message || 'Failed to add salary record';
       setSubmitError(msg);
     } finally {
@@ -252,7 +280,7 @@ export default function SalariesPage() {
               {syncing ? 'Syncing...' : 'Sync Report'}
             </button>
             <button
-              onClick={() => setAddModalOpen(true)}
+              onClick={openAdd}
               className="flex items-center gap-2 rounded-md bg-[hsl(var(--primary))] px-4 py-2 text-sm font-medium text-[hsl(var(--primary-foreground))] shadow-sm hover:opacity-90 border-0 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[hsl(var(--primary))]/10 transition-all"
             >
               <UserPlus className="h-4 w-4" />
@@ -262,121 +290,72 @@ export default function SalariesPage() {
         }
       />
 
-      <div className="p-6">
-        <div className="mb-4 flex items-center gap-2">
-          <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <input
-              type="text"
-              placeholder="Search salaries..."
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="w-full rounded-md border border-input bg-background pl-9 pr-4 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
-            />
-          </div>
-          <span className="text-sm text-muted-foreground">
-            {filteredData.length} record(s) found
-          </span>
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
+        <div className="p-6 pb-0 flex items-center justify-between">
+            <div className="flex items-center gap-3 flex-1">
+                <input
+                    type="text"
+                    placeholder="Search salaries..."
+                    value={searchTerm}
+                    onChange={(e) => {
+                        setSearchTerm(e.target.value);
+                        setCurrentPage(1);
+                    }}
+                    className="max-w-sm w-full h-9 rounded-full border border-slate-200 dark:border-slate-800 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                />
+                <span className="text-sm text-slate-500">{filteredData.length} records</span>
+            </div>
         </div>
 
         {apiError && (
-          <div className="mb-4 flex items-center gap-2 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+          <div className="m-6 flex items-center gap-2 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
             <ShieldAlert className="h-4 w-4" />
             {apiError}
           </div>
         )}
 
-        {isLoading ? (
-          <TableSkeleton rows={10} columns={13} height="h-12" />
-        ) : (
-          <>
-            <div className="overflow-x-auto min-w-[1500px] rounded-md border">
-              <table className="w-full caption-bottom text-sm">
-                <thead className="bg-muted/50">
-                  <tr>
-                    <th className="border-b px-3 py-2 text-left font-medium">Employee ID</th>
-                    <th className="border-b px-3 py-2 text-left font-medium">Employee Name</th>
-                    <th className="border-b px-3 py-2 text-left font-medium">Department</th>
-                    <th className="border-b px-3 py-2 text-left font-medium">Basic Salary</th>
-                    <th className="border-b px-3 py-2 text-left font-medium">Allowances</th>
-                    <th className="border-b px-3 py-2 text-left font-medium">Overtime</th>
-                    <th className="border-b px-3 py-2 text-left font-medium">Bonuses</th>
-                    <th className="border-b px-3 py-2 text-left font-medium">% Percentage</th>
-                    <th className="border-b px-3 py-2 text-left font-medium"># Tax</th>
-                    <th className="border-b px-3 py-2 text-left font-medium">Insurance</th>
-                    <th className="border-b px-3 py-2 text-left font-medium">AbsenceDeduction</th>
-                    <th className="border-b px-3 py-2 text-left font-medium">OtherDeductions</th>
-                    <th className="border-b px-3 py-2 text-left font-medium">Notes</th>
-                    <th className="border-b px-3 py-2 text-left font-medium">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {currentRows.length === 0 ? (
-                    <tr>
-                      <td colSpan={14} className="border-b px-3 py-8 text-center text-muted-foreground">
-                        {searchTerm ? 'No salaries match your search' : 'No salary data found'}
-                      </td>
-                    </tr>
-                  ) : (
-                    currentRows.map((row, idx) => (
-                      <tr key={`${row.employeeId}-${idx}`} className="hover:bg-muted/50">
-                        <td className="border-b px-3 py-2 font-medium">{row.employeeId}</td>
-                        <td className="border-b px-3 py-2">{row.employeeName}</td>
-                        <td className="border-b px-3 py-2">
-                          <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${getDepartmentBadgeClass(row.department)}`}>
-                            {row.department}
-                          </span>
-                        </td>
-                        <td className="border-b px-3 py-2">{row.basicSalary}</td>
-                        <td className="border-b px-3 py-2">{row.allowances}</td>
-                        <td className="border-b px-3 py-2">{row.overtime}</td>
-                        <td className="border-b px-3 py-2">{row.bonuses}</td>
-                        <td className="border-b px-3 py-2">{row.percentage}</td>
-                        <td className="border-b px-3 py-2">{row.tax}</td>
-                        <td className="border-b px-3 py-2">{row.insurance}</td>
-                        <td className="border-b px-3 py-2">{row.absenceDeduction}</td>
-                        <td className="border-b px-3 py-2">{row.otherDeductions}</td>
-                        <td className="border-b px-3 py-2 text-muted-foreground">{row.notes}</td>
-                        <td className="border-b px-3 py-2">
-                          <button
-                            onClick={() => handleDelete(row._id)}
-                            className="text-red-500 hover:text-red-700 transition-colors"
-                            title="Delete"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-            <Pagination
-              currentPage={currentPage}
-              totalItems={filteredData.length}
-              itemsPerPage={itemsPerPage}
-              onPageChange={setCurrentPage}
-            />
-          </>
-        )}
+        <div className="mt-4">
+          <DataTable
+            data={filteredData}
+            columns={columns}
+            loading={isLoading}
+            page={currentPage}
+            totalPages={Math.ceil(filteredData.length / itemsPerPage)}
+            totalItems={filteredData.length}
+            itemsPerPage={itemsPerPage}
+            onPageChange={setCurrentPage}
+            onRowClick={openPreview}
+            defaultVisibility={DEFAULT_VISIBILITY}
+            renderActions={(row) => (
+              <button
+                onClick={() => handleDelete(row._id)}
+                className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                title="Delete"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            )}
+            emptyMessage={searchTerm ? 'No salaries match your search' : 'No salary data found'}
+          />
+        </div>
       </div>
 
-      {addModalOpen && (
+      {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm transition-opacity">
           <div className="rounded-2xl border border-[hsl(var(--border))] modern-glass-card premium-shadow animate-in-slide m-auto relative shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
 
             <div className="px-6 py-4 border-b border-[hsl(var(--border))] flex justify-between items-center bg-[hsl(var(--muted))]/50">
               <div>
-                <h3 className="text-xl font-bold text-[hsl(var(--foreground))]">Add New Salary</h3>
-                <p className="text-sm text-[hsl(var(--muted-foreground))] mt-1">Fill out the details below to record employee salary.</p>
+                <h3 className="text-xl font-bold text-[hsl(var(--foreground))]">
+                  {isAdding ? 'Add New Salary' : (effectivelyReadOnly ? 'Salary Preview' : 'Edit Salary')}
+                </h3>
+                <p className="text-sm text-[hsl(var(--muted-foreground))] mt-1">
+                  {isAdding ? 'Fill out the details below to record employee salary.' : (effectivelyReadOnly ? 'Viewing salary record in read-only mode.' : 'Modify the details of this salary record below.')}
+                  {effectivelyReadOnly && <span className="ml-2 text-amber-600 font-semibold">• Preview Mode</span>}
+                </p>
               </div>
               <button
-                onClick={() => setAddModalOpen(false)}
+                onClick={() => setModalOpen(false)}
                 className="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] transition-colors p-2 rounded-full hover:bg-[hsl(var(--muted))]"
               >
                 <X className="h-4 w-4" />
@@ -392,7 +371,7 @@ export default function SalariesPage() {
             <div className="p-6 overflow-y-auto">
               <form className="space-y-5" onSubmit={handleSubmit}>
 
-                {/* Employee Selection - replaces manual Employee ID + Name inputs */}
+                {/* Employee Selection */}
                 <div>
                   <label className={labelCls}>Employee</label>
                   <select
@@ -419,6 +398,7 @@ export default function SalariesPage() {
                     }}
                     className={iCls}
                     required
+                    disabled={effectivelyReadOnly || !isAdding}
                   >
                     <option value="">Select Employee</option>
                     {loadingEmployees ? (
@@ -435,7 +415,6 @@ export default function SalariesPage() {
                   </select>
                 </div>
 
-                {/* Auto-filled Department */}
                 <div>
                   <label className={labelCls}>
                     Department
@@ -476,6 +455,7 @@ export default function SalariesPage() {
                       onChange={(e) => setFormData({ ...formData, allowances: e.target.value === '' ? '' : parseFloat(e.target.value) || 0 })}
                       className={iCls}
                       placeholder="0.00"
+                      disabled={effectivelyReadOnly}
                     />
                   </div>
                 </div>
@@ -491,6 +471,7 @@ export default function SalariesPage() {
                       onChange={(e) => setFormData({ ...formData, overtime: e.target.value === '' ? '' : parseFloat(e.target.value) || 0 })}
                       className={iCls}
                       placeholder="0.00"
+                      disabled={effectivelyReadOnly}
                     />
                   </div>
                   <div>
@@ -503,6 +484,7 @@ export default function SalariesPage() {
                       onChange={(e) => setFormData({ ...formData, bonuses: e.target.value === '' ? '' : parseFloat(e.target.value) || 0 })}
                       className={iCls}
                       placeholder="0.00"
+                      disabled={effectivelyReadOnly}
                     />
                   </div>
                 </div>
@@ -516,6 +498,7 @@ export default function SalariesPage() {
                       onChange={(e) => setFormData({ ...formData, percentage: e.target.value })}
                       className={iCls}
                       placeholder="e.g. 5%"
+                      disabled={effectivelyReadOnly}
                     />
                   </div>
                   <div>
@@ -528,6 +511,7 @@ export default function SalariesPage() {
                       onChange={(e) => setFormData({ ...formData, tax: e.target.value === '' ? '' : parseFloat(e.target.value) || 0 })}
                       className={iCls}
                       placeholder="0.00"
+                      disabled={effectivelyReadOnly}
                     />
                   </div>
                 </div>
@@ -543,6 +527,7 @@ export default function SalariesPage() {
                       onChange={(e) => setFormData({ ...formData, insurance: e.target.value === '' ? '' : parseFloat(e.target.value) || 0 })}
                       className={iCls}
                       placeholder="0.00"
+                      disabled={effectivelyReadOnly}
                     />
                   </div>
                   <div>
@@ -555,6 +540,7 @@ export default function SalariesPage() {
                       onChange={(e) => setFormData({ ...formData, absenceDeduction: e.target.value === '' ? '' : parseFloat(e.target.value) || 0 })}
                       className={iCls}
                       placeholder="0.00"
+                      disabled={effectivelyReadOnly}
                     />
                   </div>
                 </div>
@@ -569,6 +555,7 @@ export default function SalariesPage() {
                     onChange={(e) => setFormData({ ...formData, otherDeductions: e.target.value === '' ? '' : parseFloat(e.target.value) || 0 })}
                     className={iCls}
                     placeholder="0.00"
+                    disabled={effectivelyReadOnly}
                   />
                 </div>
 
@@ -580,34 +567,45 @@ export default function SalariesPage() {
                     className={`${iCls} resize-none`}
                     placeholder="Any additional notes..."
                     rows={3}
+                    disabled={effectivelyReadOnly}
                   />
                 </div>
 
                 <div className="pt-4 mt-2 border-t border-gray-200 dark:border-gray-800 flex justify-end gap-3">
                   <button
                     type="button"
-                    onClick={() => setAddModalOpen(false)}
+                    onClick={() => setModalOpen(false)}
                     className="px-5 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-800 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
                   >
-                    Cancel
+                    {effectivelyReadOnly ? 'Close' : 'Cancel'}
                   </button>
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="px-5 py-2.5 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 shadow-sm transition-colors flex items-center gap-2 disabled:opacity-50"
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Adding...
-                      </>
-                    ) : (
-                      <>
-                        <UserPlus className="h-4 w-4" />
-                        Add Salary
-                      </>
-                    )}
-                  </button>
+                  {effectivelyReadOnly ? (
+                    <button
+                      type="button"
+                      onClick={() => setInternalPreviewMode(false)}
+                      className="px-8 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition-all shadow-lg flex items-center gap-2"
+                    >
+                      Edit Salary
+                    </button>
+                  ) : (
+                    <button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="px-5 py-2.5 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 shadow-sm transition-colors flex items-center gap-2 disabled:opacity-50"
+                    >
+                      {isSubmitting ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          {isAdding ? 'Adding...' : 'Saving...'}
+                        </>
+                      ) : (
+                        <>
+                          <UserPlus className="h-4 w-4" />
+                          {isAdding ? 'Add Salary' : 'Save Changes'}
+                        </>
+                      )}
+                    </button>
+                  )}
                 </div>
 
               </form>
@@ -633,20 +631,4 @@ type SalaryFormData = {
   absenceDeduction: number | string;
   otherDeductions: number | string;
   notes: string;
-};
-
-const initialFormData: SalaryFormData = {
-  employeeId: '',
-  employeeName: '',
-  department: '',
-  basicSalary: '',
-  allowances: '',
-  overtime: '',
-  bonuses: '',
-  percentage: '0%',
-  tax: '',
-  insurance: '',
-  absenceDeduction: '',
-  otherDeductions: '',
-  notes: ''
 };

@@ -25,6 +25,7 @@ interface EditCustomerOrderDialogProps {
   order: CustomerOrder;
   onClose: () => void;
   onSuccess: () => void;
+  readOnly?: boolean;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -119,10 +120,13 @@ const formatDateDisplay = (isoDate: string | null | undefined): string => {
 // Component
 // ─────────────────────────────────────────────────────────────────────────────
 
-export default function EditCustomerOrderDialog({ order, onClose, onSuccess }: EditCustomerOrderDialogProps) {
+export default function EditCustomerOrderDialog({ order, onClose, onSuccess, readOnly = false }: EditCustomerOrderDialogProps) {
+  const [internalPreviewMode, setInternalPreviewMode] = useState(true);
   const [saving, setSaving] = useState(false);
   const [engineers, setEngineers] = useState<any[]>([]);
   const [loadingEngineers, setLoadingEngineers] = useState(false);
+
+  const effectivelyReadOnly = readOnly || internalPreviewMode;
 
   // Initialize react-hook-form with Zod validation
   const form = useForm<FormSchema>({
@@ -237,9 +241,10 @@ export default function EditCustomerOrderDialog({ order, onClose, onSuccess }: E
     <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Edit Customer Order</DialogTitle>
+          <DialogTitle>{effectivelyReadOnly ? 'Customer Order Preview' : 'Edit Customer Order'}</DialogTitle>
           <p className="text-[11px] text-[hsl(var(--muted-foreground))] font-medium mt-0.5">
             Order ID: {order._id}
+            {effectivelyReadOnly && <span className="ml-2 text-amber-600 font-semibold">• Preview Mode</span>}
           </p>
         </DialogHeader>
 
@@ -288,7 +293,7 @@ export default function EditCustomerOrderDialog({ order, onClose, onSuccess }: E
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className={labelCls}>Assigned Engineer</label>
-                  <select {...form.register('engineerId')} className={iCls} disabled={loadingEngineers}>
+                  <select {...form.register('engineerId')} className={iCls} disabled={loadingEngineers || effectivelyReadOnly}>
                     <option value="">{loadingEngineers ? 'Loading...' : 'Select Engineer...'}</option>
                     {engineers.map((engineer) => (
                       <option key={engineer._id} value={engineer._id}>{engineer.firstName} {engineer.lastName}</option>
@@ -297,33 +302,33 @@ export default function EditCustomerOrderDialog({ order, onClose, onSuccess }: E
                 </div>
                 <div className="space-y-1">
                   <label className={labelCls}>Actual Visit Date</label>
-                  <input type="datetime-local" {...form.register('actualVisitDate')} className={iCls} />
+                  <input type="datetime-local" {...form.register('actualVisitDate')} className={iCls} disabled={effectivelyReadOnly} />
                 </div>
                 <div className="space-y-1">
                   <label className={labelCls}>Pickup Type</label>
-                  <select {...form.register('devicePickupType')} className={iCls}>
+                  <select {...form.register('devicePickupType')} className={iCls} disabled={effectivelyReadOnly}>
                     <option value="">Select type...</option>
                     {DEVICE_PICKUP_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                   </select>
                 </div>
                 <div className="space-y-1">
                   <label className={labelCls}>Deal Status</label>
-                  <select {...form.register('deal')} className={iCls}>
+                  <select {...form.register('deal')} className={iCls} disabled={effectivelyReadOnly}>
                     <option value="">Select status...</option>
                     {DEAL_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
                   </select>
                 </div>
                 <div className="space-y-1">
                   <label className={labelCls}>Start Date</label>
-                  <input type="date" {...form.register('startDate')} className={iCls} />
+                  <input type="date" {...form.register('startDate')} className={iCls} disabled={effectivelyReadOnly} />
                 </div>
                 <div className="space-y-1">
                   <label className={labelCls}>End Date</label>
-                  <input type="date" {...form.register('endDate')} className={iCls} />
+                  <input type="date" {...form.register('endDate')} className={iCls} disabled={effectivelyReadOnly} />
                 </div>
                 <div className="space-y-1">
                   <label className={labelCls}>Device Returned Date</label>
-                  <input type="date" {...form.register('deviceReturnedDate')} className={iCls} />
+                  <input type="date" {...form.register('deviceReturnedDate')} className={iCls} disabled={effectivelyReadOnly} />
                 </div>
 
                 {/* Notes */}
@@ -333,6 +338,7 @@ export default function EditCustomerOrderDialog({ order, onClose, onSuccess }: E
                     placeholder="Additional notes..."
                     {...form.register('notes')}
                     rows={4}
+                    disabled={effectivelyReadOnly}
                     className={iCls}
                   />
                 </div>
@@ -362,16 +368,26 @@ export default function EditCustomerOrderDialog({ order, onClose, onSuccess }: E
             onClick={onClose}
             className="flex-1 rounded-xl border border-[hsl(var(--border))] py-3 text-sm font-semibold hover:bg-[hsl(var(--muted))]/50 transition-colors"
           >
-            Cancel
+            {effectivelyReadOnly ? 'Close' : 'Cancel'}
           </button>
-          <button
-            type="submit"
-            form="edit-customer-order-form"
-            disabled={saving}
-            className="flex-1 rounded-xl bg-[hsl(var(--primary))] py-3 text-sm font-semibold text-[hsl(var(--primary-foreground))] hover:opacity-90 transition-opacity disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            {saving ? 'Saving...' : 'Save Changes'}
-          </button>
+          {effectivelyReadOnly ? (
+            <button
+              type="button"
+              onClick={() => setInternalPreviewMode(false)}
+              className="flex-1 rounded-xl bg-[hsl(var(--primary))] py-3 text-sm font-semibold text-[hsl(var(--primary-foreground))] hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+            >
+              Edit Order
+            </button>
+          ) : (
+            <button
+              type="submit"
+              form="edit-customer-order-form"
+              disabled={saving}
+              className="flex-1 rounded-xl bg-[hsl(var(--primary))] py-3 text-sm font-semibold text-[hsl(var(--primary-foreground))] hover:opacity-90 transition-opacity disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {saving ? 'Saving...' : 'Save Changes'}
+            </button>
+          )}
         </div>
       </DialogFooter>
     </DialogContent>

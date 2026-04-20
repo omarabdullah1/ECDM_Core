@@ -33,6 +33,7 @@ interface EditCustomerDialogProps {
   customer: Customer;
   onClose: () => void;
   onSuccess: () => void;
+  readOnly?: boolean;
 }
 
 // Available options
@@ -47,7 +48,8 @@ const SECTORS = ['B2B', 'B2C', 'B2G', 'Hybrid', 'Other'];
 // Styling constants
 const labelCls = 'text-xs font-semibold text-[hsl(var(--muted-foreground))] uppercase tracking-wide mb-1.5 block';
 
-export default function EditCustomerDialog({ customer, onClose, onSuccess }: EditCustomerDialogProps) {
+export default function EditCustomerDialog({ customer, onClose, onSuccess, readOnly = false }: EditCustomerDialogProps) {
+  const [internalPreviewMode, setInternalPreviewMode] = useState(true);
   const [saving, setSaving] = useState(false);
   const [generatingId, setGeneratingId] = useState(false);
   const [formData, setFormData] = useState({
@@ -62,6 +64,8 @@ export default function EditCustomerDialog({ customer, onClose, onSuccess }: Edi
     region: customer.region || '',
     notes: customer.notes || '',
   });
+
+  const effectivelyReadOnly = readOnly || internalPreviewMode;
 
   const handleChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -123,9 +127,12 @@ export default function EditCustomerDialog({ customer, onClose, onSuccess }: Edi
     <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader className="bg-white/50 backdrop-blur-md sticky top-0 z-10">
-          <DialogTitle className="text-2xl font-bold tracking-tight text-gray-900">Edit Customer</DialogTitle>
+          <DialogTitle className="text-2xl font-bold tracking-tight text-gray-900">
+            {effectivelyReadOnly ? 'Customer Preview' : 'Edit Customer'}
+          </DialogTitle>
           <p className="text-sm text-[hsl(var(--muted-foreground))] mt-1 font-medium">
-            Update vital customer metadata (System-wide Admin Access)
+            {effectivelyReadOnly ? 'Viewing customer metadata' : 'Update vital customer metadata (System-wide Admin Access)'}
+            {effectivelyReadOnly && <span className="ml-2 text-amber-600 font-semibold">• Preview Mode</span>}
           </p>
         </DialogHeader>
 
@@ -137,20 +144,21 @@ export default function EditCustomerDialog({ customer, onClose, onSuccess }: Edi
                 <label className={labelCls}>
                   Customer ID <span className="text-red-500">*</span>
                 </label>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   <Input
                     type="text"
                     value={formData.customerId}
                     onChange={(e) => handleChange('customerId', e.target.value)}
                     placeholder="e.g., CUS-1001"
                     required
+                    disabled={effectivelyReadOnly}
                     className="h-10 border-gray-100 bg-gray-50/50"
                   />
                   <Button
                     type="button"
                     variant="secondary"
                     onClick={handleGenerateId}
-                    disabled={generatingId || saving}
+                    disabled={generatingId || saving || effectivelyReadOnly}
                     title="Generate next available ID"
                     className="shrink-0 h-10 w-10 p-0 rounded-lg"
                   >
@@ -168,6 +176,7 @@ export default function EditCustomerDialog({ customer, onClose, onSuccess }: Edi
                   onChange={(e) => handleChange('name', e.target.value)}
                   placeholder="Full name"
                   required
+                  disabled={effectivelyReadOnly}
                   className="h-10 border-gray-100 bg-gray-50/50"
                 />
               </div>
@@ -188,6 +197,7 @@ export default function EditCustomerDialog({ customer, onClose, onSuccess }: Edi
                     onChange={(e) => handleChange('phone', e.target.value)}
                     placeholder="+1234567890"
                     required
+                    disabled={effectivelyReadOnly}
                     className="h-10 border-gray-100 bg-gray-50/50"
                   />
                 </div>
@@ -198,6 +208,7 @@ export default function EditCustomerDialog({ customer, onClose, onSuccess }: Edi
                     value={formData.email}
                     onChange={(e) => handleChange('email', e.target.value)}
                     placeholder="email@example.com"
+                    disabled={effectivelyReadOnly}
                     className="h-10 border-gray-100 bg-gray-50/50"
                   />
                 </div>
@@ -210,6 +221,7 @@ export default function EditCustomerDialog({ customer, onClose, onSuccess }: Edi
                   <Select
                     value={formData.type}
                     onChange={(e) => handleChange('type', e.target.value)}
+                    disabled={effectivelyReadOnly}
                     className="h-10 border-gray-100 bg-gray-50/50"
                   >
                     {CUSTOMER_TYPES.map(type => (
@@ -222,6 +234,7 @@ export default function EditCustomerDialog({ customer, onClose, onSuccess }: Edi
                   <Select
                     value={formData.sector}
                     onChange={(e) => handleChange('sector', e.target.value)}
+                    disabled={effectivelyReadOnly}
                     className="h-10 border-gray-100 bg-gray-50/50"
                   >
                     {SECTORS.map(sector => (
@@ -244,6 +257,7 @@ export default function EditCustomerDialog({ customer, onClose, onSuccess }: Edi
                     value={formData.company}
                     onChange={(e) => handleChange('company', e.target.value)}
                     placeholder="Company name"
+                    disabled={effectivelyReadOnly}
                     className="h-10 border-gray-100 bg-gray-50/50"
                   />
                 </div>
@@ -254,6 +268,7 @@ export default function EditCustomerDialog({ customer, onClose, onSuccess }: Edi
                     value={formData.region}
                     onChange={(e) => handleChange('region', e.target.value)}
                     placeholder="Region/Location"
+                    disabled={effectivelyReadOnly}
                     className="h-10 border-gray-100 bg-gray-50/50"
                   />
                 </div>
@@ -267,6 +282,7 @@ export default function EditCustomerDialog({ customer, onClose, onSuccess }: Edi
                   value={formData.address}
                   onChange={(e) => handleChange('address', e.target.value)}
                   placeholder="Full address"
+                  disabled={effectivelyReadOnly}
                   className="h-10 border-gray-100 bg-gray-50/50"
                 />
               </div>
@@ -277,6 +293,7 @@ export default function EditCustomerDialog({ customer, onClose, onSuccess }: Edi
                 <textarea
                   value={formData.notes}
                   onChange={(e) => handleChange('notes', e.target.value)}
+                  disabled={effectivelyReadOnly}
                   className="flex min-h-[100px] w-full rounded-xl border border-gray-100 bg-gray-50/50 px-4 py-3 text-sm shadow-inner transition-all focus-visible:outline-none focus:ring-2 focus:ring-primary/10 focus:border-primary disabled:cursor-not-allowed disabled:opacity-50 font-medium resize-none"
                   placeholder="Additional notes about this customer..."
                   rows={3}
@@ -287,24 +304,36 @@ export default function EditCustomerDialog({ customer, onClose, onSuccess }: Edi
         </DialogBody>
 
         <DialogFooter className="bg-white/50 backdrop-blur-md border-t border-[hsl(var(--border))]/30">
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={onClose}
-            disabled={saving}
-            className="px-6 rounded-xl hover:bg-gray-100 transition-colors"
-          >
-            Cancel
-          </Button>
-          <Button
-            type="submit"
-            form="edit-customer-form"
-            disabled={saving}
-            className="px-8 rounded-xl bg-[hsl(var(--primary))] hover:opacity-90 transition-all shadow-md active:scale-95"
-          >
-            {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-            {saving ? 'Saving...' : 'Save Changes'}
-          </Button>
+          <div className="flex gap-3 w-full">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={onClose}
+              disabled={saving}
+              className="flex-1 px-6 rounded-xl hover:bg-gray-100 transition-colors"
+            >
+              {effectivelyReadOnly ? 'Close' : 'Cancel'}
+            </Button>
+            {effectivelyReadOnly ? (
+              <Button
+                type="button"
+                onClick={() => setInternalPreviewMode(false)}
+                className="flex-1 px-8 rounded-xl bg-[hsl(var(--primary))] hover:opacity-90 transition-all shadow-md active:scale-95"
+              >
+                Edit Customer
+              </Button>
+            ) : (
+              <Button
+                type="submit"
+                form="edit-customer-form"
+                disabled={saving}
+                className="flex-1 px-8 rounded-xl bg-[hsl(var(--primary))] hover:opacity-90 transition-all shadow-md active:scale-95"
+              >
+                {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                {saving ? 'Saving...' : 'Save Changes'}
+              </Button>
+            )}
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>

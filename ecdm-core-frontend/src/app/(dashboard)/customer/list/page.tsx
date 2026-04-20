@@ -114,6 +114,7 @@ export default function CustomerListPage() {
     {
       key: 'customerId',
       header: 'Customer ID',
+      className: 'md:w-[1%] md:whitespace-nowrap',
       render: (row: Customer) => (
         <span className="font-mono text-xs text-[hsl(var(--primary))] font-semibold">
           {row.customerId || '—'}
@@ -123,6 +124,7 @@ export default function CustomerListPage() {
     {
       key: 'name',
       header: 'Name',
+      className: 'md:w-auto md:max-w-[150px] md:truncate',
       render: (row: Customer) => (
         <span className="font-medium">{row.name}</span>
       ),
@@ -130,11 +132,13 @@ export default function CustomerListPage() {
     {
       key: 'phone',
       header: 'Phone',
+      className: 'hidden xl:table-cell md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: Customer) => row.phone,
     },
     {
       key: 'potentialStatus',
       header: 'Status',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: Customer) => {
         if (row.isNonPotential) {
           return (
@@ -153,6 +157,7 @@ export default function CustomerListPage() {
     {
       key: 'address',
       header: 'Address',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: Customer) => (
         <span className="max-w-[200px] truncate block" title={row.address}>
           {row.address || '—'}
@@ -162,6 +167,7 @@ export default function CustomerListPage() {
     {
       key: 'sector',
       header: 'Sector',
+      className: 'hidden xl:table-cell md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: Customer) => (
         <span className="rounded-full px-2 py-0.5 text-xs font-medium bg-purple-500/10 text-purple-600">
           {row.sector || '—'}
@@ -171,6 +177,7 @@ export default function CustomerListPage() {
     {
       key: 'createdAt',
       header: 'Created',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: Customer) => (
         <span className="text-xs text-[hsl(var(--muted-foreground))]">
           {formatDate(row.createdAt)}
@@ -181,7 +188,7 @@ export default function CustomerListPage() {
 
   // ─── Row Actions ──────────────────────────────────────────────────────────────
   const renderActions = (row: Customer) => (
-    <div className="flex items-center gap-2">
+    <div className="flex flex-wrap items-center gap-2">
       {isAdmin && (
         <button
           onClick={() => {
@@ -211,8 +218,6 @@ export default function CustomerListPage() {
       </button>
     </div>
   );
-
-  const COLUMNS = ['Customer ID', 'Name', 'Phone', 'Status', 'Address', 'Sector', 'Created', 'Actions'];
 
   return (
     <div className="space-y-6 pb-8">
@@ -244,7 +249,7 @@ export default function CustomerListPage() {
         </select>
       </div>
 
-      {/* DataTable with RBAC-Protected Bulk Delete */}
+      {/* DataTable */}
       <DataTable
         data={rows}
         columns={columns}
@@ -258,10 +263,8 @@ export default function CustomerListPage() {
         bulkDeleteEndpoint="/shared/customers/bulk-delete"
         onBulkDeleteSuccess={fetch_}
         onRowClick={(row) => {
-          if (isAdmin) {
-            setCustomerToEdit(row);
-            setEditModal(true);
-          }
+          setCustomerToEdit(row);
+          setEditModal(true);
         }}
         renderActions={renderActions}
         defaultVisibility={{
@@ -358,10 +361,11 @@ export default function CustomerListPage() {
         </div>
       )}
 
-      {/* Edit Customer Modal (Admin Only) */}
+      {/* Edit Customer Modal */}
       {editModal && customerToEdit && (
         <EditCustomerDialog
           customer={customerToEdit}
+          readOnly={!isAdmin}
           onClose={() => {
             setEditModal(false);
             setCustomerToEdit(null);

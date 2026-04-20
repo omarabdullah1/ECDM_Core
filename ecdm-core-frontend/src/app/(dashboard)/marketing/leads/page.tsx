@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import api from '@/lib/axios';
 import toast from 'react-hot-toast';
-import { TrendingUp, Plus, Edit2, Trash2, X, ChevronLeft, ChevronRight, Sheet, Upload, Loader2, AlertTriangle, Check, RefreshCw, Save, Database } from 'lucide-react';
+import { TrendingUp, Plus, Edit2, Trash2, X, Sheet, Upload, Loader2, AlertTriangle, Check, RefreshCw, Save, Database } from 'lucide-react';
 import { DataTable } from '@/components/ui/DataTable';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter } from '@/components/ui/dialog';
@@ -31,7 +31,6 @@ interface SheetSyncForm {
   serviceAccountJson: string;
 }
 
-// Saved Sheet Connection
 interface SavedConnection {
   _id: string;
   connectionName: string;
@@ -40,7 +39,6 @@ interface SavedConnection {
   lastUsedAt?: string;
 }
 
-// Types for 2-step sync process
 interface AnalyzedLead {
   rowIndex: number;
   sheetData: { name: string; phone: string; type: string; sector: string; address?: string };
@@ -72,6 +70,10 @@ export default function MarketingLeadsPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [delId, setDelId] = useState<string | null>(null);
+  const [internalPreviewMode, setInternalPreviewMode] = useState(true);
+
+  const effectivelyReadOnly = modal && editing && internalPreviewMode;
+  const isAdding = modal && !editing;
 
   // Google Sheets Sync Dialog state
   const [syncModal, setSyncModal] = useState(false);
@@ -115,7 +117,6 @@ export default function MarketingLeadsPage() {
 
   useEffect(() => { fetch_(); }, [fetch_]);
 
-  // Fetch saved sheet connections
   const fetchSavedConnections = useCallback(async () => {
     try {
       const { data } = await api.get('/marketing/saved-sheets');
@@ -128,10 +129,8 @@ export default function MarketingLeadsPage() {
 
   useEffect(() => { fetchSavedConnections(); }, [fetchSavedConnections]);
 
-  // Clear selection when rows change
   useEffect(() => { setSelectedRows(new Set()); }, [rows]);
 
-  // Toggle row selection
   const toggleRowSelection = (id: string) => {
     setSelectedRows(prev => {
       const newSet = new Set(prev);
@@ -141,34 +140,26 @@ export default function MarketingLeadsPage() {
     });
   };
 
-  // Toggle all rows selection
-  const toggleAllSelection = () => {
-    if (selectedRows.size === rows.length) {
-      setSelectedRows(new Set());
-    } else {
-      setSelectedRows(new Set(rows.map(r => r._id)));
-    }
-  };
-
-  // Bulk delete selected rows
   const handleBulkDelete = async () => {
     if (selectedRows.size === 0) return;
     setBulkDeleting(true);
     try {
       await api.post('/marketing/sync/bulk-delete', { ids: Array.from(selectedRows) });
+      toast.success('Bulk delete successful');
       setSelectedRows(new Set());
       fetch_();
     } catch (e) {
       const err = e as { response?: { data?: { message?: string } } };
-      alert(err.response?.data?.message || 'Bulk delete failed');
+      toast.error(err.response?.data?.message || 'Bulk delete failed');
     }
     setBulkDeleting(false);
     setShowBulkDeleteConfirm(false);
   };
 
-  const openC = () => { setEditing(null); setForm(blank); setError(''); setModal(true); };
-  const openE = (r: MarketingLead) => {
+  const openC = () => { setEditing(null); setForm(blank); setError(''); setInternalPreviewMode(false); setModal(true); };
+  const openE = (r: MarketingLead, mode: 'preview' | 'edit' = 'preview') => {
     setEditing(r);
+    setInternalPreviewMode(mode === 'preview');
     setForm({
       name: r.customerId?.name || '',
       phone: r.customerId?.phone || '',
@@ -213,11 +204,9 @@ export default function MarketingLeadsPage() {
 
   const u = (f: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setForm(p => ({ ...p, [f]: e.target.value }));
 
-  // Handle JSON file upload
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     const reader = new FileReader();
     reader.onload = (event) => {
       const content = event.target?.result as string;
@@ -226,14 +215,12 @@ export default function MarketingLeadsPage() {
     reader.readAsText(file);
   };
 
-  // Handle saved connection selection
   const handleConnectionSelect = async (connectionId: string) => {
     setSelectedConnectionId(connectionId);
     if (connectionId === 'new') {
       resetSync();
       return;
     }
-    // Fetch full connection data including serviceAccountJson
     try {
       const { data } = await api.get(`/marketing/saved-sheets/${connectionId}`);
       const conn = data.data;
@@ -245,12 +232,10 @@ export default function MarketingLeadsPage() {
     }
   };
 
-  // Step 1: Analyze sheet data
   const onSyncSubmit = async (data: SheetSyncForm) => {
     setSyncing(true);
     setAnalysis(null);
     try {
-      // Optionally save the new connection
       if (selectedConnectionId === 'new' && saveNewConnection && newConnectionName) {
         await api.post('/marketing/saved-sheets', {
           connectionName: newConnectionName,
@@ -258,12 +243,10 @@ export default function MarketingLeadsPage() {
           sheetRange: data.sheetRange,
           serviceAccountJson: data.serviceAccountJson,
         });
-        fetchSavedConnections(); // Refresh saved connections list
+        fetchSavedConnections();
       }
-
       const response = await api.post('/marketing/sync/analyze', data);
       setAnalysis(response.data.data);
-      // Initialize conflict resolutions to 'keep' by default
       const defaultResolutions: Record<number, 'update' | 'keep'> = {};
       response.data.data.conflicts.forEach((c: AnalyzedLead) => {
         defaultResolutions[c.rowIndex] = 'keep';
@@ -272,15 +255,13 @@ export default function MarketingLeadsPage() {
       setSyncStep('review');
     } catch (e: unknown) {
       const err = e as { response?: { data?: { message?: string } } };
-      alert(err.response?.data?.message || 'Analysis failed');
+      toast.error(err.response?.data?.message || 'Analysis failed');
     }
     setSyncing(false);
   };
 
-  // Step 2: Commit approved changes
   const handleCommit = async () => {
     if (!analysis) return;
-
     setSyncing(true);
     try {
       const conflictResolutionsList = analysis.conflicts.map(c => ({
@@ -288,19 +269,17 @@ export default function MarketingLeadsPage() {
         action: conflictResolutions[c.rowIndex] || 'keep',
         data: c,
       }));
-
       const response = await api.post('/marketing/sync/commit', {
         serviceAccountJson: getSyncValues('serviceAccountJson'),
         newLeads: analysis.new,
         conflictResolutions: conflictResolutionsList,
       });
-
       setCommitResult(response.data.data);
       setSyncStep('done');
-      fetch_(); // Refresh the table
+      fetch_();
     } catch (e: unknown) {
       const err = e as { response?: { data?: { message?: string } } };
-      alert(err.response?.data?.message || 'Commit failed');
+      toast.error(err.response?.data?.message || 'Commit failed');
     }
     setSyncing(false);
   };
@@ -315,11 +294,6 @@ export default function MarketingLeadsPage() {
     setSaveNewConnection(false);
     setNewConnectionName('');
     setSyncModal(true);
-  };
-
-  const closeSyncModal = () => {
-    setSyncModal(false);
-    setSyncStep('config');
   };
 
   const formatDate = (dateStr: string) => {
@@ -343,11 +317,11 @@ export default function MarketingLeadsPage() {
         icon={TrendingUp}
         actions={
           <>
-            <button onClick={openSyncModal} className="flex items-center gap-2 rounded-md border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] px-4 py-2 text-sm font-medium shadow-sm hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--accent-foreground))] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[hsl(var(--primary))]/10 transition-all">
+            <button onClick={openSyncModal} className="flex items-center gap-2 rounded-md border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] px-4 py-2 text-sm font-medium shadow-sm hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--accent-foreground))] transition-all">
               <Sheet className="h-4 w-4 text-green-600" />
               Sync Sheet
             </button>
-            <button onClick={openC} className="flex items-center gap-2 rounded-md bg-[hsl(var(--primary))] px-4 py-2 text-sm font-medium text-[hsl(var(--primary-foreground))] shadow-sm hover:opacity-90 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[hsl(var(--primary))]/10 transition-all">
+            <button onClick={openC} className="flex items-center gap-2 rounded-md bg-[hsl(var(--primary))] px-4 py-2 text-sm font-medium text-[hsl(var(--primary-foreground))] shadow-sm hover:opacity-90 transition-all">
               <Plus className="h-4 w-4" />Add
             </button>
           </>
@@ -366,7 +340,7 @@ export default function MarketingLeadsPage() {
         {selectedRows.size > 0 && (
           <button
             onClick={() => setShowBulkDeleteConfirm(true)}
-            className="flex items-center gap-2 rounded-md bg-[hsl(var(--destructive))] px-4 py-2 text-sm font-medium text-[hsl(var(--destructive-foreground))] shadow-sm hover:opacity-90 transition-all ml-auto focus-visible:outline-none"
+            className="flex items-center gap-2 rounded-md bg-[hsl(var(--destructive))] px-4 py-2 text-sm font-medium text-[hsl(var(--destructive-foreground))] shadow-sm hover:opacity-90 ml-auto"
           >
             <Trash2 className="h-4 w-4" />
             Delete Selected ({selectedRows.size})
@@ -374,7 +348,7 @@ export default function MarketingLeadsPage() {
         )}
       </div>
 
-      <div className="overflow-x-auto">
+      <div className="w-full">
         <DataTable
           data={rows}
           columns={[
@@ -394,122 +368,140 @@ export default function MarketingLeadsPage() {
             {
               key: "customerId.customerId",
               header: "ID",
+              className: 'md:w-[1%] md:whitespace-nowrap',
               render: (row: any) => <span className="font-mono text-xs text-[hsl(var(--primary))]">{row.customerId?.customerId || '—'}</span>,
             },
             {
               key: "customerId.name",
               header: "Name",
+              className: 'md:w-auto md:max-w-[150px] md:truncate',
               render: (row: any) => <span className="font-medium">{row.customerId?.name || '—'}</span>,
             },
             {
               key: "customerId.phone",
               header: "Phone",
+              className: 'hidden xl:table-cell md:w-1/6 md:max-w-[120px] md:truncate',
               render: (row: any) => <span>{row.customerId?.phone || '—'}</span>,
             },
             {
               key: "customerId.type",
               header: "Type",
+              className: 'md:w-[1%] md:whitespace-nowrap',
               render: (row: any) => <span className="rounded-full px-2 py-0.5 text-xs font-medium bg-blue-500/10 text-blue-600">{row.customerId?.type || '—'}</span>,
             },
             {
               key: "customerId.sector",
               header: "Sector",
+              className: 'hidden xl:table-cell md:w-1/6 md:max-w-[120px] md:truncate',
               render: (row: any) => <span className="rounded-full px-2 py-0.5 text-xs font-medium bg-purple-500/10 text-purple-600">{row.customerId?.sector || '—'}</span>,
             },
             {
               key: "customerId.address",
               header: "Address",
+              className: 'md:w-1/6 md:max-w-[120px] md:truncate',
               render: (row: any) => <span>{row.customerId?.address || '—'}</span>,
             },
             {
               key: "date",
               header: "Date",
+              className: 'md:w-1/6 md:max-w-[120px] md:truncate',
               render: (row: any) => <span className="text-[hsl(var(--muted-foreground))]">{formatDate(row.date)}</span>,
-            },
-            {
-              key: "notes",
-              header: "Notes",
-              render: (row: any) => <span className="max-w-[200px] truncate text-[hsl(var(--muted-foreground))]" title={row.notes}>{row.notes || '—'}</span>,
             },
           ]}
           loading={loading}
-          onRowClick={openE}
           emptyMessage="No marketing leads found."
           page={page}
           totalPages={tp}
-          totalItems={total}
-          itemsPerPage={lim}
           onPageChange={setPage}
-          renderActions={(row: any) => (
-            <div className="flex gap-2">
-              <button onClick={() => openE(row as MarketingLead)} className="p-1 hover:text-[hsl(var(--primary))]"><Edit2 className="h-4 w-4" /></button>
-              <button onClick={() => setDelId((row as MarketingLead)._id)} className="p-1 hover:text-destructive"><Trash2 className="h-4 w-4" /></button>
+          onRowClick={(row: MarketingLead) => openE(row, 'preview')}
+          renderActions={(row: MarketingLead) => (
+            <div className="flex items-center gap-2">
+              <button onClick={() => openE(row, 'edit')} className="p-2 hover:bg-[hsl(var(--accent))] rounded-lg transition-colors">
+                <Edit2 className="h-4 w-4" />
+              </button>
+              <button onClick={() => setDelId(row._id)} className="p-2 hover:bg-destructive/10 text-destructive rounded-lg transition-colors">
+                <Trash2 className="h-4 w-4" />
+              </button>
             </div>
           )}
-          defaultVisibility={{
-            "customerId.address": false,
-            "customerId.region": false,
-            "customerId.sector": false,
-            "notes": false,
-            "date": false,
-          }}
         />
       </div>
 
-
-
-      {/* Add/Edit Lead Dialog */}
+      {/* Main Lead Dialog */}
       <Dialog open={modal} onOpenChange={setModal}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>{editing ? 'Edit Lead' : 'Add Lead'}</DialogTitle>
+            <DialogTitle>
+              {effectivelyReadOnly ? 'Lead Preview' : (isAdding ? 'Add Marketing Lead' : 'Edit Marketing Lead')}
+            </DialogTitle>
+            {effectivelyReadOnly && <p className="text-xs text-amber-600 font-semibold mt-1 italic">• Preview Mode</p>}
           </DialogHeader>
           <DialogBody>
             <form id="lead-form" onSubmit={save} className="space-y-4">
-              <div className="space-y-4">
-                <div>
-                  <label className="text-xs font-semibold text-[hsl(var(--muted-foreground))] uppercase mb-1.5 block">Name</label>
-                  <input required placeholder="Name" value={form.name} onChange={u('name')} className={iCls} />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold uppercase text-[hsl(var(--muted-foreground))]">Customer Name</label>
+                  <input value={form.name} onChange={u('name')} className={iCls} disabled={effectivelyReadOnly} required />
                 </div>
-                <div>
-                  <label className="text-xs font-semibold text-[hsl(var(--muted-foreground))] uppercase mb-1.5 block">Phone</label>
-                  <input required placeholder="Phone" value={form.phone} onChange={u('phone')} className={iCls} />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-xs font-semibold text-[hsl(var(--muted-foreground))] uppercase mb-1.5 block">Type</label>
-                    <select required value={form.type} onChange={u('type')} className={iCls}>
-                      <option value="">Select Type</option>
-                      {TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-xs font-semibold text-[hsl(var(--muted-foreground))] uppercase mb-1.5 block">Sector</label>
-                    <select value={form.sector} onChange={u('sector')} className={iCls}>
-                      {SECTORS.map(s => <option key={s} value={s}>{s}</option>)}
-                    </select>
-                  </div>
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-[hsl(var(--muted-foreground))] uppercase mb-1.5 block">Date</label>
-                  <input type="date" placeholder="Date" value={form.date} onChange={u('date')} className={iCls} />
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-[hsl(var(--muted-foreground))] uppercase mb-1.5 block">Notes</label>
-                  <textarea placeholder="Notes" value={form.notes} onChange={u('notes')} rows={3} className={iCls} />
+                <div className="space-y-1">
+                  <label className="text-xs font-bold uppercase text-[hsl(var(--muted-foreground))]">Phone</label>
+                  <input value={form.phone} onChange={u('phone')} className={iCls} disabled={effectivelyReadOnly} required />
                 </div>
               </div>
-              {error && <p className="text-sm text-destructive">{error}</p>}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold uppercase text-[hsl(var(--muted-foreground))]">Type</label>
+                  <select value={form.type} onChange={u('type')} className={iCls} disabled={effectivelyReadOnly} required>
+                    <option value="">Select Type</option>
+                    {TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-bold uppercase text-[hsl(var(--muted-foreground))]">Sector</label>
+                  <select value={form.sector} onChange={u('sector')} className={iCls} disabled={effectivelyReadOnly} required>
+                    {SECTORS.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-bold uppercase text-[hsl(var(--muted-foreground))]">Date</label>
+                <input type="date" value={form.date} onChange={u('date')} className={iCls} disabled={effectivelyReadOnly} />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-bold uppercase text-[hsl(var(--muted-foreground))]">Notes</label>
+                <textarea value={form.notes} onChange={u('notes')} rows={3} className={`${iCls} h-auto`} disabled={effectivelyReadOnly} />
+              </div>
+              {error && <p className="text-xs text-destructive font-bold">{error}</p>}
             </form>
           </DialogBody>
           <DialogFooter>
             <div className="flex gap-3 w-full">
-              <button type="button" onClick={() => setModal(false)} className="flex-1 rounded-xl border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] py-3 text-sm font-semibold hover:bg-[hsl(var(--muted))]/50 transition-colors">
-                Cancel
+              <button 
+                type="button" 
+                onClick={() => setModal(false)} 
+                className="flex-1 rounded-xl border border-[hsl(var(--border))] py-3 text-sm font-semibold hover:bg-[hsl(var(--muted))] transition-colors"
+              >
+                {effectivelyReadOnly ? 'Close' : 'Cancel'}
               </button>
-              <button type="submit" form="lead-form" disabled={saving} className="flex-1 rounded-xl bg-[hsl(var(--primary))] py-3 text-sm font-semibold text-[hsl(var(--primary-foreground))] hover:opacity-90 transition-opacity disabled:opacity-60">
-                {saving ? 'Saving…' : 'Save Lead'}
-              </button>
+              {effectivelyReadOnly ? (
+                <button 
+                  type="button" 
+                  onClick={() => setInternalPreviewMode(false)} 
+                  className="flex-1 rounded-xl bg-blue-600 text-white py-3 text-sm font-bold shadow-lg hover:bg-blue-700 transition-all flex items-center justify-center gap-2"
+                >
+                  <Edit2 className="h-4 w-4" />
+                  Edit Lead
+                </button>
+              ) : (
+                <button 
+                  type="submit" 
+                  form="lead-form" 
+                  disabled={saving} 
+                  className="flex-1 rounded-xl bg-[hsl(var(--primary))] text-white py-3 text-sm font-semibold disabled:opacity-60 transition-all"
+                >
+                  {saving ? 'Saving...' : (isAdding ? 'Add Lead' : 'Save Changes')}
+                </button>
+              )}
             </div>
           </DialogFooter>
         </DialogContent>
@@ -528,66 +520,29 @@ export default function MarketingLeadsPage() {
               </DialogTitle>
             </div>
           </DialogHeader>
-
           <DialogBody>
-            {/* Step 1: Configuration */}
             {syncStep === 'config' && (
               <form id="sync-config-form" onSubmit={handleSync(onSyncSubmit)} className="space-y-4">
-                {/* Saved Connections Dropdown */}
                 <div>
                   <label className="block text-sm font-medium mb-1.5 flex items-center gap-2">
                     <Database className="h-4 w-4" />
                     Select Connection
                   </label>
-                  <select
-                    value={selectedConnectionId}
-                    onChange={e => handleConnectionSelect(e.target.value)}
-                    className={iCls}
-                  >
+                  <select value={selectedConnectionId} onChange={e => handleConnectionSelect(e.target.value)} className={iCls}>
                     <option value="new">+ Connect New Sheet</option>
-                    {savedConnections.map(conn => (
-                      <option key={conn._id} value={conn._id}>
-                        {conn.connectionName} ({conn.sheetRange})
-                      </option>
-                    ))}
+                    {savedConnections.map(conn => <option key={conn._id} value={conn._id}>{conn.connectionName} ({conn.sheetRange})</option>)}
                   </select>
                 </div>
-
-                {/* Show details if saved connection selected */}
-                {selectedConnectionId !== 'new' && (
-                  <div className="rounded-xl bg-green-500/10 border border-green-500/20 p-4">
-                    <p className="text-sm text-green-600 font-medium flex items-center gap-2">
-                      <Check className="h-4 w-4" />
-                      Connection loaded - Ready to sync
-                    </p>
-                  </div>
-                )}
-
-                {/* Show form fields only for new connections */}
                 {selectedConnectionId === 'new' && (
-                  <>
+                  <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium mb-1.5">Spreadsheet ID</label>
-                      <input
-                        {...regSync('spreadsheetId', { required: selectedConnectionId === 'new' ? 'Spreadsheet ID is required' : false })}
-                        placeholder="e.g., 1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms"
-                        className={iCls}
-                      />
-                      {syncErrors.spreadsheetId && <p className="text-sm text-destructive mt-1">{syncErrors.spreadsheetId.message}</p>}
-                      <p className="text-xs text-[hsl(var(--muted-foreground))] mt-1">Found in the Google Sheet URL after /d/</p>
+                      <input {...regSync('spreadsheetId', { required: true })} placeholder="ID from URL" className={iCls} />
                     </div>
-
                     <div>
                       <label className="block text-sm font-medium mb-1.5">Sheet Name / Range</label>
-                      <input
-                        {...regSync('sheetRange', { required: selectedConnectionId === 'new' ? 'Sheet range is required' : false })}
-                        placeholder="e.g., Sheet1!A:F or Leads!A1:F100"
-                        className={iCls}
-                      />
-                      {syncErrors.sheetRange && <p className="text-sm text-destructive mt-1">{syncErrors.sheetRange.message}</p>}
-                      <p className="text-xs text-[hsl(var(--muted-foreground))] mt-1">Expected columns: Name, Phone, Type, Sector, Address</p>
+                      <input {...regSync('sheetRange', { required: true })} placeholder="Sheet1!A:F" className={iCls} />
                     </div>
-
                     <div>
                       <label className="block text-sm font-medium mb-1.5">Service Account JSON Key</label>
                       <div className="flex gap-2 mb-2">
@@ -597,273 +552,97 @@ export default function MarketingLeadsPage() {
                           <input type="file" accept=".json" onChange={handleFileUpload} className="hidden" />
                         </label>
                       </div>
-                      <textarea
-                        {...regSync('serviceAccountJson', { required: selectedConnectionId === 'new' ? 'Service account JSON is required' : false })}
-                        placeholder='Paste your service account JSON here or upload the file above...'
-                        rows={6}
-                        className={`${iCls} font-mono text-xs`}
-                      />
-                      {syncErrors.serviceAccountJson && <p className="text-sm text-destructive mt-1">{syncErrors.serviceAccountJson.message}</p>}
+                      <textarea {...regSync('serviceAccountJson', { required: true })} placeholder='Paste JSON key' rows={5} className={`${iCls} h-auto font-mono text-xs`} />
                     </div>
-
-                    {/* Save connection option */}
                     <div className="flex items-center gap-3 p-3 rounded-xl bg-[hsl(var(--muted))]/30 border border-[hsl(var(--border))]">
-                      <input
-                        type="checkbox"
-                        id="saveConnection"
-                        checked={saveNewConnection}
-                        onChange={e => setSaveNewConnection(e.target.checked)}
-                        className="h-4 w-4 rounded cursor-pointer"
-                      />
-                      <label htmlFor="saveConnection" className="text-sm cursor-pointer flex items-center gap-2">
-                        <Save className="h-4 w-4" />
-                        Save this connection for future use
-                      </label>
+                      <input type="checkbox" id="saveConnection" checked={saveNewConnection} onChange={e => setSaveNewConnection(e.target.checked)} className="h-4 w-4 rounded" />
+                      <label htmlFor="saveConnection" className="text-sm cursor-pointer flex items-center gap-2">Save connection</label>
                     </div>
-
                     {saveNewConnection && (
                       <div>
                         <label className="block text-sm font-medium mb-1.5">Connection Name</label>
-                        <input
-                          value={newConnectionName}
-                          onChange={e => setNewConnectionName(e.target.value)}
-                          placeholder="e.g., Facebook Campaign Q1"
-                          className={iCls}
-                          required={saveNewConnection}
-                        />
+                        <input value={newConnectionName} onChange={e => setNewConnectionName(e.target.value)} placeholder="e.g., Campaign X" className={iCls} required />
                       </div>
                     )}
-                  </>
+                  </div>
                 )}
               </form>
             )}
-
-            {/* Step 2: Review & Resolve Conflicts */}
             {syncStep === 'review' && analysis && (
               <div className="space-y-4">
-                {/* Summary */}
                 <div className="grid grid-cols-3 gap-3">
                   <div className="rounded-xl bg-green-500/10 p-4 text-center">
                     <p className="text-2xl font-bold text-green-600">{analysis.summary.new}</p>
-                    <p className="text-xs text-green-600/80">New Leads</p>
+                    <p className="text-xs">New</p>
                   </div>
                   <div className="rounded-xl bg-blue-500/10 p-4 text-center">
                     <p className="text-2xl font-bold text-blue-600">{analysis.summary.exactMatch}</p>
-                    <p className="text-xs text-blue-600/80">Already Synced</p>
+                    <p className="text-xs">Identical</p>
                   </div>
                   <div className="rounded-xl bg-amber-500/10 p-4 text-center">
                     <p className="text-2xl font-bold text-amber-600">{analysis.summary.conflicts}</p>
-                    <p className="text-xs text-amber-600/80">Conflicts</p>
+                    <p className="text-xs">Conflicts</p>
                   </div>
                 </div>
-
-                {/* New Leads Preview */}
-                {analysis.new.length > 0 && (
-                  <div className="rounded-xl border border-green-500/20 p-4">
-                    <div className="flex items-center gap-2 mb-3">
-                      <Plus className="h-4 w-4 text-green-600" />
-                      <span className="font-medium text-green-600">New Leads to Create ({analysis.new.length})</span>
-                    </div>
-                    <div className="max-h-32 overflow-y-auto space-y-1">
-                      {analysis.new.map((lead, i) => (
-                        <div key={i} className="text-sm flex gap-2 text-[hsl(var(--muted-foreground))]">
-                          <span>{lead.sheetData.name}</span>
-                          <span>•</span>
-                          <span>{lead.sheetData.phone}</span>
-                        </div>
-                      ))}
+                {analysis.conflicts.map(c => (
+                  <div key={c.rowIndex} className="p-3 rounded-lg bg-muted/30 text-xs flex justify-between items-center">
+                    <div>{c.sheetData.name} ({c.sheetData.phone})</div>
+                    <div className="flex gap-2">
+                       <button onClick={() => setConflictResolutions(p => ({...p, [c.rowIndex]: 'update'}))} className={`px-2 py-1 rounded ${conflictResolutions[c.rowIndex] === 'update' ? 'bg-amber-500 text-white' : 'bg-muted'}`}>Update</button>
+                       <button onClick={() => setConflictResolutions(p => ({...p, [c.rowIndex]: 'keep'}))} className={`px-2 py-1 rounded ${conflictResolutions[c.rowIndex] === 'keep' ? 'bg-blue-500 text-white' : 'bg-muted'}`}>Keep</button>
                     </div>
                   </div>
-                )}
-
-                {/* Conflicts - Need Resolution */}
-                {analysis.conflicts.length > 0 && (
-                  <div className="rounded-xl border border-amber-500/20 p-4">
-                    <div className="flex items-center gap-2 mb-3">
-                      <AlertTriangle className="h-4 w-4 text-amber-600" />
-                      <span className="font-medium text-amber-600">Conflicts Requiring Resolution ({analysis.conflicts.length})</span>
-                    </div>
-                    <div className="space-y-3 max-h-64 overflow-y-auto">
-                      {analysis.conflicts.map((conflict) => (
-                        <div key={conflict.rowIndex} className="rounded-lg bg-[hsl(var(--muted))]/30 p-3 text-sm">
-                          <div className="flex justify-between items-start mb-2">
-                            <div>
-                              <p className="font-medium">{conflict.existingData?.name} ({conflict.existingData?.customerId})</p>
-                              <p className="text-xs text-[hsl(var(--muted-foreground))]">{conflict.existingData?.phone}</p>
-                            </div>
-                            <div className="flex gap-1">
-                              <button
-                                type="button"
-                                onClick={() => setConflictResolutions(prev => ({ ...prev, [conflict.rowIndex]: 'update' }))}
-                                className={`px-2 py-1 rounded text-xs font-medium transition-colors ${conflictResolutions[conflict.rowIndex] === 'update'
-                                  ? 'bg-amber-500 text-white'
-                                  : 'bg-[hsl(var(--muted))] hover:bg-amber-500/20'
-                                  }`}
-                              >
-                                <RefreshCw className="h-3 w-3 inline mr-1" />Update
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setConflictResolutions(prev => ({ ...prev, [conflict.rowIndex]: 'keep' }))}
-                                className={`px-2 py-1 rounded text-xs font-medium transition-colors ${conflictResolutions[conflict.rowIndex] === 'keep'
-                                  ? 'bg-blue-500 text-white'
-                                  : 'bg-[hsl(var(--muted))] hover:bg-blue-500/20'
-                                  }`}
-                              >
-                                <Check className="h-3 w-3 inline mr-1" />Keep
-                              </button>
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-2 gap-2 text-xs">
-                            <div className="bg-red-500/10 rounded p-2">
-                              <p className="text-red-600 mb-1 font-medium">Current (System)</p>
-                              <p>{conflict.existingData?.type} • {conflict.existingData?.sector}</p>
-                              {conflict.existingData?.address && <p className="truncate">{conflict.existingData.address}</p>}
-                            </div>
-                            <div className="bg-green-500/10 rounded p-2">
-                              <p className="text-green-600 mb-1 font-medium">New (Sheet)</p>
-                              <p>{conflict.sheetData.type} • {conflict.sheetData.sector}</p>
-                              {conflict.sheetData.address && <p className="truncate">{conflict.sheetData.address}</p>}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                ))}
               </div>
             )}
-
-            {/* Step 3: Done */}
             {syncStep === 'done' && commitResult && (
-              <div className="space-y-4 text-center">
-                <div className={`rounded-full mx-auto flex h-16 w-16 items-center justify-center ${commitResult.errors.length > 0 ? 'bg-amber-500/10' : 'bg-green-500/10'}`}>
-                  <Check className={`h-8 w-8 ${commitResult.errors.length > 0 ? 'text-amber-600' : 'text-green-600'}`} />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold">Sync Completed</h3>
-                  <div className="mt-4 grid grid-cols-4 gap-3">
-                    <div className="rounded-xl border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] p-3">
-                      <p className="text-xl font-bold text-green-600">{commitResult.created}</p>
-                      <p className="text-[10px] uppercase font-bold text-[hsl(var(--muted-foreground))]">Created</p>
-                    </div>
-                    <div className="rounded-xl border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] p-3">
-                      <p className="text-xl font-bold text-blue-600">{commitResult.updated}</p>
-                      <p className="text-[10px] uppercase font-bold text-[hsl(var(--muted-foreground))]">Updated</p>
-                    </div>
-                    <div className="rounded-xl border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] p-3">
-                      <p className="text-xl font-bold text-[hsl(var(--muted-foreground))]">{commitResult.skipped}</p>
-                      <p className="text-[10px] uppercase font-bold text-[hsl(var(--muted-foreground))]">Skipped</p>
-                    </div>
-                    <div className="rounded-xl border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] p-3">
-                      <p className="text-xl font-bold text-purple-600">{commitResult.forwarded}</p>
-                      <p className="text-[10px] uppercase font-bold text-[hsl(var(--muted-foreground))]">Forwarded</p>
-                    </div>
-                  </div>
-                </div>
-
-                {commitResult.errors.length > 0 && (
-                  <div className="mt-4 rounded-xl bg-red-500/10 border border-red-500/20 p-4 text-left">
-                    <p className="text-sm font-medium text-red-600 mb-2">Errors ({commitResult.errors.length})</p>
-                    <ul className="text-xs text-red-600 space-y-1 max-h-24 overflow-y-auto">
-                      {commitResult.errors.slice(0, 10).map((e, i) => <li key={i}>• {e}</li>)}
-                      {commitResult.errors.length > 10 && <li>…and {commitResult.errors.length - 10} more</li>}
-                    </ul>
-                  </div>
-                )}
+              <div className="text-center py-6">
+                <Check className="h-12 w-12 text-green-600 mx-auto mb-4" />
+                <h3 className="text-lg font-bold">Sync Complete</h3>
+                <p className="mt-2 text-sm">Created: {commitResult.created} | Updated: {commitResult.updated}</p>
               </div>
             )}
           </DialogBody>
-
           <DialogFooter>
-            <div className="flex gap-3 w-full">
-              {syncStep === 'config' && (
-                <>
-                  <button type="button" onClick={closeSyncModal} className="flex-1 rounded-xl border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] py-3 text-sm font-semibold hover:bg-[hsl(var(--muted))]/50 transition-colors">
-                    Cancel
-                  </button>
-                  <button type="submit" form="sync-config-form" disabled={syncing} className="flex-1 rounded-xl bg-green-600 py-3 text-sm font-semibold text-white disabled:opacity-60 hover:bg-green-700 transition-colors">
-                    {syncing ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Analyzing…</> : <><Sheet className="h-4 w-4 mr-2" />Analyze Sheet</>}
-                  </button>
-                </>
-              )}
-              {syncStep === 'review' && (
-                <>
-                  <button type="button" onClick={() => setSyncStep('config')} className="px-6 rounded-xl border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] py-3 text-sm font-semibold hover:bg-[hsl(var(--muted))]/50 transition-colors">
-                    Back
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleCommit}
-                    disabled={syncing}
-                    className="flex-1 rounded-xl bg-green-600 py-3 text-sm font-semibold text-white disabled:opacity-60 hover:bg-green-700 transition-colors"
-                  >
-                    {syncing ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Committing…</> : <><Check className="h-4 w-4 mr-2" />Commit Changes</>}
-                  </button>
-                </>
-              )}
-              {syncStep === 'done' && (
-                <button type="button" onClick={closeSyncModal} className="w-full rounded-xl bg-[hsl(var(--primary))] py-3 text-sm font-semibold text-[hsl(var(--primary-foreground))]">
-                  Done
-                </button>
-              )}
-            </div>
+             {syncStep === 'config' && (
+               <button type="submit" form="sync-config-form" disabled={syncing} className="w-full rounded-xl bg-green-600 py-3 text-sm font-semibold text-white">
+                 {syncing ? 'Analyzing...' : 'Analyze Sheet'}
+               </button>
+             )}
+             {syncStep === 'review' && (
+               <button onClick={handleCommit} disabled={syncing} className="w-full rounded-xl bg-green-600 py-3 text-sm font-semibold text-white">
+                 {syncing ? 'Committing...' : 'Commit Changes'}
+               </button>
+             )}
+             {syncStep === 'done' && (
+               <button onClick={closeSyncModal} className="w-full rounded-xl bg-[hsl(var(--primary))] py-3 text-sm font-semibold text-white">Done</button>
+             )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={!!delId} onOpenChange={(open) => !open && setDelId(null)}>
+      {/* Delete Confirmation */}
+      <Dialog open={!!delId} onOpenChange={o => !o && setDelId(null)}>
         <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Confirm Delete</DialogTitle>
-          </DialogHeader>
-          <DialogBody>
-            <p className="text-[hsl(var(--muted-foreground))]">
-              Are you sure you want to delete this lead? This action cannot be undone.
-            </p>
-          </DialogBody>
+          <DialogHeader><DialogTitle>Confirm Delete</DialogTitle></DialogHeader>
+          <DialogBody><p>Are you sure you want to delete this lead?</p></DialogBody>
           <DialogFooter>
             <div className="flex gap-3 w-full">
-              <button onClick={() => setDelId(null)} className="flex-1 rounded-xl border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] py-3 text-sm font-semibold hover:bg-[hsl(var(--muted))]/50 transition-colors">
-                Cancel
-              </button>
-              <button onClick={del} className="flex-1 rounded-xl bg-destructive py-3 text-sm font-semibold text-white hover:opacity-90 transition-opacity">
-                Delete Lead
-              </button>
+              <button onClick={() => setDelId(null)} className="flex-1 rounded-xl border border-border py-3">Cancel</button>
+              <button onClick={del} className="flex-1 rounded-xl bg-destructive text-white py-3">Delete</button>
             </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Bulk Delete Confirmation Dialog */}
+      {/* Bulk Delete Confirm */}
       <Dialog open={showBulkDeleteConfirm} onOpenChange={setShowBulkDeleteConfirm}>
         <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-full bg-destructive/10">
-                <AlertTriangle className="h-5 w-5 text-destructive" />
-              </div>
-              <DialogTitle>Delete {selectedRows.size} leads?</DialogTitle>
-            </div>
-          </DialogHeader>
-          <DialogBody>
-            <p className="text-sm text-[hsl(var(--muted-foreground))]">
-              This action cannot be undone. All selected leads will be permanently removed from the system.
-            </p>
-          </DialogBody>
+          <DialogHeader><DialogTitle>Delete {selectedRows.size} leads?</DialogTitle></DialogHeader>
           <DialogFooter>
             <div className="flex gap-3 w-full">
-              <button onClick={() => setShowBulkDeleteConfirm(false)} className="flex-1 rounded-xl border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] py-3 text-sm font-semibold hover:bg-[hsl(var(--muted))]/50 transition-colors">
-                Cancel
-              </button>
-              <button
-                onClick={handleBulkDelete}
-                disabled={bulkDeleting}
-                className="flex-1 rounded-xl bg-destructive py-3 text-sm font-semibold text-white disabled:opacity-60 hover:opacity-90 transition-opacity"
-              >
-                {bulkDeleting ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Deleting…</> : 'Delete All'}
-              </button>
+              <button onClick={() => setShowBulkDeleteConfirm(false)} className="flex-1 rounded-xl border border-border py-3">Cancel</button>
+              <button onClick={handleBulkDelete} className="flex-1 rounded-xl bg-destructive text-white py-3">Delete All</button>
             </div>
           </DialogFooter>
         </DialogContent>

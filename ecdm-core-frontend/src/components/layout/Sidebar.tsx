@@ -99,6 +99,7 @@ const NAV: NavItem[] = [
         labelKey: 'operations', icon: 'Wrench', children: [
             { labelKey: 'workOrder', href: '/operations/work-order', icon: 'Wrench' },
             { labelKey: 'priceList', href: '/operations/price-list', icon: 'FileText' },
+            { labelKey: 'purchaseOrder', href: '/operations/purchase-order', icon: 'ShoppingCart' },
             { labelKey: 'reportOperation', href: '/operations/report', icon: 'Star' },
         ]
     },
@@ -176,6 +177,10 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
             return NAV.filter(item => ['dashboard'].includes(item.labelKey));
         }
 
+        if (role === 'Finance') {
+            return NAV.filter(item => ['dashboard', 'finance', 'operations'].includes(item.labelKey));
+        }
+
         return NAV.filter(item => item.labelKey === 'dashboard');
     };
 
@@ -187,17 +192,16 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
 
     return (
         <aside className={cn(
-            'fixed inset-inline-start-0 top-0 z-40 flex h-screen flex-col border-e border-[hsl(var(--border))]/30 bg-[hsl(var(--background))]/60 backdrop-blur-3xl transition-all duration-300 ease-in-out shadow-[4px_0_24px_rgba(0,0,0,0.02)]',
+            'fixed inset-inline-start-0 top-0 z-40 flex h-screen flex-col bg-[#111111] transition-all duration-300 ease-in-out border-r border-[#262626]',
             isCollapsed ? 'w-[var(--sidebar-collapsed-width)]' : 'w-[var(--sidebar-width)]'
         )}>
-            {/* Logo + Toggle */}
-            <div className="flex h-[var(--header-height)] items-center border-b border-[hsl(var(--border))]/40 px-3">
+            <div className="flex h-[var(--header-height)] items-center border-b border-[#262626] px-3">
                 {!isCollapsed && (
                     <div className="flex items-center gap-2.5 flex-1 min-w-0 ps-1">
                         <Image src="/logo.png" alt="ECDM" width={28} height={28} className="rounded-md shrink-0" />
-                        <div className="min-w-0">
-                            <h1 className="text-[13px] font-bold leading-tight">ECDM Core</h1>
-                            <p className="text-[10px] text-[hsl(var(--muted-foreground))] truncate">{nav.erpPlatform}</p>
+                        <div className="min-w-0 text-white">
+                            <h1 className="text-[13px] font-bold leading-tight tracking-wider">ECDM Core</h1>
+                            <p className="text-[10px] text-[#8b919e] truncate uppercase tracking-widest">{nav.erpPlatform}</p>
                         </div>
                     </div>
                 )}
@@ -208,7 +212,7 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
                 )}
                 <button
                     onClick={onToggle}
-                    className="shrink-0 rounded-md p-1 text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--secondary))] hover:text-[hsl(var(--foreground))] transition-colors"
+                    className="shrink-0 rounded-md p-1 text-[#8b919e] hover:bg-white/10 hover:text-white transition-colors"
                     title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
                 >
                     {isCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
@@ -229,8 +233,8 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
                                     'group flex items-center rounded-xl py-2 text-[12px] font-semibold transition-all duration-200',
                                     isCollapsed ? 'justify-center px-0' : 'gap-3 px-3',
                                     isActive
-                                        ? 'bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] shadow-md shadow-[hsl(var(--primary))]/20'
-                                        : 'text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--secondary))] hover:text-[hsl(var(--foreground))]',
+                                        ? 'bg-white text-black shadow-md'
+                                        : 'text-[#8b919e] hover:bg-white/10 hover:text-white',
                                 )}>
                                 {Icon && <Icon size={16} className={cn("shrink-0 transition-transform duration-200", !isActive && "group-hover:scale-110")} />}
                                 {!isCollapsed && <span className="truncate">{label(item.labelKey)}</span>}
@@ -250,8 +254,8 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
                                     'group flex w-full items-center rounded-lg py-1.5 text-[13px] font-medium transition-all duration-200',
                                     isCollapsed ? 'justify-center px-0' : 'gap-2 px-2',
                                     anyChildActive
-                                        ? 'text-[hsl(var(--primary))]'
-                                        : 'text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--secondary))]/80 hover:text-[hsl(var(--foreground))]'
+                                        ? 'text-white'
+                                        : 'text-[#8b919e] hover:bg-white/10 hover:text-white'
                                 )}>
                                 {Icon && <Icon size={15} className={cn("shrink-0 transition-transform duration-200", !anyChildActive && "group-hover:scale-110")} />}
                                 {!isCollapsed && (
@@ -263,7 +267,7 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
                             </button>
 
                             {!isCollapsed && isOpen && item.children && (
-                                <div className="ms-3 mt-1 space-y-0.5 border-s border-[hsl(var(--border))]/30 ps-3">
+                                <div className="ms-3 mt-1 space-y-0.5 border-s border-[#262626] ps-3">
                                     {item.children.map((child) => {
                                         const ChildIcon = iconMap[child.icon];
                                         const isActive = pathname === child.href;
@@ -272,10 +276,10 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
                                                 className={cn(
                                                     'group flex items-center gap-2 rounded-md px-2 py-1.5 text-[12px] transition-all duration-200 hover:translate-x-1',
                                                     isActive
-                                                        ? 'bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))] font-medium shadow-sm'
-                                                        : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]',
+                                                        ? 'bg-white/10 text-white font-medium shadow-sm'
+                                                        : 'text-[#8b919e] hover:text-white',
                                                 )}>
-                                                {ChildIcon && <ChildIcon size={13} className="shrink-0 transition-colors duration-200 group-hover:text-[hsl(var(--primary))]" />}
+                                                {ChildIcon && <ChildIcon size={13} className="shrink-0 transition-colors duration-200 group-hover:text-white" />}
                                                 <span className="truncate">{label(child.labelKey)}</span>
                                             </Link>
                                         );
@@ -295,8 +299,8 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
                                                 className={cn(
                                                     'flex justify-center rounded-md py-1 text-[12px] transition-all',
                                                     isActive
-                                                        ? 'bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))]'
-                                                        : 'text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--secondary))] hover:text-[hsl(var(--foreground))]',
+                                                        ? 'bg-white/10 text-white'
+                                                        : 'text-[#8b919e] hover:bg-white/10 hover:text-white',
                                                 )}>
                                                 {ChildIcon && <ChildIcon size={13} />}
                                             </Link>
@@ -312,7 +316,7 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
                 {isAdmin && (
                     <div className="mt-4 mb-2">
                         {!isCollapsed && (
-                            <h3 className="text-[11px] font-semibold text-[hsl(var(--muted-foreground))] uppercase tracking-wider mb-2 px-2">
+                            <h3 className="text-[11px] font-semibold text-[#8b919e] uppercase tracking-wider mb-2 px-2">
                                 Employee Reports
                             </h3>
                         )}
@@ -323,8 +327,8 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
                                     'flex items-center rounded-lg py-1.5 text-[13px] font-medium transition-all',
                                     isCollapsed ? 'justify-center px-0' : 'gap-2 px-2',
                                     pathname === '/reports/sales'
-                                        ? 'bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))]'
-                                        : 'text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--secondary))] hover:text-[hsl(var(--foreground))]',
+                                        ? 'bg-white/10 text-white'
+                                        : 'text-[#8b919e] hover:bg-white/10 hover:text-white',
                                 )}>
                                 <FileSpreadsheet size={15} className="shrink-0" />
                                 {!isCollapsed && <span className="truncate">Sales Report</span>}
@@ -335,8 +339,8 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
                                     'flex items-center rounded-lg py-1.5 text-[13px] font-medium transition-all',
                                     isCollapsed ? 'justify-center px-0' : 'gap-2 px-2',
                                     pathname === '/reports/marketing'
-                                        ? 'bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))]'
-                                        : 'text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--secondary))] hover:text-[hsl(var(--foreground))]',
+                                        ? 'bg-white/10 text-white'
+                                        : 'text-[#8b919e] hover:bg-white/10 hover:text-white',
                                 )}>
                                 <BarChart3 size={15} className="shrink-0" />
                                 {!isCollapsed && <span className="truncate">Marketing Report</span>}
@@ -347,8 +351,8 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
                                     'flex items-center rounded-lg py-1.5 text-[13px] font-medium transition-all',
                                     isCollapsed ? 'justify-center px-0' : 'gap-2 px-2',
                                     pathname === '/reports/operation-members'
-                                        ? 'bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))]'
-                                        : 'text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--secondary))] hover:text-[hsl(var(--foreground))]',
+                                        ? 'bg-white/10 text-white'
+                                        : 'text-[#8b919e] hover:bg-white/10 hover:text-white',
                                 )}>
                                 <Users size={15} className="shrink-0" />
                                 {!isCollapsed && <span className="truncate">Operation Members</span>}
@@ -359,8 +363,8 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
         'flex items-center rounded-lg py-1.5 text-[13px] font-medium transition-all',
         isCollapsed ? 'justify-center px-0' : 'gap-2 px-2',
         pathname === '/reports/employee-evaluation'
-            ? 'bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))]'
-            : 'text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--secondary))] hover:text-[hsl(var(--foreground))]',
+            ? 'bg-white/10 text-white'
+            : 'text-[#8b919e] hover:bg-white/10 hover:text-white',
     )}>
     <ClipboardCheck size={15} className="shrink-0" />
     {!isCollapsed && <span className="truncate">Employee Evaluation</span>}
@@ -371,8 +375,8 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
         'flex items-center rounded-lg py-1.5 text-[13px] font-medium transition-all',
         isCollapsed ? 'justify-center px-0' : 'gap-2 px-2',
         pathname === '/reports/hr-efficiency'
-            ? 'bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))]'
-            : 'text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--secondary))] hover:text-[hsl(var(--foreground))]',
+            ? 'bg-white/10 text-white'
+            : 'text-[#8b919e] hover:bg-white/10 hover:text-white',
     )}>
     <BarChart3 size={15} className="shrink-0" />
     {!isCollapsed && <span className="truncate">HR Efficiency</span>}
@@ -383,23 +387,23 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
             </nav>
 
             {/* User Footer with Dropdown */}
-            <div className="border-t border-[hsl(var(--border))]/40 px-3 py-3">
+            <div className="border-t border-[#262626] px-3 py-3">
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <button className={cn(
-                            'flex w-full items-center rounded-md p-2 text-left transition-all hover:bg-[hsl(var(--secondary))]/80',
+                            'flex w-full items-center rounded-md p-2 text-left transition-all hover:bg-white/10',
                             isCollapsed ? 'justify-center' : 'gap-3'
                         )}>
                             {/* Avatar */}
-                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-gradient-to-br from-[hsl(var(--primary))] to-purple-500 text-xs font-bold text-white shadow-sm">
+                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-white text-xs font-bold text-black shadow-sm">
                                 {initials}
                             </div>
                             {!isCollapsed && (
-                                <div className="flex-1 min-w-0">
+                                <div className="flex-1 min-w-0 text-white">
                                     <p className="text-[12px] font-medium leading-tight truncate">
                                         {user?.firstName} {user?.lastName}
                                     </p>
-                                    <p className="text-[10px] text-[hsl(var(--muted-foreground))] truncate capitalize">
+                                    <p className="text-[10px] text-[#8b919e] truncate capitalize">
                                         {user?.role}
                                     </p>
                                 </div>

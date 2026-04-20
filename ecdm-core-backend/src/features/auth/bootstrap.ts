@@ -20,7 +20,7 @@ export const bootstrapAdmin = async (): Promise<void> => {
             
             console.log('✅ Bootstrap: Default admin created successfully!');
         } else {
-            console.log(`ℹ️ Bootstrap: ${count} users already exist. Skipping.`);
+            console.log('ℹ️ Bootstrap: Admin user already exists. Skipping creation.');
         }
     } catch (error) {
         console.error('❌ Bootstrap: Error creating default admin:', error);

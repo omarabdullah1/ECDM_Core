@@ -104,7 +104,7 @@ export default function CustomerOrdersPage() {
       </div>
 
       {/* Data Table with Horizontal Scrolling */}
-      <div className="overflow-x-auto w-full">
+      <div className="w-full">
         <DataTable
           data={filteredOrders}
           columns={columns}

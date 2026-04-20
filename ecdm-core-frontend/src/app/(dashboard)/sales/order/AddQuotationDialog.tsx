@@ -289,8 +289,8 @@ export default function AddQuotationDialog({ order, onClose, onSuccess }: AddQuo
               </div>
 
               <div className="border border-gray-100 rounded-xl overflow-hidden shadow-sm">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-xs">
+                <div className="w-full overflow-x-auto custom-table-scrollbar">
+        <table className="w-full text-xs">
                     <thead className="bg-gray-50/80 border-b border-gray-100">
                       <tr>
                         <th className="px-3 py-2.5 text-left font-bold text-gray-500 uppercase tracking-tighter w-10">#</th>

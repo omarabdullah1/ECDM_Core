@@ -217,8 +217,8 @@ export default function EmployeeEvaluationReport() {
           </div>
         ) : (
           <>
-            <div className="overflow-x-auto min-w-[1500px] rounded-md border">
-              <table className="w-full caption-bottom text-sm">
+            <div className="w-full overflow-x-auto custom-table-scrollbar">
+        <table className="w-full caption-bottom text-sm">
                 <thead className="bg-muted/50">
                   <tr>
                     <th className="border-b px-3 py-2 text-left font-medium">#</th>

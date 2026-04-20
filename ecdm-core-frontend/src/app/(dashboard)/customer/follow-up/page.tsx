@@ -286,6 +286,7 @@ export default function FollowUpPage() {
         totalItems={total}
         itemsPerPage={lim}
         onPageChange={setPage}
+        onRowClick={openE}
         defaultVisibility={{
           issue: false,
           visitSite: false,

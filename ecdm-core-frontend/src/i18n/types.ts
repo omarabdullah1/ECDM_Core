@@ -15,7 +15,7 @@ export interface Translations {
     customer: string; customersList: string; customerOrders: string; customerFollowUp: string; customerFeedback: string;
     finance: string; invoices: string; orderFinance: string; generalExpenses: string; salaries: string;
 
-    operations: string; workOrder: string; priceList: string; reportOperation: string;
+    operations: string; workOrder: string; priceList: string; purchaseOrder: string; reportOperation: string;
     hr: string; hrEmployees: string; hrAttendance: string;
     rnd: string; personalBoard: string; rndProjects: string; myPerformance: string;
     administration: string; userManagement: string; modificationRequests: string; auditLogs: string; netProfitReport: string;

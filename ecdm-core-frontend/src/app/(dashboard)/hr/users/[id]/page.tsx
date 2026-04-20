@@ -36,6 +36,10 @@ interface Employee {
     createdAt: string;
     targetBudget?: number;
     targetSales?: number;
+    maxDiscountPercentage?: number;
+    commissionPercentage?: number;
+    department?: string;
+    salary?: number;
 }
 
 interface AttendanceRecord {
@@ -170,7 +174,40 @@ export default function EmployeeProfilePage() {
     const [docTitle, setDocTitle] = useState('');
     const [docFile, setDocFile] = useState<File | null>(null);
 
+    const [internalPreviewMode, setInternalPreviewMode] = useState(true);
+
     const canEdit = user?.role && ['SuperAdmin', 'Manager', 'HR'].includes(user.role);
+    const effectivelyReadOnly = internalPreviewMode;
+
+    // Commission & discount editing
+    const [editingRates, setEditingRates] = useState(false);
+    const [savingRates, setSavingRates] = useState(false);
+    const [ratesForm, setRatesForm] = useState({
+        commissionPercentage: 0,
+        maxDiscountPercentage: 0,
+    });
+
+    const handleUpdateRates = async () => {
+        setSavingRates(true);
+        try {
+            await api.patch(`/hr/users/${employeeId}`, ratesForm);
+            toast.success('Commission rates updated successfully');
+            setProfile(prev => prev ? {
+                ...prev,
+                employee: {
+                    ...prev.employee,
+                    ...ratesForm
+                }
+            } : null);
+            setEditingRates(false);
+        } catch (err: any) {
+            console.error('Failed to update rates:', err);
+            toast.error(err.response?.data?.message || 'Failed to update rates');
+        } finally {
+            setSavingRates(false);
+        }
+    };
+
 
     useEffect(() => {
         const fetchProfile = async () => {
@@ -178,12 +215,8 @@ export default function EmployeeProfilePage() {
             setError(null);
             try {
                 const response = await api.get(`/hr/users/${employeeId}/profile`);
-                console.log("RAW API RESPONSE:", response.data); // Debugging line
-
-                // Handle both generic ApiResponse wrapper and direct returns
                 const profileData = response.data?.data || response.data;
                 
-                // If the backend wraps the employee in another object (e.g. data.item.employee)
                 const mappedProfile = {
                     employee: profileData.employee || profileData.item?.employee || profileData,
                     attendance: profileData.attendance || profileData.item?.attendance || { records: [], stats: { monthly: { breakdown: {}, presentRate: 0 }, yearly: { breakdown: {}, presentRate: 0 } } },
@@ -191,20 +224,14 @@ export default function EmployeeProfilePage() {
                     salesKPIs: profileData.salesKPIs || profileData.item?.salesKPIs || null,
                 };
 
-                console.log("MAPPED PROFILE:", mappedProfile); // Check what is actually set
                 setProfile(mappedProfile as ProfileData);
 
-                // Fetch sales performance if employee is in Sales role
                 if (mappedProfile.employee?.role === 'Sales') {
                     fetchSalesPerformance();
                 }
             } catch (err: any) {
                 setError('Failed to load employee profile.');
-                if (err.response && err.response.data) {
-                    console.error('BACKEND 500 ERROR DETAILS:', err.response.data);
-                } else {
-                    console.error(err);
-                }
+                console.error(err);
             }
             setLoading(false);
         };
@@ -226,17 +253,14 @@ export default function EmployeeProfilePage() {
         fetchProfile();
     }, [employeeId]);
 
-    // TODO: Implement document upload once backend adds endpoint at /shared/employees/:id/documents/upload
     const handleDocumentUpload = async () => {
         toast.error('Document upload not available yet. Backend endpoint pending.');
     };
 
-    // TODO: Implement document delete once backend adds endpoint at /shared/employees/:id/documents/:docId
     const handleDocumentDelete = async (docId: string) => {
         toast.error('Document delete not available yet. Backend endpoint pending.');
     };
 
-    // Tab configuration
     const tabs: { key: TabKey; label: string; icon: React.ReactNode }[] = [
         { key: 'info', label: 'Profile Info', icon: <User className="h-4 w-4" /> },
         { key: 'attendance', label: 'Attendance', icon: <Calendar className="h-4 w-4" /> },
@@ -268,19 +292,45 @@ export default function EmployeeProfilePage() {
 
     return (
         <div className="space-y-6 pb-8">
-            {/* Back button */}
-            <Link
-                href="/hr/users"
-                className="inline-flex items-center gap-2 text-sm text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
-            >
-                <ArrowLeft className="h-4 w-4" />
-                Back to Employees
-            </Link>
+            <div className="flex items-center justify-between">
+                <Link
+                    href="/hr/users"
+                    className="inline-flex items-center gap-2 text-sm text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
+                >
+                    <ArrowLeft className="h-4 w-4" />
+                    Back to Employees
+                </Link>
 
-            {/* Header Card */}
-            <div className="rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6">
+                {canEdit && (
+                    <button
+                        onClick={() => setInternalPreviewMode(!internalPreviewMode)}
+                        className={`flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-bold transition-all shadow-sm ${internalPreviewMode
+                                ? 'bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))] hover:bg-[hsl(var(--primary))]/20'
+                                : 'bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] hover:opacity-90'
+                            }`}
+                    >
+                        {internalPreviewMode ? (
+                            <>
+                                <TrendingUp className="h-4 w-4" />
+                                Edit Profile
+                            </>
+                        ) : (
+                            <>
+                                <CheckCircle className="h-4 w-4" />
+                                Finish Editing
+                            </>
+                        )}
+                    </button>
+                )}
+            </div>
+
+            <div className="rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6 relative overflow-hidden">
+                {effectivelyReadOnly && (
+                    <div className="absolute top-0 right-0 px-3 py-1 bg-amber-500 text-white text-[10px] font-black uppercase tracking-widest rounded-bl-xl z-10">
+                        Preview Mode
+                    </div>
+                )}
                 <div className="flex flex-col md:flex-row gap-6">
-                    {/* Avatar */}
                     <div className="flex-shrink-0">
                         <div className="h-32 w-32 rounded-2xl bg-[hsl(var(--primary))]/10 flex items-center justify-center overflow-hidden">
                             {employee.avatarUrl ? (
@@ -293,7 +343,6 @@ export default function EmployeeProfilePage() {
                         </div>
                     </div>
 
-                    {/* Info */}
                     <div className="flex-1 space-y-4">
                         <div>
                             <h1 className="text-2xl font-bold">{employee.fullName || `${employee.firstName || ''} ${employee.lastName || ''}`.trim() || 'Unknown Employee'}</h1>
@@ -314,18 +363,18 @@ export default function EmployeeProfilePage() {
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                            <div className="flex items-center gap-2">
+                            <div className="flex flex-wrap items-center gap-2">
                                 <Mail className="h-4 w-4 text-[hsl(var(--muted-foreground))]" />
                                 <span>{employee.email ?? 'N/A'}</span>
                             </div>
                             {employee.phone && (
-                                <div className="flex items-center gap-2">
+                                <div className="flex flex-wrap items-center gap-2">
                                     <Phone className="h-4 w-4 text-[hsl(var(--muted-foreground))]" />
                                     <span>{employee.phone}</span>
                                 </div>
                             )}
                             {employee.address && (
-                                <div className="flex items-center gap-2">
+                                <div className="flex flex-wrap items-center gap-2">
                                     <MapPin className="h-4 w-4 text-[hsl(var(--muted-foreground))]" />
                                     <span>{employee.address}</span>
                                 </div>
@@ -333,7 +382,6 @@ export default function EmployeeProfilePage() {
                         </div>
                     </div>
 
-                    {/* Quick Stats - Different for Sales role */}
                     <div className="flex-shrink-0 grid grid-cols-3 gap-3">
                         <div className="rounded-xl bg-green-50 dark:bg-green-900/20 p-4 text-center">
                             <p className="text-2xl font-bold text-green-600 dark:text-green-400">
@@ -368,7 +416,6 @@ export default function EmployeeProfilePage() {
                 </div>
             </div>
 
-            {/* Tabs */}
             <div className="border-b border-[hsl(var(--border))]">
                 <div className="flex gap-1">
                     {tabs.map((tab) => (
@@ -388,9 +435,7 @@ export default function EmployeeProfilePage() {
                 </div>
             </div>
 
-            {/* Tab Content */}
             <div className="rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6">
-                {/* Profile Info Tab */}
                 {activeTab === 'info' && (
                     <div className="space-y-6 pb-8">
                         <h2 className="text-lg font-bold flex items-center gap-2">
@@ -401,15 +446,15 @@ export default function EmployeeProfilePage() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
                                 <label className="block text-sm font-medium text-[hsl(var(--muted-foreground))] mb-1">First Name</label>
-                                <p className="text-base">{employee.firstName ?? 'N/A'}</p>
+                                <p className="text-base">{employee.firstName || '—'}</p>
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-[hsl(var(--muted-foreground))] mb-1">Last Name</label>
-                                <p className="text-base">{employee.lastName ?? 'N/A'}</p>
+                                <p className="text-base">{employee.lastName || '—'}</p>
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-[hsl(var(--muted-foreground))] mb-1">Email</label>
-                                <p className="text-base">{employee.email ?? 'N/A'}</p>
+                                <p className="text-base">{employee.email || '—'}</p>
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-[hsl(var(--muted-foreground))] mb-1">Phone</label>
@@ -427,6 +472,104 @@ export default function EmployeeProfilePage() {
                                 <label className="block text-sm font-medium text-[hsl(var(--muted-foreground))] mb-1">Role</label>
                                 <p className="text-base">{ROLE_LABELS[employee.role] ?? employee.role ?? 'N/A'}</p>
                             </div>
+
+                            {/* Commission & Discount Rates */}
+                            <div className="md:col-span-2 border-t border-[hsl(var(--border))] pt-6 mt-2">
+                                <div className="flex items-center justify-between mb-4">
+                                    <h3 className="text-sm font-bold uppercase tracking-wider text-[hsl(var(--muted-foreground))] flex items-center gap-2">
+                                        <TrendingUp className="h-4 w-4" />
+                                        Performance & Commission Rates
+                                    </h3>
+                                    {canEdit && !editingRates && !effectivelyReadOnly && (
+                                        <button 
+                                            onClick={() => {
+                                                setRatesForm({
+                                                    commissionPercentage: employee.commissionPercentage || 0,
+                                                    maxDiscountPercentage: employee.maxDiscountPercentage || 0,
+                                                });
+                                                setEditingRates(true);
+                                            }}
+                                            className="text-xs font-bold text-[hsl(var(--primary))] hover:underline"
+                                        >
+                                            Edit Rates
+                                        </button>
+                                    )}
+                                </div>
+                                
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="space-y-1">
+                                        <label className="block text-xs font-bold text-[hsl(var(--muted-foreground))] uppercase tracking-wider">
+                                            Default Commission %
+                                        </label>
+                                        {editingRates ? (
+                                            <div className="flex items-center gap-2">
+                                                <input
+                                                    type="number"
+                                                    value={ratesForm.commissionPercentage}
+                                                    onChange={(e) => setRatesForm(prev => ({ ...prev, commissionPercentage: Number(e.target.value) }))}
+                                                    className={inputClass}
+                                                    min="0"
+                                                    max="100"
+                                                />
+                                                <span className="font-bold text-[hsl(var(--muted-foreground))]">%</span>
+                                            </div>
+                                        ) : (
+                                            <p className="text-xl font-black text-emerald-600 dark:text-emerald-400">
+                                                {employee.commissionPercentage || 0}%
+                                            </p>
+                                        )}
+                                        <p className="text-[10px] text-[hsl(var(--muted-foreground))] italic">
+                                            Used as the default rate in Order Finance.
+                                        </p>
+                                    </div>
+
+                                    <div className="space-y-1">
+                                        <label className="block text-xs font-bold text-[hsl(var(--muted-foreground))] uppercase tracking-wider">
+                                            Max Discount Allowed %
+                                        </label>
+                                        {editingRates ? (
+                                            <div className="flex items-center gap-2">
+                                                <input
+                                                    type="number"
+                                                    value={ratesForm.maxDiscountPercentage}
+                                                    onChange={(e) => setRatesForm(prev => ({ ...prev, maxDiscountPercentage: Number(e.target.value) }))}
+                                                    className={inputClass}
+                                                    min="0"
+                                                    max="100"
+                                                />
+                                                <span className="font-bold text-[hsl(var(--muted-foreground))]">%</span>
+                                            </div>
+                                        ) : (
+                                            <p className="text-xl font-black text-blue-600 dark:text-blue-400">
+                                                {employee.maxDiscountPercentage || 0}%
+                                            </p>
+                                        )}
+                                        <p className="text-[10px] text-[hsl(var(--muted-foreground))] italic">
+                                            Enforced during quotation generation.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {editingRates && (
+                                    <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-[hsl(var(--border))] border-dashed">
+                                        <button
+                                            onClick={() => setEditingRates(false)}
+                                            className="px-4 py-2 text-xs font-bold text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))]/50 rounded-lg transition-all"
+                                            disabled={savingRates}
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            onClick={handleUpdateRates}
+                                            disabled={savingRates}
+                                            className="px-6 py-2 text-xs font-bold bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] rounded-lg shadow-lg shadow-[hsl(var(--primary))]/20 flex items-center gap-2 transition-all hover:opacity-90"
+                                        >
+                                            {savingRates && <Loader2 className="h-3 w-3 animate-spin" />}
+                                            Save Rates
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
                             <div>
                                 <label className="block text-sm font-medium text-[hsl(var(--muted-foreground))] mb-1">Joined</label>
                                 <p className="text-base">
@@ -443,7 +586,6 @@ export default function EmployeeProfilePage() {
                     </div>
                 )}
 
-                {/* Attendance Tab */}
                 {activeTab === 'attendance' && (
                     <div className="space-y-6 pb-8">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-in-slide stagger-1">
@@ -453,7 +595,6 @@ export default function EmployeeProfilePage() {
                             </h2>
                         </div>
 
-                        {/* Stats Cards */}
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                             <div className="rounded-xl bg-[hsl(var(--muted))]/50 p-4">
                                 <p className="text-sm text-[hsl(var(--muted-foreground))]">Monthly Present</p>
@@ -473,8 +614,7 @@ export default function EmployeeProfilePage() {
                             </div>
                         </div>
 
-                        {/* Attendance Table */}
-                        <div className="overflow-x-auto">
+                        <div className="w-full overflow-x-auto custom-table-scrollbar">
                             <table className="w-full text-sm">
                                 <thead className="bg-[hsl(var(--muted))]/50">
                                     <tr>
@@ -543,7 +683,6 @@ export default function EmployeeProfilePage() {
                     </div>
                 )}
 
-                {/* Tasks Tab */}
                 {activeTab === 'tasks' && (
                     <div className="space-y-6 pb-8">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-in-slide stagger-1">
@@ -553,7 +692,6 @@ export default function EmployeeProfilePage() {
                             </h2>
                         </div>
 
-                        {/* Performance Stats - Different for Sales role */}
                         {employee.role === 'Sales' && profile.salesKPIs ? (
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                                 <div className="rounded-xl bg-blue-50 dark:bg-blue-900/20 p-4">
@@ -638,7 +776,6 @@ export default function EmployeeProfilePage() {
                             </div>
                         )}
 
-                        {/* Sales Performance Widget - Only for Sales role */}
                         {employee.role === 'Sales' && (
                             <div className="rounded-xl border-2 border-blue-200 dark:border-blue-800 bg-gradient-to-br from-blue-50 to-white dark:from-blue-950 dark:to-gray-900 p-6 shadow-sm">
                                 <div className="flex items-center gap-2 mb-4">
@@ -688,78 +825,27 @@ export default function EmployeeProfilePage() {
                                                             className="h-3 bg-blue-100 dark:bg-blue-900"
                                                             indicatorClassName="bg-blue-600 dark:bg-blue-400"
                                                         />
-                                                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                                                            Based on Accepted/Won orders
-                                                        </p>
                                                     </div>
                                                 </>
                                             );
                                         })()}
-
                                         <p className="text-xs text-center text-gray-500 dark:text-gray-400 mt-3 pt-3 border-t border-blue-200 dark:border-blue-800">
-                                            Current Performance
+                                            Current Month Performance
                                         </p>
                                     </div>
                                 )}
                             </div>
                         )}
 
-                        {/* Marketing Budget Progress Widget - Only for Marketing role */}
-                        {employee.role === 'Marketing' && (
-                            <div className="rounded-xl border-2 border-emerald-200 dark:border-emerald-800 bg-gradient-to-br from-emerald-50 to-white dark:from-emerald-950 dark:to-gray-900 p-6 shadow-sm">
-                                <div className="flex items-center gap-2 mb-4">
-                                    <TrendingUp className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-                                    <h3 className="text-lg font-bold text-emerald-800 dark:text-emerald-300">
-                                        Monthly Marketing Budget Progress
-                                    </h3>
-                                </div>
-
-                                <div className="space-y-4">
-                                    <div className="flex justify-between items-center">
-                                        <div>
-                                            <p className="text-sm text-gray-600 dark:text-gray-400">Spent / Achieved</p>
-                                            <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
-                                                EGP 0
-                                            </p>
-                                        </div>
-                                        <div className="text-right">
-                                            <p className="text-sm text-gray-600 dark:text-gray-400">Target Budget</p>
-                                            <p className="text-2xl font-bold text-emerald-800 dark:text-emerald-300">
-                                                EGP {(employee.targetBudget ?? 0).toLocaleString()}
-                                            </p>
-                                        </div>
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        <div className="flex justify-between text-sm font-semibold text-emerald-700 dark:text-emerald-400">
-                                            <span>Progress</span>
-                                            <span>0%</span>
-                                        </div>
-                                        <Progress
-                                            value={0}
-                                            max={100}
-                                            className="h-3 bg-emerald-100 dark:bg-emerald-900"
-                                            indicatorClassName="bg-emerald-500 dark:bg-emerald-400"
-                                        />
-                                    </div>
-
-                                    <p className="text-xs text-center text-gray-500 dark:text-gray-400 mt-3 pt-3 border-t border-emerald-200 dark:border-emerald-800">
-                                        {new Date().toLocaleString('default', { month: 'long', year: 'numeric' })} Performance
-                                    </p>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Sales Orders Table - Only for Sales role */}
                         {employee.role === 'Sales' && profile.salesKPIs?.salesOrders ? (
-                            <div className="overflow-x-auto">
+                            <div className="w-full overflow-x-auto custom-table-scrollbar">
                                 <table className="w-full text-sm">
                                     <thead className="bg-[hsl(var(--muted))]/50">
                                         <tr>
                                             <th className="px-4 py-3 text-left font-medium">Customer</th>
                                             <th className="px-4 py-3 text-left font-medium">Type</th>
-                                            <th className="px-4 py-3 text-left font-medium">Follow-up Status</th>
-                                            <th className="px-4 py-3 text-left font-medium">Total Amount</th>
+                                            <th className="px-4 py-3 text-left font-medium">Stage</th>
+                                            <th className="px-4 py-3 text-left font-medium">Amount</th>
                                             <th className="px-4 py-3 text-left font-medium">Created</th>
                                         </tr>
                                     </thead>
@@ -772,7 +858,6 @@ export default function EmployeeProfilePage() {
                                             </tr>
                                         ) : (
                                             profile.salesKPIs.salesOrders.slice(0, 20).map((order) => {
-                                                // Determine current follow-up stage
                                                 const firstFollowUp = order.quotationStatusFirstFollowUp;
                                                 const secondFollowUp = order.statusSecondFollowUp;
                                                 const thirdFollowUp = order.finalStatusThirdFollowUp;
@@ -799,37 +884,22 @@ export default function EmployeeProfilePage() {
                                                     stageClass = 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400';
                                                 }
                                                 
-                                                // Type: check typeOfOrder first, then salesDataTypeOfOrder fallback
-                                                const orderType = order.typeOfOrder || order.salesDataTypeOfOrder || 'General supplies';
-                                                
-                                                // Total Amount: use quotation.grandTotal
-                                                const totalAmount = order.quotation?.grandTotal || 0;
-                                                
                                                 return (
                                                     <tr key={order._id} className="hover:bg-[hsl(var(--muted))]/30">
-                                                        <td className="px-4 py-3 font-medium">
-                                                            {order.customer?.name || '—'}
-                                                        </td>
-                                                        <td className="px-4 py-3">
-                                                            {orderType}
-                                                        </td>
+                                                        <td className="px-4 py-3 font-medium">{order.customer?.name || '—'}</td>
+                                                        <td className="px-4 py-3">{order.typeOfOrder || order.salesDataTypeOfOrder || 'General'}</td>
                                                         <td className="px-4 py-3">
                                                             <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${stageClass}`}>
                                                                 {currentStage}
                                                             </span>
                                                         </td>
                                                         <td className="px-4 py-3 font-medium text-green-600 dark:text-green-400">
-                                                            EGP {totalAmount.toLocaleString()}
+                                                            EGP {(order.quotation?.grandTotal || 0).toLocaleString()}
                                                         </td>
                                                         <td className="px-4 py-3">
                                                             {order.createdAt && !isNaN(new Date(order.createdAt).getTime())
-                                                                ? new Date(order.createdAt).toLocaleDateString('en-GB', {
-                                                                    day: '2-digit',
-                                                                    month: 'short',
-                                                                    year: 'numeric',
-                                                                })
-                                                                : '—'
-                                                            }
+                                                                ? new Date(order.createdAt).toLocaleDateString('en-GB')
+                                                                : '—'}
                                                         </td>
                                                     </tr>
                                                 );
@@ -839,72 +909,46 @@ export default function EmployeeProfilePage() {
                                 </table>
                             </div>
                         ) : (
-                            /* Work Orders Table - For non-Sales roles */
-                            <div className="overflow-x-auto">
+                            <div className="w-full overflow-x-auto custom-table-scrollbar">
                                 <table className="w-full text-sm">
                                     <thead className="bg-[hsl(var(--muted))]/50">
                                         <tr>
                                             <th className="px-4 py-3 text-left font-medium">Customer</th>
                                             <th className="px-4 py-3 text-left font-medium">Issue</th>
-                                            <th className="px-4 py-3 text-left font-medium">Type</th>
-                                            <th className="px-4 py-3 text-left font-medium">Date</th>
                                             <th className="px-4 py-3 text-left font-medium">Punctuality</th>
-                                            <th className="px-4 py-3 text-left font-medium">Completed</th>
-                                            <th className="px-4 py-3 text-left font-medium">Rating</th>
+                                            <th className="px-4 py-3 text-left font-medium">Status</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-[hsl(var(--border))]">
                                         {workOrders?.records?.length === 0 ? (
                                             <tr>
-                                                <td colSpan={7} className="px-4 py-8 text-center text-[hsl(var(--muted-foreground))]">
+                                                <td colSpan={4} className="px-4 py-8 text-center text-[hsl(var(--muted-foreground))]">
                                                     No work orders found.
                                                 </td>
                                             </tr>
                                         ) : (
                                             workOrders?.records?.slice(0, 20).map((wo) => (
                                                 <tr key={wo?._id ?? 'wo'} className="hover:bg-[hsl(var(--muted))]/30">
-                                                    <td className="px-4 py-3 font-medium">
-                                                        {wo?.customerOrderId?.customerId?.name || '—'}
-                                                    </td>
-                                                    <td className="px-4 py-3 max-w-[200px] truncate">
-                                                        {wo?.customerOrderId?.issue || '—'}
-                                                    </td>
-                                                    <td className="px-4 py-3">
-                                                        {wo?.customerOrderId?.typeOfOrder || '—'}
-                                                    </td>
-                                                    <td className="px-4 py-3">
-                                                        {wo?.taskDate && !isNaN(new Date(wo.taskDate).getTime())
-                                                            ? new Date(wo.taskDate).toLocaleDateString('en-GB', {
-                                                                day: '2-digit',
-                                                                month: 'short',
-                                                                year: 'numeric',
-                                                            })
-                                                            : '—'
-                                                        }
-                                                    </td>
+                                                    <td className="px-4 py-3 font-medium">{wo?.customerOrderId?.customerId?.name || '—'}</td>
+                                                    <td className="px-4 py-3 truncate max-w-[200px]">{wo?.customerOrderId?.issue || '—'}</td>
                                                     <td className="px-4 py-3">
                                                         <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${
                                                             wo?.punctuality === 'On Time' 
                                                                 ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                                                                : wo?.punctuality === 'Delayed'
-                                                                    ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                                                                    : 'bg-gray-100 text-gray-600'
+                                                                : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
                                                         }`}>
-                                                            {wo?.punctuality || 'N/A'}
+                                                            {wo?.punctuality || 'Delayed'}
                                                         </span>
                                                     </td>
                                                     <td className="px-4 py-3">
                                                         <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${
                                                             wo?.taskCompleted === 'Yes' 
                                                                 ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                                                                : wo?.taskCompleted === 'No'
-                                                                    ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                                                                    : 'bg-gray-100 text-gray-600'
+                                                                : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
                                                         }`}>
-                                                            {wo?.taskCompleted || 'N/A'}
+                                                            {wo?.taskCompleted || 'No'}
                                                         </span>
                                                     </td>
-                                                    <td className="px-4 py-3">{wo?.rating || '—'}</td>
                                                 </tr>
                                             ))
                                         )}
@@ -915,7 +959,6 @@ export default function EmployeeProfilePage() {
                     </div>
                 )}
 
-                {/* Documents Tab */}
                 {activeTab === 'documents' && (
                     <div className="space-y-6 pb-8">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-in-slide stagger-1">
@@ -925,7 +968,6 @@ export default function EmployeeProfilePage() {
                             </h2>
                         </div>
 
-                        {/* Upload Form (if authorized) */}
                         {canEdit && (
                             <div className="rounded-xl bg-[hsl(var(--muted))]/50 p-4">
                                 <h3 className="text-sm font-semibold mb-3">Upload New Document</h3>
@@ -965,7 +1007,6 @@ export default function EmployeeProfilePage() {
                             </div>
                         )}
 
-                        {/* Documents List */}
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             {(!employee.documents || employee.documents.length === 0) ? (
                                 <div className="col-span-full text-center py-8 text-[hsl(var(--muted-foreground))]">
@@ -975,7 +1016,7 @@ export default function EmployeeProfilePage() {
                                 employee.documents.map((doc) => (
                                     <div
                                         key={doc?._id ?? `doc-${Math.random()}`}
-                                        className="rounded-xl border border-[hsl(var(--border))] p-4 hover:bg-[hsl(var(--muted))]/30 transition-colors"
+                                        className="rounded-xl border border-[hsl(var(--border))] p-4 hover:bg-[hsl(var(--muted))]/30 transition-all"
                                     >
                                         <div className="flex items-start justify-between gap-3">
                                             <div className="flex items-start gap-3">
@@ -983,15 +1024,9 @@ export default function EmployeeProfilePage() {
                                                     <FileText className="h-6 w-6 text-[hsl(var(--primary))]" />
                                                 </div>
                                                 <div>
-                                                    <h4 className="font-medium">{doc?.title ?? 'Untitled Document'}</h4>
+                                                    <h4 className="font-medium">{doc?.title ?? 'Untitled'}</h4>
                                                     <p className="text-xs text-[hsl(var(--muted-foreground))]">
-                                                        Uploaded {doc?.uploadedAt 
-                                                            ? new Date(doc.uploadedAt).toLocaleDateString('en-GB', {
-                                                                day: '2-digit',
-                                                                month: 'short',
-                                                                year: 'numeric',
-                                                            })
-                                                            : 'N/A'}
+                                                        Uploaded {doc?.uploadedAt ? new Date(doc.uploadedAt).toLocaleDateString('en-GB') : 'N/A'}
                                                     </p>
                                                 </div>
                                             </div>
@@ -1001,15 +1036,13 @@ export default function EmployeeProfilePage() {
                                                     target="_blank"
                                                     rel="noopener noreferrer"
                                                     className="rounded-lg p-2 hover:bg-[hsl(var(--secondary))] transition-colors"
-                                                    title="View"
                                                 >
                                                     <ExternalLink className="h-4 w-4" />
                                                 </a>
                                                 {canEdit && (
                                                     <button
                                                         onClick={() => doc?._id && handleDocumentDelete(doc._id)}
-                                                        className="rounded-lg p-2 hover:bg-red-100 dark:hover:bg-red-900/30 text-red-600 transition-colors"
-                                                        title="Delete"
+                                                        className="rounded-lg p-2 hover:bg-red-100 text-red-600 transition-colors"
                                                     >
                                                         <Trash2 className="h-4 w-4" />
                                                     </button>

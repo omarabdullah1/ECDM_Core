@@ -61,6 +61,9 @@ export const getAll = async (query: Record<string, unknown>) => {
             .populate('customerId',    'customerId name phone region sector address')
             .populate('salesOrderId',  'salesOrderId issueDescription quotationStatus finalStatus quotation invoiceId')
             .populate('updatedBy',     'name email')
+            .populate('salesPersonId', 'firstName lastName fullName commissionPercentage role')
+            .populate('technicianId',  'firstName lastName fullName commissionPercentage role')
+            .populate('engineerId',    'firstName lastName fullName commissionPercentage role')
             .sort({ createdAt: -1 }).skip(skip).limit(Number(limit)),
         CustomerOrder.countDocuments(filter),
     ]);
@@ -71,7 +74,10 @@ export const getById = async (id: string): Promise<ICustomerOrderDocument> => {
     const doc = await CustomerOrder.findById(id)
         .populate('customerId',    'customerId name phone region sector address email company')
         .populate('salesOrderId',  'salesOrderId issueDescription quotationStatus finalStatus siteInspectionDate quotation invoiceId')
-        .populate('updatedBy',     'name email');
+        .populate('updatedBy',     'name email')
+        .populate('salesPersonId', 'firstName lastName fullName commissionPercentage role')
+        .populate('technicianId',  'firstName lastName fullName commissionPercentage role')
+        .populate('engineerId',    'firstName lastName fullName commissionPercentage role');
     if (!doc) throw new AppError('Customer order not found', 404);
     return doc;
 };

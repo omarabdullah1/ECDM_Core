@@ -92,21 +92,20 @@ export function DialogContent({
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-[100] flex justify-end pointer-events-none">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 pointer-events-none">
       {/* Backdrop */}
       <div 
-        className="fixed inset-0 bg-black/40 backdrop-blur-[2px] transition-opacity animate-in fade-in duration-300 pointer-events-auto" 
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity animate-in fade-in duration-300 pointer-events-auto" 
         onClick={handleClose}
         aria-hidden="true"
       />
       
-      {/* Dialog Drawer (Full Height) */}
+      {/* Dialog Card (Centered) */}
       <div
         className={cn(
-          'relative w-full sm:max-w-2xl h-screen flex flex-col',
-          'bg-white/90 backdrop-blur-xl shadow-[0_0_50px_-12px_rgba(0,0,0,0.25)] animate-drawer-in overflow-hidden pointer-events-auto',
-          'dark:bg-[hsl(var(--background))]/80 dark:border-l dark:border-[hsl(var(--border))]/30',
-          'rounded-l-3xl border-l border-[hsl(var(--border))]/50', // Premium rounded edge
+          'relative w-full sm:max-w-xl max-h-[90vh] flex flex-col',
+          'bg-white shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] animate-in zoom-in-95 duration-200 overflow-hidden pointer-events-auto',
+          'rounded-3xl border border-gray-200 min-h-0',
           className
         )}
         role="dialog"
@@ -116,7 +115,7 @@ export function DialogContent({
         {/* Close button - now always on top of the card stack */}
         <button
           onClick={handleClose}
-          className="absolute right-4 top-4 z-50 rounded-lg bg-gray-100/50 p-2 text-gray-500 opacity-70 transition-all hover:bg-gray-100 hover:opacity-100 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary/20"
+          className="absolute right-5 top-5 z-50 rounded-full bg-gray-100 p-2 text-gray-500 transition-all hover:bg-gray-200 hover:text-black focus:outline-none"
         >
           <X className="h-4 w-4" />
           <span className="sr-only">Close</span>
@@ -131,7 +130,7 @@ export function DialogContent({
 
 export function DialogHeader({ className, children }: DialogHeaderProps) {
   return (
-    <div className={cn('flex-none px-8 py-6', className)}>
+    <div className={cn('flex-none px-8 py-6 border-b border-gray-100 bg-white/50', className)}>
       {children}
     </div>
   );
@@ -139,7 +138,7 @@ export function DialogHeader({ className, children }: DialogHeaderProps) {
 
 export function DialogBody({ className, children }: { className?: string; children: React.ReactNode }) {
   return (
-    <div className={cn('flex-1 min-h-0 overflow-y-auto p-8 custom-scrollbar', className)}>
+    <div className={cn('flex-1 overflow-y-auto p-6 md:p-8 custom-scrollbar bg-white', className)}>
       {children}
     </div>
   );
@@ -147,7 +146,7 @@ export function DialogBody({ className, children }: { className?: string; childr
 
 export function DialogTitle({ className, children }: DialogTitleProps) {
   return (
-    <h2 className={cn('text-lg font-semibold leading-none tracking-tight', className)}>
+    <h2 className={cn('text-xl font-bold leading-none tracking-tight text-[#111111]', className)}>
       {children}
     </h2>
   );
@@ -163,7 +162,7 @@ export function DialogDescription({ className, children }: DialogDescriptionProp
 
 export function DialogFooter({ className, children }: DialogFooterProps) {
   return (
-    <div className={cn('flex-none px-8 py-5 border-t border-[hsl(var(--border))]/30 flex justify-end gap-3', className)}>
+    <div className={cn('flex-none px-8 py-5 border-t border-gray-100 bg-gray-50 flex justify-end gap-3', className)}>
       {children}
     </div>
   );

@@ -53,9 +53,13 @@ export interface ICustomerOrder {
     spareParts?:         string;
     extraExpenseType?:   ExtraExpenseType;
     extraExpenseAmount?: number;
-    salesPercentage?:    string; // e.g. "5%"
-    technicianPercentage?: string;
-    engineerPercentage?: string;
+    salesPercentage?:    number; // e.g. 5 (percent, 0-100)
+    technicianPercentage?: number;
+    engineerPercentage?: number;
+    // Personnel references (linked to User documents)
+    salesPersonId?:   Types.ObjectId;  // Sales employee responsible for this order
+    technicianId?:    Types.ObjectId;  // Technician assigned to this order
+    engineerId?:      Types.ObjectId;  // Engineer assigned to this order
     
     startDate?:          Date;
     endDate?:            Date;

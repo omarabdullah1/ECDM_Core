@@ -86,6 +86,10 @@ export default function PriceListPage() {
         onDelete: (row) => setDelId(row._id),
     });
 
+    const handleRowClick = (item: PriceListItem) => {
+        setEditing(item);
+    };
+
     return (
         <div className="space-y-6 pb-8">
 
@@ -129,7 +133,7 @@ export default function PriceListPage() {
             </div>
 
             {/* ─── Data Table ──────────────────────────────────────────────────── */}
-            <div className="overflow-x-auto">
+            <div className="w-full">
                 <DataTable
                     data={rows}
                     columns={priceListColumns}
@@ -142,6 +146,7 @@ export default function PriceListPage() {
                     onPageChange={setPage}
                     bulkDeleteEndpoint="/operations/price-list/bulk-delete"
                     onBulkDeleteSuccess={fetchData}
+                    onRowClick={handleRowClick}
                     renderActions={renderActions}
                 />
             </div>
@@ -199,3 +204,4 @@ export default function PriceListPage() {
         </div>
     );
 }
+

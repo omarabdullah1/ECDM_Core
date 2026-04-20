@@ -21,6 +21,8 @@ const formSchema = z.object({
     specification: z.string().max(2000).optional(),
     category: z.string().optional(),
     unitPrice: z.string().optional(),
+    availableQuantity: z.string().optional(),
+    minStockLevel: z.string().optional(),
     notes: z.string().max(2000).optional(),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     dataSheet: z.any().optional(),
@@ -44,6 +46,8 @@ export default function AddPriceListDialog({ onClose, onSuccess }: AddPriceListD
             specification: '',
             category: '',
             unitPrice: '0',
+            availableQuantity: '0',
+            minStockLevel: '5',
             notes: '',
         },
     });
@@ -70,6 +74,8 @@ export default function AddPriceListDialog({ onClose, onSuccess }: AddPriceListD
             if (values.specification) formData.append('specification', values.specification);
             if (values.category) formData.append('category', values.category);
             if (values.unitPrice !== undefined) formData.append('unitPrice', String(values.unitPrice));
+            if (values.availableQuantity !== undefined) formData.append('availableQuantity', String(values.availableQuantity));
+            if (values.minStockLevel !== undefined) formData.append('minStockLevel', String(values.minStockLevel));
             if (values.notes) formData.append('notes', values.notes);
             if (dataSheetFile) formData.append('dataSheet', dataSheetFile);
 
@@ -110,7 +116,7 @@ export default function AddPriceListDialog({ onClose, onSuccess }: AddPriceListD
                             )}
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-3 gap-4">
                             <div className="space-y-1">
                                 <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Category</label>
                                 <Select {...form.register('category')}>
@@ -124,6 +130,16 @@ export default function AddPriceListDialog({ onClose, onSuccess }: AddPriceListD
                                 <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Unit Price ($)</label>
                                 <Input type="number" step="0.01" min="0" {...form.register('unitPrice')} placeholder="0.00" />
                             </div>
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-bold text-[hsl(var(--primary))] uppercase tracking-widest">Initial Qty</label>
+                                <Input type="number" min="0" {...form.register('availableQuantity')} placeholder="0" className="border-[hsl(var(--primary))]/30 bg-[hsl(var(--primary))]/5 font-bold" />
+                            </div>
+                        </div>
+
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-amber-500 uppercase tracking-widest">Low Stock Alert Level (Min Quantity)</label>
+                            <Input type="number" min="0" {...form.register('minStockLevel')} placeholder="5" className="border-amber-200 bg-amber-50/30" />
+                            <p className="text-[9px] text-amber-500 font-medium">You will be notified when stock drops below this number.</p>
                         </div>
 
                         <div className="space-y-1">

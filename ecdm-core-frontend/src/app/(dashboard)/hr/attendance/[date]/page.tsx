@@ -6,6 +6,7 @@ import { ArrowLeft, Calendar, Download } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { DataTable } from '@/components/ui/DataTable';
 import { columns, AttendanceRecord } from '../columns';
+import ViewAttendanceDialog from '../ViewAttendanceDialog';
 
 export default function DailyAttendanceFolder() {
     const params = useParams();
@@ -16,6 +17,9 @@ export default function DailyAttendanceFolder() {
     const [total, setTotal] = useState(0);
     const [page, setPage] = useState(1);
     const [loading, setLoading] = useState(true);
+
+    const [selectedRecord, setSelectedRecord] = useState<AttendanceRecord | null>(null);
+    const [viewDialogOpen, setViewDialogOpen] = useState(false);
 
     const limit = 100; // Higher limit for single-day view
     const totalPages = Math.ceil(total / limit);
@@ -43,6 +47,11 @@ export default function DailyAttendanceFolder() {
             fetchDailyAttendance();
         }
     }, [dateStr, page]);
+
+    const handleRowClick = (record: AttendanceRecord) => {
+        setSelectedRecord(record);
+        setViewDialogOpen(true);
+    };
 
     // Format date for display
     const formatDate = (dateStr: string) => {
@@ -121,7 +130,7 @@ export default function DailyAttendanceFolder() {
             </div>
 
             {/* Data Table */}
-            <div className="overflow-x-auto">
+            <div className="w-full">
                 <DataTable
                     data={rows}
                     columns={columns}
@@ -130,6 +139,7 @@ export default function DailyAttendanceFolder() {
                     page={page}
                     totalPages={totalPages}
                     onPageChange={setPage}
+                    onRowClick={handleRowClick}
                     bulkDeleteEndpoint="/hr/attendance/bulk-delete"
                     onBulkDeleteSuccess={fetchDailyAttendance}
                     defaultVisibility={{
@@ -141,6 +151,16 @@ export default function DailyAttendanceFolder() {
                     }}
                 />
             </div>
+
+            {/* Detail Dialog */}
+            {selectedRecord && (
+                <ViewAttendanceDialog
+                    open={viewDialogOpen}
+                    onOpenChange={setViewDialogOpen}
+                    record={selectedRecord}
+                    onSuccess={fetchDailyAttendance}
+                />
+            )}
         </div>
     );
 }

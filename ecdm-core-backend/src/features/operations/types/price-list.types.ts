@@ -13,6 +13,8 @@ export interface IPriceList {
     dataSheetFileName: string;
     category: 'Maintenance' | 'General supply' | 'Supply and installation';
     unitPrice: number;
+    availableQuantity: number;
+    minStockLevel: number;
     notes: string;
     updatedBy: mongoose.Types.ObjectId | string;
     createdAt: Date;
@@ -26,6 +28,8 @@ export interface PriceListCreatePayload {
     dataSheetFileName?: string;
     category?: string;
     unitPrice?: number;
+    availableQuantity?: number;
+    minStockLevel?: number;
     notes?: string;
 }
 
@@ -36,6 +40,8 @@ export interface PriceListUpdatePayload {
     dataSheetFileName?: string;
     category?: string;
     unitPrice?: number;
+    availableQuantity?: number;
+    minStockLevel?: number;
     notes?: string;
     updatedBy?: mongoose.Types.ObjectId | string;
 }

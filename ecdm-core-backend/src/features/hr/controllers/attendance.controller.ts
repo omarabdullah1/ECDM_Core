@@ -311,9 +311,10 @@ export const uploadExcel = async (req: Request, res: Response, next: NextFunctio
             attendanceRecords.forEach(record => {
                 const matchedUserId = userMap.get(record.employeeId);
                 
-                // Track unlinked employees for reporting
+                // Track and SKIP unlinked employees (IDs not found in the system)
                 if (!matchedUserId) {
                     unlinkedCount++;
+                    return;
                 }
 
                 // Prepare the update payload
@@ -382,6 +383,69 @@ export const uploadExcel = async (req: Request, res: Response, next: NextFunctio
             fs.unlink(filePath, () => {});
             throw parseError;
         }
+    } catch (e) {
+        next(e);
+    }
+};
+
+/**
+ * GET /api/hr/attendance/template
+ * 
+ * Generates and downloads an Excel template pre-filled with all active employees.
+ */
+export const downloadTemplate = async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+        if (!xlsx) {
+            sendSuccess(res, null, 'xlsx package not installed', 500);
+            return;
+        }
+
+        const User = mongoose.model('User');
+        const employees = await User.find({ 
+            // Only include employees who have an employeeId
+            employeeId: { $ne: null, $exists: true } 
+        }).select('employeeId firstName lastName department').sort({ employeeId: 1 });
+
+        const today = new Date();
+        const dateStr = today.toISOString().split('T')[0];
+        const dayStr = today.toLocaleDateString('en-GB', { weekday: 'long' });
+
+        const data = employees.map(emp => ({
+            'EmployeeID': emp.employeeId,
+            'Name': `${emp.firstName} ${emp.lastName}`.trim(),
+            'Department': emp.department || '',
+            'Date': dateStr,
+            'Day': dayStr,
+            'Check In': '',
+            'Check Out': '',
+            'Status': '',
+            'Notes': ''
+        }));
+
+        const wb = xlsx.utils.book_new();
+        const ws = xlsx.utils.json_to_sheet(data);
+        
+        // Adjust column widths for better UX
+        const wscols = [
+            { wch: 15 }, // EmployeeID
+            { wch: 25 }, // Name
+            { wch: 20 }, // Department
+            { wch: 15 }, // Date
+            { wch: 15 }, // Day
+            { wch: 12 }, // Check In
+            { wch: 12 }, // Check Out
+            { wch: 15 }, // Status
+            { wch: 30 }  // Notes
+        ];
+        ws['!cols'] = wscols;
+
+        xlsx.utils.book_append_sheet(wb, ws, 'Attendance Template');
+
+        const buffer = xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' });
+
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', `attachment; filename=attendance_template_${dateStr}.xlsx`);
+        res.status(200).send(buffer);
     } catch (e) {
         next(e);
     }

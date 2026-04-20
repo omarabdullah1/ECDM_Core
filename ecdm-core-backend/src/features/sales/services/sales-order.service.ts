@@ -10,6 +10,8 @@ import SalesOrder from '../models/sales-order.model';
 import { ISalesOrderDocument } from '../types/sales-order.types';
 import { CreateSalesOrderInput, UpdateSalesOrderInput } from '../validation/sales-order.validation';
 import { updateCampaignRevenueFromSalesOrder } from '../../marketing/services/campaign-roi.service';
+import { adjustStock, checkAvailability } from '../../operations/services/price-list.service';
+import * as invoiceService from '../../finance/services/invoice.service';
 
 export const create = async (data: CreateSalesOrderInput): Promise<ISalesOrderDocument> =>
     SalesOrder.create(data);
@@ -159,6 +161,22 @@ export const update = async (id: string, data: UpdateSalesOrderInput): Promise<I
     );
 
     console.log('✓ Processed fields ready for DB:', JSON.stringify(cleanedFields, null, 2));
+
+    // ─── Inventory Check: Prevent adding items with 0 stock or exceeding available quantity ───
+    if (processedData.quotation?.items && processedData.quotation.items.length > 0) {
+        const itemsToCheck = processedData.quotation.items
+            .filter((item: any) => item.priceListId)
+            .map((item: any) => ({
+                priceListId: item.priceListId.toString(),
+                quantity: item.quantity,
+                itemName: item.description
+            }));
+        
+        if (itemsToCheck.length > 0) {
+            console.log('🛡️ Inventory: Checking availability for', itemsToCheck.length, 'items');
+            await checkAvailability(itemsToCheck);
+        }
+    }
 
     const doc = await SalesOrder.findByIdAndUpdate(id, cleanedFields, { new: true, runValidators: true });
     if (!doc) throw new AppError('Sales order not found', 404);
@@ -445,6 +463,28 @@ export const update = async (id: string, data: UpdateSalesOrderInput): Promise<I
             }
         } catch (campaignError) {
             console.error('⚠️ Failed to update Campaign revenue:', campaignError);
+        }
+
+        // 🎯 INVENTORY TRIGGER: Deduct stock when SalesOrder is marked as Won
+        if (doc.quotation?.items && doc.quotation.items.length > 0) {
+            console.log('📉 Inventory: Order WON - Deducting stock for', doc.quotation.items.length, 'items');
+            for (const item of doc.quotation.items) {
+                if (item.priceListId) {
+                    try {
+                        await adjustStock(item.priceListId.toString(), -item.quantity);
+                    } catch (stockError) {
+                        console.error(`⚠️ Failed to deduct stock for ${item.description}:`, (stockError as Error).message);
+                    }
+                }
+            }
+        }
+
+        // 🎯 FINANCE TRIGGER: Generate Invoice when SalesOrder is marked as Won
+        try {
+            console.log('💰 Finance: Order WON - Generating Invoice...');
+            await invoiceService.generateFromOrder(id);
+        } catch (invoiceError) {
+            console.error('⚠️ Failed to auto-generate Invoice:', (invoiceError as Error).message);
         }
     }
 

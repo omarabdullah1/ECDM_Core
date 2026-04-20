@@ -61,6 +61,16 @@ const userSchema = new Schema<IUserDocument>(
             trim: true,
             maxlength: [500, 'Address cannot exceed 500 characters'],
         },
+        department: {
+            type: String,
+            trim: true,
+            maxlength: [100, 'Department cannot exceed 100 characters'],
+        },
+        salary: {
+            type: Number,
+            default: 0,
+            min: [0, 'Salary cannot be negative'],
+        },
         employeeId: {
             type: String,
             unique: true,
@@ -81,6 +91,12 @@ const userSchema = new Schema<IUserDocument>(
             default: 0,
         },
         maxDiscountPercentage: {
+            type: Number,
+            default: 0,
+            min: 0,
+            max: 100,
+        },
+        commissionPercentage: {
             type: Number,
             default: 0,
             min: 0,

@@ -1,14 +1,14 @@
 @import "tailwindcss";
 
 /* ═══════════════════════════════════════════════════════════════
-   GLOBAL 75% SCALE FOR ULTRA-DENSE UI
+   GLOBAL 80% SCALE FOR DENSE ERP UI
    ═══════════════════════════════════════════════════════════════
-   Default browser font-size: 16px → Setting to 12px = 75% scale
-   All Tailwind rem-based utilities (text-*, p-*, m-*, w-*, h-*, etc.)
-   will automatically scale down proportionately by 25%.
+   Default browser font-size: 16px. Setting it to 80% (12.8px) 
+   scales all rem-based Tailwind utilities (text, padding, etc.) 
+   down globally by 20%.
    ═══════════════════════════════════════════════════════════════ */
 html {
-  font-size: 12px !important;
+  font-size: 80% !important; 
 }
 
 /* Arabic RTL — switch to Cairo when direction is RTL */
@@ -24,61 +24,62 @@ html[dir="rtl"] * {
 
 @layer base {
   :root {
-    /* ── Light theme (Premium ERP/CRM) ─────────────── */
-    --background: 0 0% 98%;
-    --foreground: 240 10% 8%;
+    /* ── High-Contrast Minimalist (Muted Light) ─────────────── */
+    --background: 210 20% 98%; /* #f9fafb exact mapping */
+    --foreground: 0 0% 7%; /* Nearly black #111111 */
     --card: 0 0% 100%;
-    --card-foreground: 240 10% 8%;
+    --card-foreground: 0 0% 7%;
     --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 8%;
-    --primary: 221 83% 53%; /* Strong, trustworthy professional blue */
-    --primary-foreground: 0 0% 100%;
-    --secondary: 240 5% 96%;
-    --secondary-foreground: 240 5% 20%;
-    --muted: 240 5% 96%;
-    --muted-foreground: 240 4% 46%;
-    --accent: 240 5% 96%;
-    --accent-foreground: 240 5% 10%;
+    --popover-foreground: 0 0% 7%;
+    --primary: 0 0% 7%; /* Black buttons/accents */
+    --primary-foreground: 0 0% 100%; /* White text inside buttons */
+    --secondary: 210 20% 96%; /* Very subtle gray #f3f4f6 */
+    --secondary-foreground: 0 0% 30%; /* Secondary text */
+    --muted: 210 20% 96%;
+    --muted-foreground: 215 14% 47%; /* #6b7280 subtle gray */
+    --accent: 210 20% 96%;
+    --accent-foreground: 0 0% 7%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
     --success: 142 72% 29%;
     --success-foreground: 0 0% 100%;
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
-    --border: 240 6% 90%;
-    --input: 240 6% 90%;
-    --ring: 221 83% 53%;
-    --radius: 0.5rem; /* Sligthly sharper, more structural radius */
-    --sidebar-width: 250px;           /* Generous width for clear typography */
-    --sidebar-collapsed-width: 64px;  /* Comfortable collapsed target area */
-    --header-height: 56px;            /* Sleek, unobtrusive header */
+    --border: 214 32% 91%; /* #e5e7eb */
+    --input: 214 32% 91%;
+    --ring: 0 0% 7%;
+    --radius: 0.75rem; /* 12px soft rounded corners */
+    --sidebar-width: 250px;
+    --sidebar-collapsed-width: 64px;
+    --header-height: 56px;
   }
 
-  /* ── Dark theme (Premium Enterprise Dark) ──────────────────────── */
+  /* ── Force Light Theme Globally ──────────────────────── */
   .dark {
-    --background: 0 0% 6%; /* Deep, calm gray-black */
-    --foreground: 0 0% 90%;
-    --card: 0 0% 9%; /* Subtle elevation */
-    --card-foreground: 0 0% 90%;
-    --popover: 0 0% 9%;
-    --popover-foreground: 0 0% 90%;
-    --primary: 217 91% 60%; /* Vibrant, legible blue */
+    /* Using exact same variables as root to force light mode content everywhere */
+    --background: 210 20% 98%; 
+    --foreground: 0 0% 7%; 
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 7%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 7%;
+    --primary: 0 0% 7%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 0 0% 12%;
-    --secondary-foreground: 0 0% 90%;
-    --muted: 0 0% 12%;
-    --muted-foreground: 0 0% 60%;
-    --accent: 0 0% 14%;
-    --accent-foreground: 0 0% 90%;
-    --destructive: 0 62.8% 50.6%;
-    --destructive-foreground: 0 0% 98%;
-    --success: 142 76% 36%;
-    --success-foreground: 0 0% 98%;
+    --secondary: 210 20% 96%;
+    --secondary-foreground: 0 0% 30%;
+    --muted: 210 20% 96%;
+    --muted-foreground: 215 14% 47%;
+    --accent: 210 20% 96%;
+    --accent-foreground: 0 0% 7%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 142 72% 29%;
+    --success-foreground: 0 0% 100%;
     --warning: 38 92% 50%;
-    --warning-foreground: 0 0% 98%;
-    --border: 0 0% 14%;
-    --input: 0 0% 14%;
-    --ring: 217 91% 60%;
+    --warning-foreground: 0 0% 100%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 0 0% 7%;
   }
 
   * {
@@ -131,8 +132,29 @@ html[dir="rtl"] * {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: hsl(var(--muted));
+  background: hsl(var(--muted-foreground));
   border-radius: 999px;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+}
+
+.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.2);
 }
 
 ::-webkit-scrollbar-thumb:hover {
@@ -284,25 +306,23 @@ html[dir="rtl"] .animate-slide-in-left {
 /* ── Premium SaaS Utilities ────────────────────────────────── */
 
 .premium-shadow {
-  box-shadow: 0 4px 20px -4px hsla(0, 0%, 0%, 0.05), 0 2px 8px -2px hsla(0, 0%, 0%, 0.02);
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
 }
 
 .dark .premium-shadow {
-  box-shadow: 0 4px 20px -4px hsla(0, 0%, 0%, 0.7), 0 2px 8px -2px hsla(0, 0%, 0%, 0.4);
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
 }
 
 .modern-glass-card {
-  background: hsla(240, 0%, 100%, 0.7);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid hsla(240, 6%, 90%, 0.4);
-  box-shadow: 0 8px 32px -4px hsla(0, 0%, 0%, 0.04);
+  background: white;
+  border: 1px solid hsla(214, 32%, 91%, 1); /* matches --border */
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.08), 0 2px 4px -2px rgb(0 0 0 / 0.04);
 }
 
 .dark .modern-glass-card {
-  background: hsla(240, 0%, 9%, 0.5);
-  border: 1px solid hsla(0, 0%, 14%, 0.4);
-  box-shadow: 0 8px 32px -4px hsla(0, 0%, 0%, 0.4);
+  background: white;
+  border: 1px solid hsla(214, 32%, 91%, 1);
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.08), 0 2px 4px -2px rgb(0 0 0 / 0.04);
 }
 
 /* ── Staggered Animations ────────────────────────────────── */

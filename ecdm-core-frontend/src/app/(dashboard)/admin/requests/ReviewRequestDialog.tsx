@@ -166,9 +166,14 @@ export default function ReviewRequestDialog({
                             <FileText className="h-5 w-5 text-primary" />
                         </div>
                         <div>
-                            <DialogTitle>Review Modification</DialogTitle>
+                            <DialogTitle>
+                                {request.status === 'Pending' ? 'Review Modification' : 'Modification Details'}
+                            </DialogTitle>
                             <DialogDescription>
                                 Proposed changes for {formatFieldLabel(request.moduleName)}
+                                {request.status !== 'Pending' && (
+                                    <span className="ml-2 font-bold text-gray-500">• {request.status}</span>
+                                )}
                             </DialogDescription>
                         </div>
                     </div>
@@ -178,16 +183,24 @@ export default function ReviewRequestDialog({
                     <div className="space-y-6">
                         {/* Request Meta Info */}
                         <div className="grid grid-cols-2 gap-3 p-4 bg-gray-50 border border-gray-100 rounded-2xl">
-                            <div className="flex items-center gap-2">
+                            <div className="flex flex-wrap items-center gap-2">
                                 <User className="h-3.5 w-3.5 text-gray-400" />
                                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Requested By:</span>
                                 <span className="text-xs font-bold text-gray-700">{request.requestedBy?.firstName} {request.requestedBy?.lastName}</span>
                             </div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex flex-wrap items-center gap-2">
                                 <Calendar className="h-3.5 w-3.5 text-gray-400" />
                                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Submitted:</span>
                                 <span className="text-xs font-bold text-gray-700">{formatDate(request.createdAt)}</span>
                             </div>
+                            {request.reviewedBy && (
+                                <div className="flex flex-wrap items-center gap-2 col-span-2 pt-2 border-t border-gray-200 mt-1">
+                                    <CheckCircle className="h-3.5 w-3.5 text-green-500" />
+                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Reviewed By:</span>
+                                    <span className="text-xs font-bold text-green-700">{request.reviewedBy.firstName} {request.reviewedBy.lastName}</span>
+                                    <span className="text-[10px] text-gray-400 ml-auto">{formatDate(request.updatedAt)}</span>
+                                </div>
+                            )}
                         </div>
 
                         {/* Tab Buttons */}
@@ -258,42 +271,54 @@ export default function ReviewRequestDialog({
                         </div>
 
                         {/* Review Notes */}
-                        <div className="space-y-1">
-                            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Decision Remarks</label>
-                            <textarea
-                                value={reviewNotes}
-                                onChange={(e) => setReviewNotes(e.target.value)}
-                                placeholder="State the reason for approval or rejection..."
-                                rows={3}
-                                className="w-full rounded-2xl border border-gray-100 bg-gray-50/50 px-4 py-3 text-sm placeholder:text-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all font-medium resize-none shadow-inner"
-                            />
-                        </div>
+                        {(request.status === 'Pending' || request.reviewNotes) && (
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                                    {request.status === 'Pending' ? 'Decision Remarks' : 'Reviewer Notes'}
+                                </label>
+                                {request.status === 'Pending' ? (
+                                    <textarea
+                                        value={reviewNotes}
+                                        onChange={(e) => setReviewNotes(e.target.value)}
+                                        placeholder="State the reason for approval or rejection..."
+                                        rows={3}
+                                        className="w-full rounded-2xl border border-gray-100 bg-gray-50/50 px-4 py-3 text-sm placeholder:text-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all font-medium resize-none shadow-inner"
+                                    />
+                                ) : (
+                                    <div className="p-3 rounded-2xl bg-gray-50 border border-gray-100 italic text-sm text-gray-600">
+                                        {request.reviewNotes || 'No notes provided.'}
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
                 </DialogBody>
 
                 <DialogFooter>
                     <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
-                        Cancel
+                        {request.status === 'Pending' ? 'Cancel' : 'Close'}
                     </Button>
-                    <div className="flex gap-2 ml-auto">
-                        <Button
-                            variant="destructive"
-                            onClick={() => handleSubmit('Rejected')}
-                            disabled={isSubmitting}
-                            className="bg-red-50 font-bold text-red-600 hover:bg-red-500 hover:text-white border-red-100"
-                        >
-                            <XCircle className="h-4 w-4 mr-2" />
-                            Reject
-                        </Button>
-                        <Button
-                            onClick={() => handleSubmit('Approved')}
-                            disabled={isSubmitting}
-                            className="bg-green-600 font-bold hover:bg-green-700 shadow-lg shadow-green-600/20"
-                        >
-                            <CheckCircle className="h-4 w-4 mr-2" />
-                            Approve
-                        </Button>
-                    </div>
+                    {request.status === 'Pending' && (
+                        <div className="flex gap-2 ml-auto">
+                            <Button
+                                variant="destructive"
+                                onClick={() => handleSubmit('Rejected')}
+                                disabled={isSubmitting}
+                                className="bg-red-50 font-bold text-red-600 hover:bg-red-500 hover:text-white border-red-100"
+                            >
+                                <XCircle className="h-4 w-4 mr-2" />
+                                Reject
+                            </Button>
+                            <Button
+                                onClick={() => handleSubmit('Approved')}
+                                disabled={isSubmitting}
+                                className="bg-green-600 font-bold hover:bg-green-700 shadow-lg shadow-green-600/20"
+                            >
+                                <CheckCircle className="h-4 w-4 mr-2" />
+                                Approve
+                            </Button>
+                        </div>
+                    )}
                 </DialogFooter>
             </DialogContent>
         </Dialog>

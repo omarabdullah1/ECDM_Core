@@ -22,6 +22,7 @@ export default function ContentTrackerPage() {
     const [showModal, setShowModal] = useState(false);
     const [editing, setEditing] = useState<ContentTracker | null>(null);
     const [delId, setDelId] = useState<string | null>(null);
+    const [isReadOnly, setIsReadOnly] = useState(true);
 
     const [fType, setFType] = useState('');
     const [fStatus, setFStatus] = useState('');
@@ -105,10 +106,13 @@ export default function ContentTrackerPage() {
         });
         setFile(null);
         setEditing(null);
+        setIsReadOnly(false);
         setShowModal(true);
     };
 
-    const openEdit = (content: ContentTracker) => {
+    const openEdit = (content: ContentTracker, mode: 'preview' | 'edit' = 'preview') => {
+        setEditing(content);
+        setIsReadOnly(mode === 'preview');
         setFormData({
             contentTitle: content.contentTitle || '',
             type: content.type || '',
@@ -186,7 +190,7 @@ export default function ContentTrackerPage() {
     };
 
     const columns = getColumns({
-        onEdit: openEdit,
+        onEdit: (c: ContentTracker) => openEdit(c, 'edit'),
         onDelete: (id: string) => setDelId(id),
     });
 
@@ -219,12 +223,12 @@ export default function ContentTrackerPage() {
             </div>
 
             {/* Data Table */}
-            <div className="overflow-x-auto">
+            <div className="w-full">
                 <DataTable
                     data={paginatedRows}
                     columns={columns}
                     loading={loading}
-                    onRowClick={openEdit}
+                    onRowClick={(c: ContentTracker) => openEdit(c, 'preview')}
                     emptyMessage="No content trackers found."
                     defaultVisibility={{
                         details: false,
@@ -258,6 +262,7 @@ export default function ContentTrackerPage() {
                                     className={iCls}
                                     placeholder="Enter content title"
                                     required
+                                    disabled={isReadOnly}
                                 />
                             </div>
 
@@ -268,6 +273,7 @@ export default function ContentTrackerPage() {
                                         value={formData.type}
                                         onChange={(e) => setFormData({ ...formData, type: e.target.value })}
                                         className={iCls}
+                                        disabled={isReadOnly}
                                     >
                                         {CONTENT_TYPES.map(type => (
                                             <option key={type} value={type}>{type || '(None)'}</option>
@@ -281,6 +287,7 @@ export default function ContentTrackerPage() {
                                         value={formData.status}
                                         onChange={(e) => setFormData({ ...formData, status: e.target.value })}
                                         className={iCls}
+                                        disabled={isReadOnly}
                                     >
                                         {CONTENT_STATUSES.map(status => (
                                             <option key={status} value={status}>{status || '(None)'}</option>
@@ -297,6 +304,7 @@ export default function ContentTrackerPage() {
                                     className={iCls}
                                     placeholder="Enter content details"
                                     rows={3}
+                                    disabled={isReadOnly}
                                 />
                             </div>
 
@@ -307,7 +315,7 @@ export default function ContentTrackerPage() {
                                         value={formData.owner}
                                         onChange={(e) => setFormData({ ...formData, owner: e.target.value })}
                                         className={iCls}
-                                        disabled={loadingUsers}
+                                        disabled={loadingUsers || isReadOnly}
                                     >
                                         <option value="">{loadingUsers ? 'Loading users...' : 'Select owner...'}</option>
                                         {users.map(user => (
@@ -325,6 +333,7 @@ export default function ContentTrackerPage() {
                                         value={formData.postDate}
                                         onChange={(e) => setFormData({ ...formData, postDate: e.target.value })}
                                         className={iCls}
+                                        disabled={isReadOnly}
                                     />
                                 </div>
                             </div>
@@ -338,14 +347,15 @@ export default function ContentTrackerPage() {
                                         accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.doc,.docx"
                                         className="hidden"
                                         id="file-upload"
+                                        disabled={isReadOnly}
                                     />
                                     <label
                                         htmlFor="file-upload"
-                                        className="flex items-center justify-center gap-2 w-full rounded-xl border-2 border-dashed border-[hsl(var(--border))] bg-[hsl(var(--muted))]/30 px-4 py-6 cursor-pointer hover:bg-[hsl(var(--muted))]/50 transition-colors"
+                                        className={`flex items-center justify-center gap-2 w-full rounded-xl border-2 border-dashed border-[hsl(var(--border))] bg-[hsl(var(--muted))]/30 px-4 py-6 transition-colors ${isReadOnly ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:bg-[hsl(var(--muted))]/50'}`}
                                     >
                                         <Upload className="h-5 w-5 text-[hsl(var(--muted-foreground))]" />
                                         <span className="text-sm text-[hsl(var(--muted-foreground))]">
-                                            {file ? file.name : 'Click to upload or drag & drop'}
+                                            {file ? file.name : (editing?.fileName || 'No file selected')}
                                         </span>
                                     </label>
                                 </div>
@@ -362,6 +372,7 @@ export default function ContentTrackerPage() {
                                     className={iCls}
                                     placeholder="Additional notes"
                                     rows={3}
+                                    disabled={isReadOnly}
                                 />
                             </div>
                         </form>
@@ -374,16 +385,26 @@ export default function ContentTrackerPage() {
                                 className="flex-1 rounded-xl border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] py-3 text-sm font-semibold hover:bg-[hsl(var(--muted))]/50 transition-colors"
                                 disabled={saving}
                             >
-                                Cancel
+                                {isReadOnly ? 'Close' : 'Cancel'}
                             </button>
-                            <button
-                                type="submit"
-                                form="content-form"
-                                className="flex-1 rounded-xl bg-[hsl(var(--primary))] py-3 text-sm font-semibold text-[hsl(var(--primary-foreground))] hover:opacity-90 transition-opacity disabled:opacity-50"
-                                disabled={saving}
-                            >
-                                {saving ? 'Saving...' : editing ? 'Update Content' : 'Create Content'}
-                            </button>
+                            {isReadOnly ? (
+                                <button
+                                    type="button"
+                                    onClick={() => setIsReadOnly(false)}
+                                    className="flex-1 rounded-xl bg-[hsl(var(--primary))] py-3 text-sm font-semibold text-[hsl(var(--primary-foreground))] hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+                                >
+                                    <Edit2 className="h-4 w-4" /> Edit Content
+                                </button>
+                            ) : (
+                                <button
+                                    type="submit"
+                                    form="content-form"
+                                    className="flex-1 rounded-xl bg-[hsl(var(--primary))] py-3 text-sm font-semibold text-[hsl(var(--primary-foreground))] hover:opacity-90 transition-opacity disabled:opacity-50"
+                                    disabled={saving}
+                                >
+                                    {saving ? 'Saving...' : editing ? 'Update Content' : 'Create Content'}
+                                </button>
+                            )}
                         </div>
                     </DialogFooter>
                 </DialogContent>
@@ -421,3 +442,4 @@ export default function ContentTrackerPage() {
         </div>
     );
 }
+

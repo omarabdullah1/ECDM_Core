@@ -42,6 +42,7 @@ export default function SalesDataPage() {
   const [error, setError] = useState('');
   const [delId, setDelId] = useState<string | null>(null);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [isReadOnly, setIsReadOnly] = useState(false);
   const lim = 10;
   const tp = Math.ceil(total / lim);
 
@@ -63,15 +64,17 @@ export default function SalesDataPage() {
 
   useEffect(() => { fetch_(); }, [fetch_]);
 
-  const openCreate = () => {
+   const openCreate = () => {
     setEditing(null);
     setForm(blank);
     setError('');
+    setIsReadOnly(false);
     setModal(true);
   };
 
-  const openEdit = (row: SalesData) => {
+  const openEdit = (row: SalesData, readOnly = false) => {
     setEditing(row);
+    setIsReadOnly(readOnly);
     setForm({
       marketingData: row.marketingData?._id || '',
       salesPerson: row.salesPerson?._id || '',
@@ -148,8 +151,8 @@ export default function SalesDataPage() {
     setForm(p => ({ ...p, [f]: e.target.value }));
 
   // Create columns with action handlers
-  const columns = createSalesDataColumns({
-    onEdit: openEdit,
+   const columns = createSalesDataColumns({
+    onEdit: (row) => openEdit(row, false),
     onDelete: handleDelete,
     onHistory: handleHistory,
   });
@@ -197,7 +200,7 @@ export default function SalesDataPage() {
         </select>
       </div>
 
-      <div className="overflow-x-auto">
+      <div className="w-full">
         <DataTable
           data={rows}
           columns={columns}
@@ -210,6 +213,7 @@ export default function SalesDataPage() {
           onPageChange={setPage}
           bulkDeleteEndpoint="/sales/data/bulk-delete"
           onBulkDeleteSuccess={fetch_}
+          onRowClick={(row) => openEdit(row, true)}
           defaultVisibility={{
             "customer.address": false,
             "customer.region": false,
@@ -227,19 +231,17 @@ export default function SalesDataPage() {
       </div >
 
       {/* Create/Edit Modal */}
-      {
-        modal && (
-          <div className="fixed inset-0 z-[100] flex overflow-y-auto bg-black/60 backdrop-blur-sm p-4 sm:p-6 animate-in fade-in transition-all">
-            <div className="w-full max-w-2xl rounded-2xl border border-[hsl(var(--border))] modern-glass-card m-auto relative premium-shadow animate-in-slide p-6 shadow-2xl">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-lg font-bold">
-                  {editing ? 'Edit Sales Data' : 'Add Sales Data'}
-                </h2>
-                <button onClick={() => setModal(false)}>
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-              <form onSubmit={save} className="space-y-4">
+      {modal && (
+        <Dialog open={modal} onOpenChange={(open) => !open && setModal(false)}>
+          <DialogContent className="sm:max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>
+                {editing ? (isReadOnly ? 'Sales Data Preview' : 'Edit Sales Data') : 'Add Sales Data'}
+              </DialogTitle>
+            </DialogHeader>
+
+            <DialogBody>
+              <form id="sales-data-form" onSubmit={save} className="space-y-4">
                 {/* Read-only Context Information */}
                 {editing && (
                   <div className="grid grid-cols-2 gap-4 p-3 rounded-xl bg-[hsl(var(--muted))]/30">
@@ -315,6 +317,7 @@ export default function SalesDataPage() {
                       type="datetime-local"
                       value={form.callDate}
                       onChange={u('callDate')}
+                      disabled={isReadOnly}
                       className={iCls}
                     />
                   </div>
@@ -324,6 +327,7 @@ export default function SalesDataPage() {
                       required
                       value={form.callOutcome}
                       onChange={u('callOutcome')}
+                      disabled={isReadOnly}
                       className={iCls}
                     >
                       {OUTCOMES.map(s => <option key={s} value={s}>{s}</option>)}
@@ -337,6 +341,7 @@ export default function SalesDataPage() {
                     <select
                       value={form.typeOfOrder}
                       onChange={u('typeOfOrder')}
+                      disabled={isReadOnly}
                       className={iCls}
                     >
                       <option value="">Select...</option>
@@ -348,6 +353,7 @@ export default function SalesDataPage() {
                     <select
                       value={form.salesPlatform}
                       onChange={u('salesPlatform')}
+                      disabled={isReadOnly}
                       className={iCls}
                     >
                       <option value="">Select...</option>
@@ -363,6 +369,7 @@ export default function SalesDataPage() {
                     value={form.issue}
                     onChange={u('issue')}
                     rows={2}
+                    disabled={isReadOnly}
                     className={iCls}
                   />
                 </div>
@@ -373,13 +380,13 @@ export default function SalesDataPage() {
                     value={form.order}
                     onChange={u('order')}
                     className={iCls}
-                    disabled={editing?.isOrderLocked}
+                    disabled={isReadOnly || editing?.isOrderLocked}
                   >
                     <option value="">Select...</option>
                     <option value="Yes">Yes</option>
                     <option value="No">No</option>
                   </select>
-                  {editing?.isOrderLocked && (
+                  {!isReadOnly && editing?.isOrderLocked && (
                     <div className="text-xs text-red-500 mt-1 flex items-center gap-1">
                       <Lock className="w-3 h-3" />
                       <span>Locked: Order is in progress and cannot be changed to No</span>
@@ -394,13 +401,13 @@ export default function SalesDataPage() {
                       value={form.followUp}
                       onChange={u('followUp')}
                       className={iCls}
-                      disabled={editing?.isFollowUpLocked}
+                      disabled={isReadOnly || editing?.isFollowUpLocked}
                     >
                       <option value="">Select...</option>
                       <option value="Yes">Yes</option>
                       <option value="No">No</option>
                     </select>
-                    {editing?.isFollowUpLocked && (
+                    {!isReadOnly && editing?.isFollowUpLocked && (
                       <div className="text-xs text-red-500 mt-1 flex items-center gap-1">
                         <Lock className="w-3 h-3" />
                         <span>Locked: Team has started working on this follow-up</span>
@@ -413,6 +420,7 @@ export default function SalesDataPage() {
                       type="datetime-local"
                       value={form.followUpDate}
                       onChange={u('followUpDate')}
+                      disabled={isReadOnly}
                       className={iCls}
                     />
                   </div>
@@ -425,33 +433,47 @@ export default function SalesDataPage() {
                     value={form.notes}
                     onChange={u('notes')}
                     rows={3}
+                    disabled={isReadOnly}
                     className={iCls}
                   />
                 </div>
 
                 {error && <p className="text-sm text-destructive">{error}</p>}
+              </form>
+            </DialogBody>
 
-                <div className="flex gap-3 pt-2">
-                  <button
-                    type="submit"
-                    disabled={saving}
-                    className="flex-1 flex-1 rounded-md bg-[hsl(var(--primary))] py-2 text-sm font-medium text-[hsl(var(--primary-foreground))] shadow-sm hover:opacity-90 transition-all focus-visible:outline-none disabled:opacity-60"
-                  >
-                    {saving ? 'Saving…' : 'Save'}
-                  </button>
+            <DialogFooter>
+              <div className="flex gap-3 w-full">
+                <button
+                  type="button"
+                  onClick={() => setModal(false)}
+                  className="flex-1 rounded-md border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] py-2 text-sm font-medium shadow-sm transition-all hover:bg-[hsl(var(--accent))] focus-visible:outline-none"
+                >
+                  {isReadOnly ? 'Close' : 'Cancel'}
+                </button>
+                {isReadOnly ? (
                   <button
                     type="button"
-                    onClick={() => setModal(false)}
-                    className="flex-1 flex-1 rounded-md border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] py-2 text-sm font-medium shadow-sm transition-all hover:bg-[hsl(var(--accent))] focus-visible:outline-none"
+                    onClick={() => setIsReadOnly(false)}
+                    className="flex-1 rounded-md bg-[hsl(var(--primary))] py-2 text-sm font-medium text-[hsl(var(--primary-foreground))] shadow-sm hover:opacity-90 transition-all focus-visible:outline-none"
                   >
-                    Cancel
+                    Edit
                   </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )
-      }
+                ) : (
+                  <button
+                    type="submit"
+                    form="sales-data-form"
+                    disabled={saving}
+                    className="flex-1 rounded-md bg-[hsl(var(--primary))] py-2 text-sm font-medium text-[hsl(var(--primary-foreground))] shadow-sm hover:opacity-90 transition-all focus-visible:outline-none disabled:opacity-60"
+                  >
+                    {saving ? 'Saving...' : 'Save'}
+                  </button>
+                )}
+              </div>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Delete Confirmation Modal */}
       {
@@ -490,3 +512,4 @@ export default function SalesDataPage() {
     </div >
   );
 }
+

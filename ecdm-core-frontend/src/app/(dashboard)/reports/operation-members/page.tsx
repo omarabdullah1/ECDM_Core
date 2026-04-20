@@ -369,8 +369,8 @@ export default function OperationMembersReport() {
 
       {/* Table */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm whitespace-nowrap">
+        <div className="w-full overflow-x-auto custom-table-scrollbar">
+        <table className="w-full text-left text-sm whitespace-nowrap">
             <thead className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-semibold">
               <tr>
                 <th className="px-6 py-4">Employee Name</th>

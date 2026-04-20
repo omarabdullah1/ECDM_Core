@@ -1,6 +1,7 @@
 'use client';
 
 import { Edit, Trash2 } from 'lucide-react';
+import { Column } from '@/components/ui/DataTable';
 
 /**
  * Work Orders Data Table - Column Definitions
@@ -143,11 +144,7 @@ const Badge = ({ children, variant = 'outline' }: BadgeProps) => {
 // Column Definitions (28 Columns + Actions)
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const columns: Array<{
-  key: string;
-  header: string;
-  render: (row: WorkOrder, meta?: any) => React.ReactNode;
-}> = [
+export const columns: Column<WorkOrder>[] = [
     
     // ═════════════════════════════════════════════════════════════════════════
     // SECTION 1: Customer Info (Deep Inherited from CustomerOrder → Customer) - 6 Columns
@@ -157,6 +154,7 @@ export const columns: Array<{
     {
       key: 'customerId',
       header: 'Customer ID',
+      className: 'md:w-[1%] md:whitespace-nowrap',
       render: (row: WorkOrder) => {
         const custId = row.customerOrderId?.customerId?.customerId;
         return (
@@ -171,6 +169,7 @@ export const columns: Array<{
     {
       key: 'name',
       header: 'Name',
+      className: 'md:w-auto md:max-w-[150px] md:truncate',
       render: (row: WorkOrder) => {
         const name = row.customerOrderId?.customerId?.name;
         return (
@@ -185,6 +184,7 @@ export const columns: Array<{
     {
       key: 'phone',
       header: 'Phone',
+      className: 'hidden xl:table-cell md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: WorkOrder) => {
         const phone = row.customerOrderId?.customerId?.phone;
         return (
@@ -199,6 +199,7 @@ export const columns: Array<{
     {
       key: 'address',
       header: 'Address',
+      className: 'hidden 2xl:table-cell md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: WorkOrder) => {
         const address = row.customerOrderId?.customerId?.address;
         return (
@@ -213,6 +214,7 @@ export const columns: Array<{
     {
       key: 'region',
       header: 'Region',
+      className: 'hidden 2xl:table-cell md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: WorkOrder) => {
         const region = row.customerOrderId?.customerId?.region;
         return (
@@ -227,6 +229,7 @@ export const columns: Array<{
     {
       key: 'sector',
       header: 'Sector',
+      className: 'hidden xl:table-cell md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: WorkOrder) => {
         const sector = row.customerOrderId?.customerId?.sector;
         return (
@@ -245,6 +248,7 @@ export const columns: Array<{
     {
       key: 'typeOfOrder',
       header: 'Type of Order',
+      className: 'hidden xl:table-cell md:w-[1%] md:whitespace-nowrap',
       render: (row: WorkOrder) => {
         return (
           <span className="text-sm">
@@ -258,6 +262,7 @@ export const columns: Array<{
     {
       key: 'issue',
       header: 'Issue',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: WorkOrder) => {
         const issue = row.customerOrderId?.issue || '-';
         return (
@@ -271,10 +276,11 @@ export const columns: Array<{
     // 9. Visit Site (Scheduled)
     {
       key: 'visitSite',
-      header: 'Visit Site (Scheduled)',
+      header: 'Visit (Sch)',
+      className: 'hidden xl:table-cell md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: WorkOrder) => {
         return (
-          <span className="text-sm font-mono">
+          <span className="text-sm font-mono text-[10px]">
             {formatDateTime(row.customerOrderId?.scheduledVisitDate)}
           </span>
         );
@@ -285,6 +291,7 @@ export const columns: Array<{
     {
       key: 'engineerName',
       header: 'Engineer Name (Ops)',
+      className: 'md:w-auto md:max-w-[150px] md:truncate',
       render: (row: WorkOrder) => {
         return (
           <span className="text-sm">
@@ -297,10 +304,11 @@ export const columns: Array<{
     // 11. Visit Date (Actual)
     {
       key: 'actualVisitDate',
-      header: 'Visit Date (Actual)',
+      header: 'Visit (Act)',
+      className: 'hidden 2xl:table-cell md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: WorkOrder) => {
         return (
-          <span className="text-sm font-mono">
+          <span className="text-sm font-mono text-[10px]">
             {formatDateTime(row.customerOrderId?.actualVisitDate)}
           </span>
         );
@@ -310,10 +318,11 @@ export const columns: Array<{
     // 12. Device Pickup Type
     {
       key: 'devicePickupType',
-      header: 'Device Pickup Type',
+      header: 'Pickup',
+      className: 'hidden xl:table-cell md:w-[1%] md:whitespace-nowrap',
       render: (row: WorkOrder) => {
         return (
-          <span className="text-sm">
+          <span className="text-xs">
             {row.customerOrderId?.devicePickupType || '-'}
           </span>
         );
@@ -324,6 +333,7 @@ export const columns: Array<{
     {
       key: 'startDateOrder',
       header: 'Start Date (Order)',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: WorkOrder) => {
         return (
           <span className="text-sm font-mono">
@@ -341,6 +351,7 @@ export const columns: Array<{
     {
       key: 'taskDate',
       header: 'Task Date (Op Role)',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: WorkOrder) => {
         return (
           <span className="text-sm font-mono">
@@ -354,6 +365,7 @@ export const columns: Array<{
     {
       key: 'maintenanceEngineer',
       header: 'Maintenance Engineer',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: WorkOrder) => {
         return (
           <span className="text-sm">
@@ -367,6 +379,7 @@ export const columns: Array<{
     {
       key: 'startMaintenanceDate',
       header: 'Start Maint. Date',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: WorkOrder) => {
         return (
           <span className="text-sm font-mono">
@@ -380,6 +393,7 @@ export const columns: Array<{
     {
       key: 'endMaintenanceDate',
       header: 'End Maint. Date',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: WorkOrder) => {
         return (
           <span className="text-sm font-mono">
@@ -393,6 +407,7 @@ export const columns: Array<{
     {
       key: 'punctuality',
       header: 'Punctuality',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: WorkOrder) => {
         const value = row.punctuality;
         if (!value || value === '') return <span className="text-sm">-</span>;
@@ -405,6 +420,7 @@ export const columns: Array<{
     {
       key: 'late',
       header: 'Late (Days)',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: WorkOrder) => {
         const start = row.startMaintenanceDate;
         const end = row.endMaintenanceDate;
@@ -420,6 +436,7 @@ export const columns: Array<{
     {
       key: 'reasonForDelay',
       header: 'Reason for Delay',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: WorkOrder) => {
         const reason = row.reasonForDelay || '-';
         return (
@@ -434,6 +451,7 @@ export const columns: Array<{
     {
       key: 'taskCompleted',
       header: 'Task Completed',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: WorkOrder) => {
         const value = row.taskCompleted;
         if (!value || value === '') return <span className="text-sm">-</span>;
@@ -446,6 +464,7 @@ export const columns: Array<{
     {
       key: 'reasonForIncompletion',
       header: 'Reason (If No)',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: WorkOrder) => {
         const reason = row.reasonForIncompletion || '-';
         return (
@@ -460,6 +479,7 @@ export const columns: Array<{
     {
       key: 'rating',
       header: 'Rating',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: WorkOrder) => {
         return (
           <span className="text-sm">
@@ -477,6 +497,7 @@ export const columns: Array<{
     {
       key: 'endDateOrder',
       header: 'End Date (Order)',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: WorkOrder) => {
         return (
           <span className="text-sm font-mono">
@@ -489,10 +510,11 @@ export const columns: Array<{
     // 25. Device Returned (Order)
     {
       key: 'deviceReturned',
-      header: 'Device Returned (Order)',
+      header: 'Returned',
+      className: 'hidden xl:table-cell md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: WorkOrder) => {
         return (
-          <span className="text-sm font-mono">
+          <span className="text-[10px] font-mono">
             {formatDate(row.customerOrderId?.deviceReturnedDate)}
           </span>
         );
@@ -507,6 +529,7 @@ export const columns: Array<{
     {
       key: 'sparePartsId',
       header: 'Spare Parts ID',
+      className: 'md:w-[1%] md:whitespace-nowrap',
       render: (row: WorkOrder) => {
         return (
           <span className="text-sm font-mono">
@@ -520,6 +543,7 @@ export const columns: Array<{
     {
       key: 'sparePartsAvailability',
       header: 'Availability',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: WorkOrder) => {
         const value = row.sparePartsAvailability;
         if (!value || value === '') return <span className="text-sm">-</span>;
@@ -537,6 +561,7 @@ export const columns: Array<{
     {
       key: 'notes',
       header: 'Notes',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: WorkOrder) => {
         const notes = row.notes || '-';
         return (
@@ -554,9 +579,10 @@ export const columns: Array<{
     {
       key: 'actions',
       header: 'Actions',
+      className: 'md:w-[1%] md:whitespace-nowrap',
       render: (row: WorkOrder, meta?: any) => {
         return (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={() => meta?.onEdit?.(row)}
               className="p-2 hover:bg-blue-500/10 rounded-lg transition-colors"

@@ -1,7 +1,7 @@
 import Attendance from '../models/attendance.model';
 import { AppError } from '../../../utils/apiError';
 import { CreateAttendanceInput, UpdateAttendanceInput } from '../validation/attendance.validation';
-import { Types } from 'mongoose';
+import mongoose, { Types } from 'mongoose';
 
 /**
  * Attendance Service - HR Module
@@ -18,14 +18,19 @@ export const create = async (data: CreateAttendanceInput) => {
  * Bulk create attendance records from Excel upload
  */
 export const bulkCreate = async (records: CreateAttendanceInput[], uploadedBy?: string) => {
-    // Try to link employee IDs to existing users
-    const recordsWithLinks = await Promise.all(
-        records.map(async (record) => {
-            // Try to find user by matching criteria (employeeId could be stored in phone or custom field)
-            let userId: Types.ObjectId | undefined;
-            
-            // You could implement more sophisticated matching here
-            // For now, we'll skip auto-linking and let admins do it manually
+    // 1. Get unique employee IDs from input for lookup
+    const uniqueIds = [...new Set(records.map(r => r.employeeId))];
+    
+    // 2. Find matching users in the system
+    const User = mongoose.model('User');
+    const existingUsers = await User.find({ employeeId: { $in: uniqueIds } }).select('_id employeeId');
+    const userMap = new Map(existingUsers.map((u: any) => [u.employeeId, u._id]));
+
+    // 3. Filter records to only include those with IDs present in the system
+    const linkedRecords = records
+        .map(record => {
+            const userId = userMap.get(record.employeeId);
+            if (!userId) return null; // Skip records for IDs not in system
             
             return {
                 ...record,
@@ -34,11 +39,15 @@ export const bulkCreate = async (records: CreateAttendanceInput[], uploadedBy?: 
                 uploadedBy: uploadedBy ? new Types.ObjectId(uploadedBy) : undefined,
             };
         })
-    );
+        .filter((r): r is any => r !== null);
 
-    // Use insertMany with ordered: false to continue on duplicates
-    const result = await Attendance.insertMany(recordsWithLinks, { ordered: false })
-        .catch((error) => {
+    if (linkedRecords.length === 0) {
+        return { insertedCount: 0, message: 'No records matched existing system IDs' };
+    }
+
+    // 4. Use insertMany with ordered: false to continue on duplicates
+    const result = await Attendance.insertMany(linkedRecords, { ordered: false })
+        .catch((error: any) => {
             // Handle duplicate key errors gracefully
             if (error.writeErrors) {
                 return { insertedCount: error.insertedDocs?.length || 0, errors: error.writeErrors };
@@ -67,7 +76,8 @@ export const getAll = async (query: Record<string, unknown>) => {
     } = query;
     
     const skip = (Number(page) - 1) * Number(limit);
-    const filter: Record<string, unknown> = {};
+    // Only return attendance for IDs present in the system (linked to a User)
+    const filter: Record<string, unknown> = { userId: { $ne: null } };
 
     if (employeeId)  filter.employeeId = { $regex: employeeId, $options: 'i' };
     if (userId)      filter.userId = userId;
@@ -136,7 +146,11 @@ export const getByEmployeeId = async (employeeId: string, query: Record<string, 
     const { page = 1, limit = 50, startDate, endDate } = query;
     const skip = (Number(page) - 1) * Number(limit);
     
-    const filter: Record<string, unknown> = { employeeId };
+    // Only return attendance for IDs present in the system (linked to a User)
+    const filter: Record<string, unknown> = { 
+        employeeId,
+        userId: { $ne: null }
+    };
     
     if (startDate || endDate) {
         filter.date = {};
@@ -261,8 +275,8 @@ export const getEmployeeStats = async (userId: string, year?: number, month?: nu
 export const getAttendanceFolders = async (startDate?: string, endDate?: string) => {
     const pipeline: any[] = [];
     
-    // Build the match stage dynamically for date range filtering
-    const matchStage: Record<string, any> = {};
+    // Build the match stage - Only return attendance for IDs present in the system (linked to a User)
+    const matchStage: Record<string, any> = { userId: { $ne: null } };
     if (startDate || endDate) {
         matchStage.date = {};
         if (startDate) {

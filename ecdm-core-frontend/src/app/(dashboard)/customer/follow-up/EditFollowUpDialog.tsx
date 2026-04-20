@@ -41,6 +41,7 @@ interface EditFollowUpDialogProps {
   onClose: () => void;
   onSuccess: () => void;
   onOpenFeedback?: (orderContext: OrderContext, customerOrderId: string, customerId: string) => void;
+  readOnly?: boolean;
 }
 
 const iCls = 'flex h-9 w-full rounded-md border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] px-3 py-1 text-sm shadow-sm transition-all placeholder:text-[hsl(var(--muted-foreground))] focus-visible:outline-none focus-visible:border-[hsl(var(--primary))]/50 focus-visible:ring-[3px] focus-visible:ring-[hsl(var(--primary))]/10';
@@ -75,10 +76,13 @@ const formatDate = (dateValue: string | Date | null | undefined): string => {
   }
 };
 
-export default function EditFollowUpDialog({ followUp, onClose, onSuccess, onOpenFeedback }: EditFollowUpDialogProps) {
+export default function EditFollowUpDialog({ followUp, onClose, onSuccess, onOpenFeedback, readOnly = false }: EditFollowUpDialogProps) {
+  const [internalPreviewMode, setInternalPreviewMode] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showFeedbackPrompt, setShowFeedbackPrompt] = useState(false);
   const [completedStatus, setCompletedStatus] = useState(false);
+
+  const effectivelyReadOnly = readOnly || internalPreviewMode;
 
   const orderContext = (followUp.orderContext as Record<string, unknown>) || {};
   const customer = followUp.customer as Record<string, unknown> | undefined;
@@ -172,20 +176,12 @@ export default function EditFollowUpDialog({ followUp, onClose, onSuccess, onOpe
     <>
       <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
         <DialogContent className="p-6 outline-none">
-          <DialogHeader className="flex flex-row items-center justify-between border-b border-[hsl(var(--border))] pb-4 mb-4 space-y-0">
-            <div>
-              <DialogTitle className="text-xl font-bold">Edit Follow Up</DialogTitle>
-              <p className="text-xs text-[hsl(var(--muted-foreground))] mt-0.5">
-                Follow Up ID: {followUp._id}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={onClose}
-              className="p-2 hover:bg-[hsl(var(--muted))] rounded-lg transition-colors"
-            >
-              <X className="h-5 w-5" />
-            </button>
+          <DialogHeader>
+            <DialogTitle>{effectivelyReadOnly ? 'Follow Up Preview' : 'Edit Follow Up'}</DialogTitle>
+            <p className="text-xs text-[hsl(var(--muted-foreground))] mt-0.5">
+              Follow Up ID: {followUp._id}
+              {effectivelyReadOnly && <span className="ml-2 text-amber-600 font-semibold">• Preview Mode</span>}
+            </p>
           </DialogHeader>
 
           <form onSubmit={form.handleSubmit(onSubmit, onError)} className="space-y-6">
@@ -258,7 +254,7 @@ export default function EditFollowUpDialog({ followUp, onClose, onSuccess, onOpe
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className={labelCls}>Status</label>
-                  <select {...form.register('status')} className={iCls}>
+                  <select {...form.register('status')} className={iCls} disabled={effectivelyReadOnly}>
                     <option value="Pending">Pending</option>
                     <option value="Contacted">Contacted</option>
                     <option value="Scheduled">Scheduled</option>
@@ -273,12 +269,13 @@ export default function EditFollowUpDialog({ followUp, onClose, onSuccess, onOpe
                     type="date"
                     {...form.register('followUpDate')}
                     className={iCls}
+                    disabled={effectivelyReadOnly}
                   />
                 </div>
 
                 <div>
                   <label className={labelCls}>Follow Up</label>
-                  <select {...form.register('followUp')} className={iCls}>
+                  <select {...form.register('followUp')} className={iCls} disabled={effectivelyReadOnly}>
                     <option value="">Not Set</option>
                     <option value="Yes">Yes</option>
                     <option value="No">No</option>
@@ -287,7 +284,7 @@ export default function EditFollowUpDialog({ followUp, onClose, onSuccess, onOpe
 
                 <div>
                   <label className={labelCls}>Solved Issue?</label>
-                  <select {...form.register('solvedIssue')} className={iCls}>
+                  <select {...form.register('solvedIssue')} className={iCls} disabled={effectivelyReadOnly}>
                     <option value="">Not Set</option>
                     <option value="Yes">Yes</option>
                     <option value="No">No</option>
@@ -296,7 +293,7 @@ export default function EditFollowUpDialog({ followUp, onClose, onSuccess, onOpe
 
                 <div>
                   <label className={labelCls}>Punctuality</label>
-                  <select {...form.register('punctuality')} className={iCls}>
+                  <select {...form.register('punctuality')} className={iCls} disabled={effectivelyReadOnly}>
                     <option value="">Not Set</option>
                     <option value="Same Visit Time">Same Visit Time</option>
                     <option value="Late">Late</option>
@@ -310,6 +307,7 @@ export default function EditFollowUpDialog({ followUp, onClose, onSuccess, onOpe
                     placeholder="Enter reason if late..."
                     {...form.register('reasonForDelay')}
                     className={iCls}
+                    disabled={effectivelyReadOnly}
                   />
                 </div>
 
@@ -320,6 +318,7 @@ export default function EditFollowUpDialog({ followUp, onClose, onSuccess, onOpe
                     {...form.register('reasonForNotSolving')}
                     rows={2}
                     className={iCls}
+                    disabled={effectivelyReadOnly}
                   />
                 </div>
 
@@ -330,6 +329,7 @@ export default function EditFollowUpDialog({ followUp, onClose, onSuccess, onOpe
                     {...form.register('notes')}
                     rows={3}
                     className={iCls}
+                    disabled={effectivelyReadOnly}
                   />
                 </div>
               </div>
@@ -350,15 +350,25 @@ export default function EditFollowUpDialog({ followUp, onClose, onSuccess, onOpe
                 onClick={onClose}
                 className="flex-1 rounded-xl border border-[hsl(var(--border))] py-3 text-sm font-semibold hover:bg-[hsl(var(--muted))]/50 transition-colors"
               >
-                Cancel
+                {effectivelyReadOnly ? 'Close' : 'Cancel'}
               </button>
-              <button
-                type="submit"
-                disabled={saving}
-                className="flex-1 rounded-xl bg-[hsl(var(--primary))] py-3 text-sm font-semibold text-[hsl(var(--primary-foreground))] hover:opacity-90 transition-opacity disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                {saving ? 'Saving...' : 'Save Changes'}
-              </button>
+              {effectivelyReadOnly ? (
+                <button
+                  type="button"
+                  onClick={() => setInternalPreviewMode(false)}
+                  className="flex-1 rounded-xl bg-[hsl(var(--primary))] py-3 text-sm font-semibold text-[hsl(var(--primary-foreground))] hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+                >
+                  Edit Follow Up
+                </button>
+              ) : (
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="flex-1 rounded-xl bg-[hsl(var(--primary))] py-3 text-sm font-semibold text-[hsl(var(--primary-foreground))] hover:opacity-90 transition-opacity disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {saving ? 'Saving...' : 'Save Changes'}
+                </button>
+              )}
             </div>
           </form>
         </DialogContent>

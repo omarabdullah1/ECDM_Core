@@ -152,6 +152,7 @@ export const createSalesDataColumns = (config?: SalesDataColumnsConfig) => {
     {
       key: 'customer.customerId',
       header: 'Customer ID',
+      className: 'md:w-[1%] md:whitespace-nowrap',
       render: (row: SalesData) => {
         const customer = row.customer || row.customerId;
         const custId = customer?.customerId;
@@ -169,6 +170,7 @@ export const createSalesDataColumns = (config?: SalesDataColumnsConfig) => {
     {
       key: 'customer.name',
       header: 'Name',
+      className: 'md:w-auto md:max-w-[150px] md:truncate',
       render: (row: SalesData) => {
         const customer = row.customer || row.customerId;
         const name = customer?.name;
@@ -186,6 +188,7 @@ export const createSalesDataColumns = (config?: SalesDataColumnsConfig) => {
     {
       key: 'customer.phone',
       header: 'Phone',
+      className: 'hidden xl:table-cell md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: SalesData) => {
         const customer = row.customer || row.customerId;
         const phone = customer?.phone;
@@ -203,6 +206,7 @@ export const createSalesDataColumns = (config?: SalesDataColumnsConfig) => {
     {
       key: 'customer.address',
       header: 'Address',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: SalesData) => {
         const customer = row.customer || row.customerId;
         const address = customer?.address;
@@ -220,6 +224,7 @@ export const createSalesDataColumns = (config?: SalesDataColumnsConfig) => {
     {
       key: 'customer.region',
       header: 'Region',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: SalesData) => {
         const customer = row.customer || row.customerId;
         const region = customer?.region;
@@ -237,6 +242,7 @@ export const createSalesDataColumns = (config?: SalesDataColumnsConfig) => {
     {
       key: 'callDate',
       header: 'Date',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: SalesData) => (
         <span className="text-xs font-mono whitespace-nowrap">
           {formatDateTime(row.callDate)}
@@ -250,6 +256,7 @@ export const createSalesDataColumns = (config?: SalesDataColumnsConfig) => {
     {
       key: 'customer.sector',
       header: 'Sector',
+      className: 'hidden xl:table-cell md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: SalesData) => {
         const customer = row.customer || row.customerId;
         const sector = customer?.sector;
@@ -267,6 +274,7 @@ export const createSalesDataColumns = (config?: SalesDataColumnsConfig) => {
     {
       key: 'issue',
       header: 'Issue',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: SalesData) => (
         <span className="text-sm max-w-[150px] truncate block" title={row.issue}>
           {row.issue || '-'}
@@ -280,6 +288,7 @@ export const createSalesDataColumns = (config?: SalesDataColumnsConfig) => {
     {
       key: 'callOutcome',
       header: 'Status',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: SalesData) => {
         const status = row.callOutcome || 'Pending';
         return (
@@ -296,6 +305,7 @@ export const createSalesDataColumns = (config?: SalesDataColumnsConfig) => {
     {
       key: 'typeOfOrder',
       header: 'Type Of Order',
+      className: 'hidden xl:table-cell md:w-[1%] md:whitespace-nowrap',
       render: (row: SalesData) => (
         <span className="text-sm">
           {row.typeOfOrder || '-'}
@@ -309,6 +319,7 @@ export const createSalesDataColumns = (config?: SalesDataColumnsConfig) => {
     {
       key: 'salesPlatform',
       header: 'Sales Platform',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: SalesData) => (
         <span className="text-sm">
           {row.salesPlatform || '-'}
@@ -322,6 +333,7 @@ export const createSalesDataColumns = (config?: SalesDataColumnsConfig) => {
     {
       key: 'order',
       header: 'Order',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: SalesData) => {
         if (!row.order) return <span className="text-gray-400 text-xs">-</span>;
         
@@ -344,6 +356,7 @@ export const createSalesDataColumns = (config?: SalesDataColumnsConfig) => {
     {
       key: 'followUp',
       header: 'Follow Up',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: SalesData) => {
         if (!row.followUp) return <span className="text-gray-400 text-xs">-</span>;
         
@@ -366,6 +379,7 @@ export const createSalesDataColumns = (config?: SalesDataColumnsConfig) => {
     {
       key: 'followUpDate',
       header: 'Follow Up Date',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: SalesData) => (
         <span className="text-xs font-mono whitespace-nowrap">
           {formatDateTime(row.followUpDate)}
@@ -379,6 +393,7 @@ export const createSalesDataColumns = (config?: SalesDataColumnsConfig) => {
     {
       key: 'salesPerson',
       header: 'SalesPerson',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: SalesData) => {
         const salesPerson = row.salesPerson;
         if (!salesPerson) return <span className="text-gray-400">-</span>;
@@ -401,6 +416,7 @@ export const createSalesDataColumns = (config?: SalesDataColumnsConfig) => {
     {
       key: 'notes',
       header: 'Notes',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: SalesData) => (
         <span className="text-sm max-w-[200px] truncate block" title={row.notes}>
           {row.notes || '-'}
@@ -414,8 +430,9 @@ export const createSalesDataColumns = (config?: SalesDataColumnsConfig) => {
     {
       key: 'actions',
       header: 'Actions',
+      className: 'md:w-[1%] md:whitespace-nowrap',
       render: (row: SalesData) => (
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {onEdit && (
             <button
               onClick={() => onEdit(row)}

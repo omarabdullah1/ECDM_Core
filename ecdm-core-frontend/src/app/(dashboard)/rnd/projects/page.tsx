@@ -154,6 +154,7 @@ export default function RndProjectsPage() {
         {
             key: 'title',
             header: 'Project Title',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
             render: (row: Project) => (
                 <div>
                     <div className="font-medium">{row.title}</div>
@@ -166,6 +167,7 @@ export default function RndProjectsPage() {
         {
             key: 'status',
             header: 'Status',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
             render: (row: Project) => (
                 <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium text-white ${statusColors[row.status] || 'bg-gray-500'}`}>
                     {row.status}
@@ -175,11 +177,13 @@ export default function RndProjectsPage() {
         {
             key: 'members',
             header: 'Members',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
             render: (row: Project) => <span className="text-sm">{row.members?.length || 0} members</span>,
         },
         {
             key: 'createdAt',
             header: 'Created',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
             render: (row: Project) => (
                 <span className="text-sm text-[hsl(var(--muted-foreground))]">
                     {new Date(row.createdAt).toLocaleDateString()}
@@ -189,8 +193,9 @@ export default function RndProjectsPage() {
         {
             key: 'actions',
             header: 'Actions',
+      className: 'md:w-[1%] md:whitespace-nowrap',
             render: (row: Project) => (
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                     <button
                         onClick={() => window.location.href = `/rnd/projects/${row._id}`}
                         className="rounded-lg p-1.5 text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--secondary))] hover:text-[hsl(var(--foreground))] transition-colors"

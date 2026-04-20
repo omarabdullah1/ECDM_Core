@@ -51,6 +51,7 @@ const ar: Translations = {
     operations: 'العمليات',
     workOrder: 'أوامر العمل',
     priceList: 'قائمة الأسعار',
+    purchaseOrder: 'طلبات الشراء',
     reportOperation: 'تقارير الأداء',
     hr: 'الموارد البشرية',
     hrEmployees: 'الموظفين',

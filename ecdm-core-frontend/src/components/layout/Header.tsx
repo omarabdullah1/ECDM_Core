@@ -9,7 +9,7 @@ export default function Header() {
     const t = useT();
 
     return (
-        <header className="sticky top-0 z-30 flex h-[var(--header-height)] items-center justify-between border-b border-[hsl(var(--border))]/30 bg-[hsl(var(--background))]/80 backdrop-blur-2xl px-6 transition-all">
+        <header className="sticky top-0 z-30 flex h-[var(--header-height)] items-center justify-between border-b border-[hsl(var(--border))]/50 bg-[#f9fafb]/80 backdrop-blur-2xl px-6 transition-all">
             {/* Search */}
             <div className="relative w-72 group">
                 <Search size={14} className="absolute start-3 top-1/2 -translate-y-1/2 text-[hsl(var(--muted-foreground))] group-focus-within:text-[hsl(var(--primary))] transition-colors" />

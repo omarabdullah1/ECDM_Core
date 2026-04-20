@@ -135,7 +135,7 @@ export default function SalesOrderPage() {
   };
 
   return (
-    <div className="space-y-6 pb-8">
+    <div className="h-full flex flex-col min-h-0 space-y-6 pb-4">
       <PageHeader
         title="Sales Orders"
         icon={ClipboardList}
@@ -163,7 +163,7 @@ export default function SalesOrderPage() {
       </div>
 
       {/* DataTable with Horizontal Scrolling (23 Columns) & RBAC-Protected Bulk Delete */}
-      <div className="overflow-x-auto">
+      <div className="w-full">
         <DataTable
           data={rows}
           columns={columns}
@@ -177,6 +177,7 @@ export default function SalesOrderPage() {
           bulkDeleteEndpoint="/sales/orders/bulk-delete"
           onBulkDeleteSuccess={fetch_}
           renderActions={renderActions}
+          onRowClick={(row) => openE(row, true)}
           rowClassName={getRowClassName}
           defaultVisibility={{
             "customer.address": false,
@@ -231,12 +232,22 @@ export default function SalesOrderPage() {
         />
       )}
 
-      {/* Create New Order Modal (Simple) */}
+      {/* Create New Order Modal (Scrollable) */}
       {modal && (
-        <div className="fixed inset-0 z-[100] flex overflow-y-auto bg-black/60 backdrop-blur-sm p-4 sm:p-6 animate-in fade-in transition-all">
-          <div className="w-full max-w-lg rounded-2xl border border-[hsl(var(--border))] modern-glass-card m-auto relative premium-shadow animate-in-slide p-6 shadow-2xl">
-            <div className="flex items-center justify-between mb-6"><h2 className="text-lg font-bold">New Order</h2><button onClick={() => setModal(false)}><X className="h-5 w-5" /></button></div>
-            <form onSubmit={save} className="space-y-4">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in transition-all">
+          <div className="w-full max-w-lg max-h-[90vh] flex flex-col rounded-2xl border border-[hsl(var(--border))] modern-glass-card relative premium-shadow animate-in-slide shadow-2xl overflow-hidden min-h-0">
+            <div className="flex items-center justify-between p-6 border-b border-[hsl(var(--border))]/30 flex-none bg-white">
+              <h2 className="text-lg font-bold">New Order</h2>
+              <button 
+                onClick={() => setModal(false)}
+                className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+              >
+                <X className="h-5 w-5 text-gray-500" />
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+              <form onSubmit={save} className="space-y-4">
               {/* Sales Lead Dropdown */}
               <div>
                 <label className="block text-xs font-medium mb-1 text-[hsl(var(--muted-foreground))]">Sales Lead</label>
@@ -263,16 +274,19 @@ export default function SalesOrderPage() {
               <select required value={form.quotationStatus} onChange={u('quotationStatus')} className={iCls}>{Q_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}</select>
               <select value={form.finalStatus} onChange={u('finalStatus')} className={iCls}><option value="">Final Status (optional)</option>{F_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}</select>
               <input type="number" placeholder="Total Amount (EGP)" value={form.totalAmount} onChange={u('totalAmount')} className={iCls} />
-              {error && <p className="text-sm text-destructive">{error}</p>}
-              <div className="flex gap-3 pt-2"><button type="submit" disabled={saving} className="flex-1 flex-1 rounded-md bg-[hsl(var(--primary))] py-2 text-sm font-medium text-[hsl(var(--primary-foreground))] shadow-sm hover:opacity-90 transition-all focus-visible:outline-none disabled:opacity-60">{saving ? 'Saving…' : 'Save'}</button><button type="button" onClick={() => setModal(false)} className="flex-1 flex-1 rounded-md border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] py-2 text-sm font-medium shadow-sm transition-all hover:bg-[hsl(var(--accent))] focus-visible:outline-none">Cancel</button></div>
+              <div className="flex gap-3 pt-6 mt-4 border-t border-[hsl(var(--border))]/30">
+                <button type="submit" disabled={saving} className="flex-1 rounded-md bg-[hsl(var(--primary))] py-2 text-sm font-medium text-[hsl(var(--primary-foreground))] shadow-sm hover:opacity-90 transition-all focus-visible:outline-none disabled:opacity-60">{saving ? 'Saving…' : 'Save'}</button>
+                <button type="button" onClick={() => setModal(false)} className="flex-1 rounded-md border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] py-2 text-sm font-medium shadow-sm transition-all hover:bg-[hsl(var(--accent))] focus-visible:outline-none">Cancel</button>
+              </div>
             </form>
+            </div>
           </div>
         </div>
       )}
 
       {delId && (
-        <div className="fixed inset-0 z-[100] flex overflow-y-auto bg-black/60 backdrop-blur-sm p-4 sm:p-6 animate-in fade-in transition-all">
-          <div className="rounded-md border border-[hsl(var(--border))]/50 modern-glass-card premium-shadow animate-in-slide m-auto relative p-6 shadow-lg sm:max-w-md w-full">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in transition-all">
+          <div className="rounded-md border border-[hsl(var(--border))]/50 modern-glass-card premium-shadow animate-in-slide relative p-6 shadow-lg sm:max-w-md w-full">
             <p className="mb-4 font-semibold">Delete this order?</p>
             <div className="flex gap-3"><button onClick={del} className="flex-1 rounded-md bg-[hsl(var(--destructive))] py-2 text-sm font-medium text-[hsl(var(--destructive-foreground))] shadow-sm transition-all hover:opacity-90 focus-visible:outline-none">Delete</button><button onClick={() => setDelId(null)} className="flex-1 rounded-md border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] py-2 text-sm font-medium shadow-sm transition-all hover:bg-[hsl(var(--accent))] focus-visible:outline-none">Cancel</button></div>
           </div>
@@ -281,3 +295,4 @@ export default function SalesOrderPage() {
     </div>
   );
 }
+

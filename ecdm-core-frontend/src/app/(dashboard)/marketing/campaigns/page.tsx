@@ -37,6 +37,7 @@ export default function CampaignResultsPage() {
     const [showModal, setShowModal] = useState(false);
     const [editing, setEditing] = useState<Campaign | null>(null);
     const [delId, setDelId] = useState<string | null>(null);
+    const [isReadOnly, setIsReadOnly] = useState(true);
 
     const [fStatus, setFStatus] = useState('');
 
@@ -69,7 +70,7 @@ export default function CampaignResultsPage() {
         setCurrentPage(1);
     }, [fStatus]);
 
-    // Calculate pagination
+    // Calculate pagination for client-side filtering
     const totalPages = Math.ceil(filteredRows.length / rowsPerPage);
     const indexOfLastRow = currentPage * rowsPerPage;
     const indexOfFirstRow = indexOfLastRow - rowsPerPage;
@@ -159,10 +160,13 @@ export default function CampaignResultsPage() {
         });
         setFile(null);
         setEditing(null);
+        setIsReadOnly(false);
         setShowModal(true);
     };
 
-    const openEdit = (campaign: Campaign) => {
+    const openEdit = (campaign: Campaign, mode: 'preview' | 'edit' = 'preview') => {
+        setEditing(campaign);
+        setIsReadOnly(mode === 'preview');
         setFormData({
             campaignName: campaign.campaignName || '',
             status: campaign.status || '',
@@ -303,7 +307,7 @@ export default function CampaignResultsPage() {
     };
 
     const columns = getColumns({
-        onEdit: openEdit,
+        onEdit: (c: Campaign) => openEdit(c, 'edit'),
         onDelete: (id: string) => setDelId(id),
     });
 
@@ -343,28 +347,22 @@ export default function CampaignResultsPage() {
             </div>
 
             {/* Data Table */}
-            <div className="overflow-x-auto">
+            <div className="w-full">
                 <DataTable
                     data={currentRows}
                     columns={columns}
                     loading={loading}
-                    onRowClick={openEdit}
+                    onRowClick={(c: Campaign) => openEdit(c, 'preview')}
                     emptyMessage="No campaign results found."
+                    page={currentPage}
+                    totalItems={filteredRows.length}
+                    itemsPerPage={rowsPerPage}
+                    onPageChange={setCurrentPage}
                     defaultVisibility={{
                         notes: false,
                     }}
                 />
             </div>
-
-            {/* Custom Pagination Controls */}
-            {!loading && filteredRows.length > 0 && (
-                <Pagination
-                    currentPage={currentPage}
-                    totalItems={filteredRows.length}
-                    itemsPerPage={rowsPerPage}
-                    onPageChange={setCurrentPage}
-                />
-            )}
 
             {/* Add/Edit Campaign Dialog */}
             <Dialog open={showModal} onOpenChange={setShowModal}>
@@ -383,6 +381,7 @@ export default function CampaignResultsPage() {
                                     className={iCls}
                                     placeholder="e.g., Google, Facebook, Instagram, LinkedIn"
                                     required
+                                    disabled={isReadOnly}
                                 />
                             </div>
 
@@ -393,6 +392,7 @@ export default function CampaignResultsPage() {
                                         value={formData.status}
                                         onChange={(e) => setFormData({ ...formData, status: e.target.value })}
                                         className={iCls}
+                                        disabled={isReadOnly}
                                     >
                                         {CAMPAIGN_STATUSES.map(status => (
                                             <option key={status} value={status}>{status || '(None)'}</option>
@@ -406,6 +406,7 @@ export default function CampaignResultsPage() {
                                         value={formData.nextSteps}
                                         onChange={(e) => setFormData({ ...formData, nextSteps: e.target.value })}
                                         className={iCls}
+                                        disabled={isReadOnly}
                                     >
                                         {NEXT_STEPS.map(step => (
                                             <option key={step} value={step}>{step || '(None)'}</option>
@@ -423,6 +424,7 @@ export default function CampaignResultsPage() {
                                         onChange={(e) => setFormData({ ...formData, impressions: e.target.value })}
                                         className={iCls}
                                         min="0"
+                                        disabled={isReadOnly}
                                     />
                                 </div>
 
@@ -434,6 +436,7 @@ export default function CampaignResultsPage() {
                                         onChange={(e) => setFormData({ ...formData, conversions: e.target.value })}
                                         className={iCls}
                                         min="0"
+                                        disabled={isReadOnly}
                                     />
                                 </div>
 
@@ -446,6 +449,7 @@ export default function CampaignResultsPage() {
                                         className={iCls}
                                         min="0"
                                         step="0.01"
+                                        disabled={isReadOnly}
                                     />
                                 </div>
                             </div>
@@ -460,6 +464,7 @@ export default function CampaignResultsPage() {
                                         className={iCls}
                                         min="0"
                                         step="0.01"
+                                        disabled={isReadOnly}
                                     />
                                 </div>
 
@@ -472,6 +477,7 @@ export default function CampaignResultsPage() {
                                         className={iCls}
                                         min="0"
                                         step="0.01"
+                                        disabled={isReadOnly}
                                     />
                                 </div>
 
@@ -484,6 +490,7 @@ export default function CampaignResultsPage() {
                                         className={iCls}
                                         min="0"
                                         step="0.01"
+                                        disabled={isReadOnly}
                                     />
                                 </div>
                             </div>
@@ -497,6 +504,7 @@ export default function CampaignResultsPage() {
                                         onChange={(e) => setFormData({ ...formData, region1: e.target.value })}
                                         className={iCls}
                                         placeholder="Primary region"
+                                        disabled={isReadOnly}
                                     />
                                 </div>
 
@@ -508,6 +516,7 @@ export default function CampaignResultsPage() {
                                         onChange={(e) => setFormData({ ...formData, region2: e.target.value })}
                                         className={iCls}
                                         placeholder="Secondary region"
+                                        disabled={isReadOnly}
                                     />
                                 </div>
 
@@ -519,6 +528,7 @@ export default function CampaignResultsPage() {
                                         onChange={(e) => setFormData({ ...formData, region3: e.target.value })}
                                         className={iCls}
                                         placeholder="Tertiary region"
+                                        disabled={isReadOnly}
                                     />
                                 </div>
                             </div>
@@ -532,14 +542,15 @@ export default function CampaignResultsPage() {
                                         accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.doc,.docx"
                                         className="hidden"
                                         id="file-upload"
+                                        disabled={isReadOnly}
                                     />
                                     <label
                                         htmlFor="file-upload"
-                                        className="flex items-center justify-center gap-2 w-full rounded-xl border-2 border-dashed border-[hsl(var(--border))] bg-[hsl(var(--muted))]/30 px-4 py-6 cursor-pointer hover:bg-[hsl(var(--muted))]/50 transition-colors"
+                                        className={`flex items-center justify-center gap-2 w-full rounded-xl border-2 border-dashed border-[hsl(var(--border))] bg-[hsl(var(--muted))]/30 px-4 py-6 transition-colors ${isReadOnly ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:bg-[hsl(var(--muted))]/50'}`}
                                     >
                                         <Upload className="h-5 w-5 text-[hsl(var(--muted-foreground))]" />
                                         <span className="text-sm text-[hsl(var(--muted-foreground))]">
-                                            {file ? file.name : 'Click to upload or drag & drop'}
+                                            {file ? file.name : (editing?.fileName || 'No file selected')}
                                         </span>
                                     </label>
                                 </div>
@@ -556,6 +567,7 @@ export default function CampaignResultsPage() {
                                     className={iCls}
                                     placeholder="Additional notes"
                                     rows={3}
+                                    disabled={isReadOnly}
                                 />
                             </div>
                         </form>
@@ -568,16 +580,26 @@ export default function CampaignResultsPage() {
                                 className="flex-1 rounded-xl border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] py-3 text-sm font-semibold hover:bg-[hsl(var(--muted))]/50 transition-colors"
                                 disabled={saving}
                             >
-                                Cancel
+                                {isReadOnly ? 'Close' : 'Cancel'}
                             </button>
-                            <button
-                                type="submit"
-                                form="campaign-form"
-                                className="flex-1 rounded-xl bg-[hsl(var(--primary))] py-3 text-sm font-semibold text-[hsl(var(--primary-foreground))] hover:opacity-90 transition-opacity disabled:opacity-50"
-                                disabled={saving}
-                            >
-                                {saving ? 'Saving...' : editing ? 'Update Campaign' : 'Create Campaign'}
-                            </button>
+                            {isReadOnly ? (
+                                <button
+                                    type="button"
+                                    onClick={() => setIsReadOnly(false)}
+                                    className="flex-1 rounded-xl bg-[hsl(var(--primary))] py-3 text-sm font-semibold text-[hsl(var(--primary-foreground))] hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+                                >
+                                    <Edit2 className="h-4 w-4" /> Edit Campaign
+                                </button>
+                            ) : (
+                                <button
+                                    type="submit"
+                                    form="campaign-form"
+                                    className="flex-1 rounded-xl bg-[hsl(var(--primary))] py-3 text-sm font-semibold text-[hsl(var(--primary-foreground))] hover:opacity-90 transition-opacity disabled:opacity-50"
+                                    disabled={saving}
+                                >
+                                    {saving ? 'Saving...' : editing ? 'Update Campaign' : 'Create Campaign'}
+                                </button>
+                            )}
                         </div>
                     </DialogFooter>
                 </DialogContent>
@@ -811,3 +833,4 @@ export default function CampaignResultsPage() {
         </div>
     );
 }
+

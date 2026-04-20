@@ -20,5 +20,6 @@ router.patch('/:id', validate(updateInvoiceSchema), invoiceController.updateInvo
 router.delete('/:id', invoiceController.deleteInvoice);
 
 router.post('/:id/approve', invoiceController.approveInvoice);
+router.post('/:id/payments', invoiceController.addPayment);
 
 export default router;

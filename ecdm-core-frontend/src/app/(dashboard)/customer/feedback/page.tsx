@@ -106,23 +106,36 @@ export default function FeedbackPage() {
     <div className="space-y-6 pb-8">
       <PageHeader title="Feedback" icon={MessageSquare} />
 
-      <div className="overflow-x-auto">
+      <div className="w-full">
         <DataTable
           data={rows as any}
           columns={[
-            { key: "customerId.customerId", header: "Customer ID", render: (row: any) => <span className="font-mono text-xs text-[hsl(var(--muted-foreground))] whitespace-nowrap">{row.customerId?.customerId || '-'}</span> },
-            { key: "customerId.name", header: "Name", render: (row: any) => <span className="font-medium whitespace-nowrap">{row.customerId?.name || '-'}</span> },
-            { key: "customerId.phone", header: "Phone", render: (row: any) => <span className="font-mono text-sm whitespace-nowrap">{row.customerId?.phone || '-'}</span> },
-            { key: "customerOrderId.engineerName", header: "Engineer Name", render: (row: any) => <span className="font-medium whitespace-nowrap">{row.customerOrderId?.engineerName || '-'}</span> },
-            { key: "customerOrderId.actualVisitDate", header: "Visit Engineer Date", render: (row: any) => <span className="text-sm whitespace-nowrap">{formatDate(row.customerOrderId?.actualVisitDate)}</span> },
-            { key: "customerOrderId.startDate", header: "Start Date", render: (row: any) => <span className="text-sm whitespace-nowrap">{formatDate(row.customerOrderId?.startDate)}</span> },
-            { key: "customerOrderId.endDate", header: "End Date", render: (row: any) => <span className="text-sm whitespace-nowrap">{formatDate(row.customerOrderId?.endDate)}</span> },
-            { key: "solvedIssue", header: "Solved Issue", render: (row: any) => <span>{row.solvedIssue ? <Badge variant={row.solvedIssue === 'Yes' ? 'default' : 'destructive'}>{row.solvedIssue}</Badge> : '-'}</span> },
-            { key: "ratingOperation", header: "Rating Operation", render: (row: any) => <span className="text-sm font-medium">{row.ratingOperation || '-'}</span> },
-            { key: "followUp", header: "Follow Up", render: (row: any) => <span className="text-sm">{row.followUp || '-'}</span> },
-            { key: "ratingCustomerService", header: "Rating CS", render: (row: any) => <span className="text-sm font-medium">{row.ratingCustomerService || '-'}</span> },
-            { key: "updatedBy.email", header: "User Email", render: (row: any) => <span className="text-sm text-[hsl(var(--muted-foreground))] whitespace-nowrap">{row.updatedBy?.email || '-'}</span> },
-            { key: "notes", header: "Notes", render: (row: any) => <span className="text-sm max-w-[150px] truncate" title={row.notes}>{row.notes || '-'}</span> },
+            { key: "customerId.customerId", header: "Customer ID",
+      className: 'md:w-[1%] md:whitespace-nowrap', render: (row: any) => <span className="font-mono text-xs text-[hsl(var(--muted-foreground))] whitespace-nowrap">{row.customerId?.customerId || '-'}</span> },
+            { key: "customerId.name", header: "Name",
+      className: 'md:w-auto md:max-w-[150px] md:truncate', render: (row: any) => <span className="font-medium whitespace-nowrap">{row.customerId?.name || '-'}</span> },
+            { key: "customerId.phone", header: "Phone",
+      className: 'hidden xl:table-cell md:w-1/6 md:max-w-[120px] md:truncate', render: (row: any) => <span className="font-mono text-sm whitespace-nowrap">{row.customerId?.phone || '-'}</span> },
+            { key: "customerOrderId.engineerName", header: "Engineer Name",
+      className: 'md:w-auto md:max-w-[150px] md:truncate', render: (row: any) => <span className="font-medium whitespace-nowrap">{row.customerOrderId?.engineerName || '-'}</span> },
+            { key: "customerOrderId.actualVisitDate", header: "Visit Engineer Date",
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate', render: (row: any) => <span className="text-sm whitespace-nowrap">{formatDate(row.customerOrderId?.actualVisitDate)}</span> },
+            { key: "customerOrderId.startDate", header: "Start Date",
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate', render: (row: any) => <span className="text-sm whitespace-nowrap">{formatDate(row.customerOrderId?.startDate)}</span> },
+            { key: "customerOrderId.endDate", header: "End Date",
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate', render: (row: any) => <span className="text-sm whitespace-nowrap">{formatDate(row.customerOrderId?.endDate)}</span> },
+            { key: "solvedIssue", header: "Solved Issue",
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate', render: (row: any) => <span>{row.solvedIssue ? <Badge variant={row.solvedIssue === 'Yes' ? 'default' : 'destructive'}>{row.solvedIssue}</Badge> : '-'}</span> },
+            { key: "ratingOperation", header: "Rating Operation",
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate', render: (row: any) => <span className="text-sm font-medium">{row.ratingOperation || '-'}</span> },
+            { key: "followUp", header: "Follow Up",
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate', render: (row: any) => <span className="text-sm">{row.followUp || '-'}</span> },
+            { key: "ratingCustomerService", header: "Rating CS",
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate', render: (row: any) => <span className="text-sm font-medium">{row.ratingCustomerService || '-'}</span> },
+            { key: "updatedBy.email", header: "User Email",
+      className: 'md:w-auto md:max-w-[150px] md:truncate', render: (row: any) => <span className="text-sm text-[hsl(var(--muted-foreground))] whitespace-nowrap">{row.updatedBy?.email || '-'}</span> },
+            { key: "notes", header: "Notes",
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate', render: (row: any) => <span className="text-sm max-w-[150px] truncate" title={row.notes}>{row.notes || '-'}</span> },
           ]}
           loading={loading}
           emptyMessage="No feedback found."
@@ -131,8 +144,9 @@ export default function FeedbackPage() {
           totalItems={total}
           itemsPerPage={lim}
           onPageChange={setPage}
+          onRowClick={openE}
           renderActions={(row: any) => (
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <button onClick={() => openE(row as Feedback)} className="p-1 hover:bg-[hsl(var(--muted))] rounded transition-colors" title="Edit"><Edit2 className="h-4 w-4" /></button>
               <button onClick={() => setDelId((row as Feedback)._id)} className="p-1 hover:bg-red-50 rounded text-red-600 transition-colors" title="Delete"><Trash2 className="h-4 w-4" /></button>
             </div>
@@ -181,3 +195,4 @@ export default function FeedbackPage() {
     </div>
   );
 }
+

@@ -30,9 +30,14 @@ const customerOrderSchema = new Schema<ICustomerOrderDocument>(
         spareParts:         { type: String, default: '' },
         extraExpenseType:   { type: String, enum: Object.values(ExtraExpenseType), default: ExtraExpenseType.NotSet },
         extraExpenseAmount: { type: Number, default: 0 },
-        salesPercentage:    { type: String, default: '0%' },
-        technicianPercentage: { type: String, default: '0%' },
-        engineerPercentage:  { type: String, default: '0%' },
+        salesPercentage:    { type: Number, default: 0, min: 0, max: 100 },
+        technicianPercentage: { type: Number, default: 0, min: 0, max: 100 },
+        engineerPercentage:  { type: Number, default: 0, min: 0, max: 100 },
+
+        // Personnel references — who is responsible for this order
+        salesPersonId: { type: Schema.Types.ObjectId, ref: 'User', default: null },
+        technicianId:  { type: Schema.Types.ObjectId, ref: 'User', default: null },
+        engineerId:    { type: Schema.Types.ObjectId, ref: 'User', default: null },
 
         startDate:          { type: Date },
         endDate:            { type: Date },

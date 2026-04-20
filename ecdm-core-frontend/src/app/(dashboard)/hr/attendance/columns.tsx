@@ -1,4 +1,5 @@
 import { Clock } from 'lucide-react';
+import Link from 'next/link';
 
 // ─── Types ──────────────────────────────────────────────────────────────────────
 export interface AttendanceRecord {
@@ -46,6 +47,7 @@ export const columns = [
     {
         key: 'employeeId',
         header: 'Employee ID',
+      className: 'md:w-[1%] md:whitespace-nowrap',
         render: (row: AttendanceRecord) => (
             <span className="font-mono text-sm">{row.employeeId}</span>
         ),
@@ -53,11 +55,26 @@ export const columns = [
     {
         key: 'name',
         header: 'Name',
+      className: 'md:w-auto md:max-w-[200px]',
         render: (row: AttendanceRecord) => (
-            <div>
-                <span className="font-medium">{row.name}</span>
+            <div className="flex flex-col">
+                {row.userId ? (
+                    <Link 
+                        href={`/hr/users/${row.userId._id}`}
+                        className="font-semibold text-[hsl(var(--primary))] hover:underline decoration-[hsl(var(--primary))]/30 underline-offset-4 transition-all"
+                    >
+                        {row.name}
+                    </Link>
+                ) : (
+                    <span className="font-semibold text-[hsl(var(--muted-foreground))]">{row.name} (Unlinked)</span>
+                )}
                 {row.userId && (
-                    <span className="ml-2 text-xs text-[hsl(var(--primary))]">● Linked</span>
+                    <div className="flex items-center gap-1 mt-0.5">
+                        <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                        <span className="text-[10px] font-bold uppercase tracking-tighter text-[hsl(var(--muted-foreground))]">
+                            System Profile
+                        </span>
+                    </div>
                 )}
             </div>
         ),
@@ -65,11 +82,13 @@ export const columns = [
     {
         key: 'department',
         header: 'Department',
+        className: 'md:w-1/6 md:max-w-[120px] md:truncate',
         render: (row: AttendanceRecord) => row.department || '—',
     },
     {
         key: 'date',
         header: 'Date',
+        className: 'md:w-1/6 md:max-w-[120px] md:truncate',
         render: (row: AttendanceRecord) => (
             <span className="whitespace-nowrap">
                 {new Date(row.date).toLocaleDateString('en-GB', {
@@ -83,11 +102,13 @@ export const columns = [
     {
         key: 'day',
         header: 'Day',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
         render: (row: AttendanceRecord) => row.day || '—',
     },
     {
         key: 'checkIn',
         header: 'Check In',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
         render: (row: AttendanceRecord) => (
             <span className="flex items-center gap-1 text-green-600 dark:text-green-400">
                 {row.checkIn ? (
@@ -102,6 +123,7 @@ export const columns = [
     {
         key: 'checkOut',
         header: 'Check Out',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
         render: (row: AttendanceRecord) => (
             <span className="flex items-center gap-1 text-orange-600 dark:text-orange-400">
                 {row.checkOut ? (
@@ -116,11 +138,13 @@ export const columns = [
     {
         key: 'status',
         header: 'Status',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
         render: (row: AttendanceRecord) => <StatusBadge status={row.status} />,
     },
     {
         key: 'notes',
         header: 'Notes',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
         render: (row: AttendanceRecord) => (
             <div className="max-w-[120px] truncate text-gray-500" title={row.notes}>
                 {row.notes || '—'}

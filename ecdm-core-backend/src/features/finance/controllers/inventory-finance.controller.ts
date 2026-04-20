@@ -42,3 +42,13 @@ export const remove  = async (req: Request, res: Response, next: NextFunction) =
     next(e); 
   } 
 };
+
+export const generateInvoice = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { targetInvoiceId } = req.body;
+    const result = await svc.generateInvoiceForWorkOrder(String(req.params.id), targetInvoiceId);
+    sendSuccess(res, result, 'Invoice processed successfully from Work Order');
+  } catch (e) {
+    next(e);
+  }
+};

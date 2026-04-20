@@ -6,6 +6,7 @@ import { Archive } from 'lucide-react';
 import { DataTable } from '@/components/ui/DataTable';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { createSalesOrderColumns, type SalesOrder, createActionsRenderer } from '../order/columns';
+import EditSalesOrderDialog from '../order/EditSalesOrderDialog';
 
 export default function NonPotentialOrdersPage() {
     const Q_STATUSES = ['Draft', 'Sent', 'Approved', 'Rejected', 'Revised'];
@@ -19,6 +20,7 @@ export default function NonPotentialOrdersPage() {
     const [fFinalStatus, setFFinalStatus] = useState('');
     const [fTypeOfOrder, setFTypeOfOrder] = useState('');
     const [loading, setLoading] = useState(true);
+    const [previewOrder, setPreviewOrder] = useState<SalesOrder | null>(null);
     const lim = 10; const tp = Math.ceil(total / lim);
 
     const fetch_ = useCallback(async () => {
@@ -47,6 +49,7 @@ export default function NonPotentialOrdersPage() {
 
     // We can include view/history actions if desired, but for archive often read-only works best
     const renderActions = createActionsRenderer({
+        onPreview: (row) => setPreviewOrder(row),
         onEdit: () => { }, // Disabled for archive (or we could point to a view-only modal)
         onDelete: () => { }, // Disabled to preserve history
     });
@@ -74,7 +77,7 @@ export default function NonPotentialOrdersPage() {
                 </select>
             </div>
 
-            <div className="overflow-x-auto">
+            <div className="w-full">
                 <DataTable
                     data={rows}
                     columns={columns}
@@ -85,6 +88,7 @@ export default function NonPotentialOrdersPage() {
                     totalItems={total}
                     itemsPerPage={lim}
                     onPageChange={setPage}
+                    onRowClick={(row) => setPreviewOrder(row)}
                     renderActions={renderActions}
                     defaultVisibility={{
                         'customer.address': false,
@@ -103,6 +107,19 @@ export default function NonPotentialOrdersPage() {
                     }}
                 />
             </div>
+
+            {previewOrder && (
+                <EditSalesOrderDialog
+                    order={previewOrder}
+                    readOnly={true}
+                    onClose={() => setPreviewOrder(null)}
+                    onSuccess={() => {
+                        fetch_();
+                        setPreviewOrder(null);
+                    }}
+                />
+            )}
         </div>
     );
 }
+

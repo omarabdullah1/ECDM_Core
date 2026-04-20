@@ -5,9 +5,9 @@ import { IAttendanceDocument, AttendanceStatus } from '../types/attendance.types
 const attendanceSchema = new Schema<IAttendanceDocument>(
     {
         employeeId: {
-            type: Schema.Types.ObjectId,
-            ref: 'Employee',
+            type: String,
             required: [true, 'Employee ID is required'],
+            trim: true,
         },
         userId: {
             type: Schema.Types.ObjectId,

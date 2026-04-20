@@ -41,6 +41,13 @@ export function EditLeadDialog({ isOpen, onClose, onSuccess, lead, onRequiresApp
     const [form, setForm] = useState(blankEdit);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
+    const [internalReadOnly, setInternalReadOnly] = useState(true);
+
+    useEffect(() => {
+        if (isOpen) {
+            setInternalReadOnly(true);
+        }
+    }, [isOpen]);
 
     useEffect(() => {
         if (lead) {
@@ -100,7 +107,7 @@ export function EditLeadDialog({ isOpen, onClose, onSuccess, lead, onRequiresApp
             <DialogContent className="sm:max-w-2xl">
                 <DialogHeader>
                     <div>
-                        <DialogTitle>{isReadOnly ? 'Lead Preview' : 'Update Lead'}</DialogTitle>
+                        <DialogTitle>{(isReadOnly || internalReadOnly) ? 'Lead Preview' : 'Update Lead'}</DialogTitle>
                         <p className="text-xs text-[hsl(var(--muted-foreground))] mt-0.5">
                             {lead.customerId?.customerId} • {lead.customerId?.name || '-'}
                         </p>
@@ -121,11 +128,11 @@ export function EditLeadDialog({ isOpen, onClose, onSuccess, lead, onRequiresApp
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-1">
                                 <label className="block text-[10px] font-bold uppercase text-gray-400 tracking-widest">Address</label>
-                                <Input placeholder="Customer address..." value={form.address} onChange={u('address')} disabled={isReadOnly} />
+                                <Input placeholder="Customer address..." value={form.address} onChange={u('address')} disabled={isReadOnly || internalReadOnly} />
                             </div>
                             <div className="space-y-1">
                                 <label className="block text-[10px] font-bold uppercase text-gray-400 tracking-widest">Region</label>
-                                <Input placeholder="Region/City..." value={form.region} onChange={u('region')} disabled={isReadOnly} />
+                                <Input placeholder="Region/City..." value={form.region} onChange={u('region')} disabled={isReadOnly || internalReadOnly} />
                             </div>
                         </div>
 
@@ -133,14 +140,14 @@ export function EditLeadDialog({ isOpen, onClose, onSuccess, lead, onRequiresApp
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-1">
                                 <label className="block text-[10px] font-bold uppercase text-gray-400 tracking-widest">Type Of Order</label>
-                                <Select value={form.typeOfOrder} onChange={u('typeOfOrder')} disabled={isReadOnly}>
+                                <Select value={form.typeOfOrder} onChange={u('typeOfOrder')} disabled={isReadOnly || internalReadOnly}>
                                     <option value="">Select...</option>
                                     {TYPE_OF_ORDER.map(t => <option key={t} value={t}>{t}</option>)}
                                 </Select>
                             </div>
                             <div className="space-y-1">
                                 <label className="block text-[10px] font-bold uppercase text-gray-400 tracking-widest">Sales Platform</label>
-                                <Select value={form.salesPlatform} onChange={u('salesPlatform')} disabled={isReadOnly}>
+                                <Select value={form.salesPlatform} onChange={u('salesPlatform')} disabled={isReadOnly || internalReadOnly}>
                                     <option value="">Select...</option>
                                     {SALES_PLATFORM.map(p => <option key={p} value={p}>{p}</option>)}
                                 </Select>
@@ -154,20 +161,20 @@ export function EditLeadDialog({ isOpen, onClose, onSuccess, lead, onRequiresApp
                                 value={form.issue}
                                 onChange={u('issue')}
                                 rows={2}
-                                disabled={isReadOnly}
+                                disabled={isReadOnly || internalReadOnly}
                                 className="w-full rounded-xl border border-gray-100 bg-gray-50/50 px-4 py-3 text-sm placeholder:text-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all font-medium resize-none shadow-inner disabled:opacity-70 cursor-not-allowed"
                             />
                         </div>
 
                         <div className="space-y-1">
                             <label className="block text-[10px] font-bold uppercase text-gray-400 tracking-widest">Order Created?</label>
-                            <div className={`flex gap-2 ${isReadOnly ? 'pointer-events-none' : ''}`}>
+                            <div className={`flex gap-2 ${(isReadOnly || internalReadOnly) ? 'pointer-events-none' : ''}`}>
                                 {(['Yes', 'No'] as const).map(opt => (
                                     <label key={opt} className={`flex-1 flex items-center justify-center gap-2 rounded-xl border-2 py-2.5 text-xs font-semibold cursor-pointer transition-all ${form.order === opt
                                             ? opt === 'Yes' ? 'border-green-500 bg-green-500/10 text-green-700' : 'border-red-500 bg-red-500/10 text-red-700'
                                             : 'border-gray-100 hover:border-primary/50 text-gray-400'
-                                        } ${isReadOnly && form.order !== opt ? 'opacity-30' : ''}`}>
-                                        <input type="radio" name="order" value={opt} checked={form.order === opt} onChange={() => !isReadOnly && setForm(p => ({ ...p, order: opt }))} className="sr-only" />
+                                        } ${(isReadOnly || internalReadOnly) && form.order !== opt ? 'opacity-30' : ''}`}>
+                                        <input type="radio" name="order" value={opt} checked={form.order === opt} onChange={() => !(isReadOnly || internalReadOnly) && setForm(p => ({ ...p, order: opt }))} className="sr-only" />
                                         <span>{opt}</span>
                                     </label>
                                 ))}
@@ -177,13 +184,13 @@ export function EditLeadDialog({ isOpen, onClose, onSuccess, lead, onRequiresApp
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-1">
                                 <label className="block text-[10px] font-bold uppercase text-gray-400 tracking-widest">Status</label>
-                                <Select value={form.status} onChange={u('status')} disabled={isReadOnly}>
+                                <Select value={form.status} onChange={u('status')} disabled={isReadOnly || internalReadOnly}>
                                     {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
                                 </Select>
                             </div>
                             <div className="space-y-1">
                                 <label className="block text-[10px] font-bold uppercase text-gray-400 tracking-widest">Outcome</label>
-                                <Input placeholder="Outcome reason..." value={form.reason} onChange={u('reason')} disabled={isReadOnly} />
+                                <Input placeholder="Outcome reason..." value={form.reason} onChange={u('reason')} disabled={isReadOnly || internalReadOnly} />
                             </div>
                         </div>
 
@@ -194,7 +201,7 @@ export function EditLeadDialog({ isOpen, onClose, onSuccess, lead, onRequiresApp
                                 value={form.notes}
                                 onChange={u('notes')}
                                 rows={2}
-                                disabled={isReadOnly}
+                                disabled={isReadOnly || internalReadOnly}
                                 className="w-full rounded-xl border border-gray-100 bg-gray-50/50 px-4 py-3 text-sm placeholder:text-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all font-medium resize-none shadow-inner disabled:opacity-70 cursor-not-allowed"
                             />
                         </div>
@@ -205,9 +212,18 @@ export function EditLeadDialog({ isOpen, onClose, onSuccess, lead, onRequiresApp
 
                 <DialogFooter>
                     <Button variant="ghost" onClick={onClose} disabled={saving}>
-                        {isReadOnly ? 'Close' : 'Cancel'}
+                        {(isReadOnly || internalReadOnly) ? 'Close' : 'Cancel'}
                     </Button>
-                    {!isReadOnly && (
+                    {(isReadOnly || internalReadOnly) ? (
+                        !isReadOnly && (
+                            <Button
+                                onClick={() => setInternalReadOnly(false)}
+                                className="bg-[hsl(var(--primary))] hover:opacity-90"
+                            >
+                                Edit Lead
+                            </Button>
+                        )
+                    ) : (
                         <Button type="submit" form="edit-lead-form" disabled={saving}>
                             {saving ? 'Saving...' : 'Save Changes'}
                         </Button>

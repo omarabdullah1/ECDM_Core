@@ -4,7 +4,7 @@ import Link from 'next/link';
 import api from '@/lib/axios';
 import { 
     Calendar, Upload, X, AlertCircle, CheckCircle, 
-    FileSpreadsheet, FolderOpen, Users, UserCheck, UserX, Clock, Filter as FilterIcon
+    FileSpreadsheet, FolderOpen, Users, UserCheck, UserX, Clock, Filter as FilterIcon, Download
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '@/features/auth/useAuth';
@@ -106,6 +106,23 @@ export default function AttendancePage() {
         setUploading(false);
     };
 
+    const handleDownloadTemplate = async () => {
+        try {
+            const response = await api.get('/hr/attendance/template', {
+                responseType: 'blob'
+            });
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `attendance_template_${new Date().toISOString().split('T')[0]}.xlsx`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+        } catch {
+            toast.error('Failed to download template');
+        }
+    };
+
     // Format date for display
     const formatDate = (dateStr: string) => {
         const date = new Date(dateStr);
@@ -129,7 +146,7 @@ export default function AttendancePage() {
                         {/* Date Range Filter */}
                         <div className="flex items-center gap-2 p-2 rounded-xl bg-[hsl(var(--card))] border border-[hsl(var(--border))]">
                             <FilterIcon className="h-4 w-4 text-[hsl(var(--muted-foreground))]" />
-                            <div className="flex items-center gap-2">
+                            <div className="flex flex-wrap items-center gap-2">
                                 <label htmlFor="startDate" className="text-xs text-[hsl(var(--muted-foreground))] whitespace-nowrap font-medium">
                                     From:
                                 </label>
@@ -141,7 +158,7 @@ export default function AttendancePage() {
                                     className="px-2 py-1 text-sm rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--background))] focus:border-[hsl(var(--primary))] focus:outline-none focus:ring-1 focus:ring-[hsl(var(--primary))]"
                                 />
                             </div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex flex-wrap items-center gap-2">
                                 <label htmlFor="endDate" className="text-xs text-[hsl(var(--muted-foreground))] whitespace-nowrap font-medium">
                                     To:
                                 </label>
@@ -270,6 +287,16 @@ export default function AttendancePage() {
 
                         {/* Instructions */}
                         <div className="mb-6 p-4 rounded-xl bg-[hsl(var(--muted))]/50 text-sm">
+                            <div className="flex items-center justify-between mb-4">
+                                <p className="font-bold text-base">Instructions</p>
+                                <button
+                                    onClick={handleDownloadTemplate}
+                                    className="flex items-center gap-2 rounded-lg bg-[hsl(var(--primary))]/10 border border-[hsl(var(--primary))]/20 px-3 py-1.5 text-xs font-bold text-[hsl(var(--primary))] hover:bg-[hsl(var(--primary))]/20 transition-all"
+                                >
+                                    <Download className="h-3 w-3" />
+                                    Download Employee Template
+                                </button>
+                            </div>
                             <p className="font-semibold mb-2">Expected Excel columns:</p>
                             <ul className="list-disc list-inside text-[hsl(var(--muted-foreground))] space-y-1">
                                 <li><strong>EmployeeID</strong> (required)</li>

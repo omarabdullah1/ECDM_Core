@@ -15,7 +15,9 @@ import {
     CheckCircle2, 
     XCircle, 
     Clock,
-    Filter
+    Filter,
+    CreditCard,
+    CircleSlash
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '@/lib/axios';
@@ -64,21 +66,23 @@ export default function InvoicesPage() {
 
     const getStatusIcon = (status: string) => {
         switch (status) {
-            case 'Paid':     return <CheckCircle2 size={12} />;
-            case 'Canceled': return <XCircle size={12} />;
-            case 'Pending':  return <Clock size={12} />;
-            case 'Unpaid':   return <CreditCard size={12} />;
-            default:        return null;
+            case 'Paid':           return <CheckCircle2 size={12} />;
+            case 'Partially Paid': return <Clock size={12} className="text-blue-500" />;
+            case 'Canceled':       return <XCircle size={12} />;
+            case 'Pending':        return <CircleSlash size={12} />;
+            case 'Unpaid':         return <CreditCard size={12} />;
+            default:               return null;
         }
     };
 
     const getStatusBadgeClass = (status: string) => {
         switch (status) {
-            case 'Paid':     return 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20';
-            case 'Canceled': return 'bg-rose-500/10 text-rose-500 border-rose-500/20';
-            case 'Unpaid':   return 'bg-amber-500/10 text-amber-500 border-amber-500/20';
-            case 'Pending':  return 'bg-blue-500/10 text-blue-500 border-blue-500/20';
-            default:        return 'bg-slate-500/10 text-slate-500 border-slate-500/20';
+            case 'Paid':           return 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20';
+            case 'Partially Paid': return 'bg-blue-500/10 text-blue-500 border-blue-500/20';
+            case 'Canceled':       return 'bg-rose-500/10 text-rose-500 border-rose-500/20';
+            case 'Unpaid':         return 'bg-amber-500/10 text-amber-500 border-amber-500/20';
+            case 'Pending':        return 'bg-slate-500/10 text-slate-500 border-slate-500/20';
+            default:               return 'bg-slate-500/10 text-slate-500 border-slate-500/20';
         }
     };
 
@@ -124,6 +128,7 @@ export default function InvoicesPage() {
                         >
                             <option value="all">All Statuses</option>
                             <option value="Pending">Pending</option>
+                            <option value="Partially Paid">Partially Paid</option>
                             <option value="Paid">Paid</option>
                             <option value="Unpaid">Unpaid</option>
                             <option value="Canceled">Canceled</option>
@@ -133,8 +138,8 @@ export default function InvoicesPage() {
 
                 {/* Data Table */}
                 <div className="rounded-2xl border border-[hsl(var(--border))]/30 bg-[hsl(var(--background))]/30 backdrop-blur-md overflow-hidden premium-shadow">
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
+                    <div className="w-full overflow-x-auto custom-table-scrollbar">
+        <table className="w-full text-sm">
                             <thead className="bg-[hsl(var(--muted))]/50 border-b border-[hsl(var(--border))]/30">
                                 <tr>
                                     <th className="px-5 py-4 text-left font-bold uppercase tracking-wider text-xs">Invoice #</th>
@@ -163,14 +168,29 @@ export default function InvoicesPage() {
                                     </tr>
                                 ) : (
                                     invoices.map((inv) => (
-                                        <tr key={inv._id} className="hover:bg-[hsl(var(--muted))]/20 transition-all duration-300">
+                                        <tr 
+                                            key={inv._id} 
+                                            className="hover:bg-[hsl(var(--muted))]/20 transition-all duration-300 cursor-pointer group"
+                                            onClick={() => {
+                                                setSelectedInvoice(inv);
+                                                setIsDialogOpen(true);
+                                            }}
+                                        >
                                             <td className="px-5 py-4 whitespace-nowrap font-mono text-xs font-bold text-[hsl(var(--primary))]">
                                                 {inv.invoiceNumber}
                                             </td>
                                             <td className="px-5 py-4 whitespace-nowrap">
                                                 <div className="flex flex-col">
                                                     <span className="font-semibold text-[hsl(var(--foreground))]">{inv.customerId?.name || 'Unknown'}</span>
-                                                    <span className="text-[10px] text-[hsl(var(--muted-foreground))] uppercase">{inv.customerId?.customerId}</span>
+                                                    <div className="flex gap-2 items-center">
+                                                        <span className="text-[10px] text-[hsl(var(--muted-foreground))] uppercase font-bold">{inv.customerId?.customerId}</span>
+                                                        {inv.salesOrderId?.salesOrderId && (
+                                                            <>
+                                                                <span className="w-1 h-1 rounded-full bg-[hsl(var(--border))]"></span>
+                                                                <span className="text-[10px] text-blue-500 font-black uppercase">{inv.salesOrderId.salesOrderId}</span>
+                                                            </>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </td>
                                             <td className="px-5 py-4 whitespace-nowrap text-[hsl(var(--muted-foreground))]">
@@ -189,7 +209,8 @@ export default function InvoicesPage() {
                                                 <Button 
                                                     variant="ghost" 
                                                     size="sm"
-                                                    onClick={() => {
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
                                                         setSelectedInvoice(inv);
                                                         setIsDialogOpen(true);
                                                     }}

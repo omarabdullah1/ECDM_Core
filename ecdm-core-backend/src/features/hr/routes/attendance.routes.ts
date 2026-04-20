@@ -57,6 +57,7 @@ router.use(authenticate);
 router.post('/', validate(createAttendanceSchema), ctrl.create);
 router.get('/', ctrl.getAll);
 router.get('/folders', ctrl.getAttendanceFolders); // Folders aggregation endpoint
+router.get('/template', authorise(UserRole.SuperAdmin, UserRole.Manager, UserRole.HR), ctrl.downloadTemplate); // Template download
 router.get('/:id', ctrl.getById);
 router.put('/:id', validate(updateAttendanceSchema), ctrl.update);
 router.delete('/:id', authorise(UserRole.SuperAdmin, UserRole.Manager, UserRole.HR), ctrl.remove);

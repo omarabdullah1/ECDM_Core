@@ -176,29 +176,41 @@ export default function MainDashboard() {
   return (
     <div className="flex flex-col gap-6 pb-12 animate-in fade-in">
 
-      {/* ── Header ───────────────────────────────────────────── */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 animate-in-slide stagger-1">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-[hsl(var(--foreground))]">
-            {greeting}, {String(firstName)} 👋
-          </h1>
-
-          <p className="text-sm text-[hsl(var(--muted-foreground))] mt-1">
-            Here's what's happening across your business today.
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="text-xs text-[hsl(var(--muted-foreground))] hidden sm:block">
-            Last updated: {lastRefreshed.toLocaleTimeString()}
-          </span>
-          <button
-            onClick={fetchAll}
-            disabled={loading}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg border border-[hsl(var(--border))]/50 bg-[hsl(var(--card))] hover:bg-[hsl(var(--secondary))] transition-colors shadow-sm disabled:opacity-60"
-          >
-            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-            Refresh
-          </button>
+      {/* ── Hero Banner ───────────────────────────────────────────── */}
+      <div className="animate-in-slide stagger-1">
+        <div className="rounded-3xl bg-[#111111] text-white p-8 relative overflow-hidden premium-shadow flex flex-col justify-between" style={{ minHeight: '220px' }}>
+          {/* Subtle Background Pattern/Glow */}
+          <div className="absolute -top-24 -right-24 h-64 w-64 rounded-full bg-white/5 blur-3xl" />
+          <div className="absolute -bottom-24 -left-24 h-64 w-64 rounded-full bg-white/5 blur-3xl" />
+          
+          <div className="relative z-10 flex flex-col md:flex-row md:items-start justify-between gap-6 h-full">
+            <div className="max-w-2xl">
+              <div className="inline-flex items-center gap-2 px-3 py-1 mb-4 rounded-full bg-white/10 text-xs font-semibold uppercase tracking-wider backdrop-blur-md border border-white/10">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                System Integrity Verified
+              </div>
+              <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-3">
+                {greeting}, {String(firstName)}
+              </h1>
+              <p className="text-[#a1a1aa] text-sm md:text-base leading-relaxed max-w-lg">
+                System Integrity through Automation. Your enterprise analytics and operations are running smoothly with complete synchronization across all modules.
+              </p>
+            </div>
+            
+            <div className="flex flex-col items-end gap-3 Shrink-0">
+              <span className="text-xs font-medium text-[#a1a1aa] bg-white/5 px-3 py-1.5 rounded-lg border border-white/10">
+                Last sync: {lastRefreshed.toLocaleTimeString()}
+              </span>
+              <button
+                onClick={fetchAll}
+                disabled={loading}
+                className="flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-xl bg-white text-black hover:bg-gray-100 transition-colors shadow-sm disabled:opacity-60"
+              >
+                <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                Refresh Data
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -239,7 +251,7 @@ export default function MainDashboard() {
             sub="Highest tier accounts"
             subPositive={true}
             icon={Star}
-            iconColor="text-amber-500 bg-amber-500"
+            iconColor="text-black bg-black"
             loading={loading}
           />
         </div>
@@ -639,7 +651,7 @@ export default function MainDashboard() {
               {charts?.campaigns.length} live
             </span>
           </CardHeader>
-          <div className="overflow-x-auto">
+          <div className="w-full overflow-x-auto custom-table-scrollbar">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-y border-[hsl(var(--border))]/50 bg-[hsl(var(--secondary))]/30">

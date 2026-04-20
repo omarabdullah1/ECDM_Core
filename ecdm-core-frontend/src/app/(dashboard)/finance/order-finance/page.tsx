@@ -104,12 +104,23 @@ export default function OrderFinancePage() {
           cost: cost,
           extraExpenseType: String(order.extraExpenseType || '-'),
           extraExpenseAmount: extraExpenseAmount,
-          salesPercentage: String(order.salesPercentage || '0%'),
-          techniciansPercentage: String(order.technicianPercentage || '0%'),
-          engineerPercentage: String(order.engineerPercentage || '0%'),
+          salesPercentage: Number(order.salesPercentage || 0),
+          techniciansPercentage: Number(order.technicianPercentage || 0),
+          engineerPercentage: Number(order.engineerPercentage || 0),
           paidAmount: paidAmount,
           netBalance: totalAmount - paidAmount,
-          notes: String(order.notes || '')
+          notes: String(order.notes || ''),
+          // Personnel refs
+          salesPersonId: order.salesPersonId?._id || order.salesPersonId || null,
+          salesPersonName: order.salesPersonId?.fullName || order.salesPersonId?.firstName
+            ? `${order.salesPersonId.firstName || ''} ${order.salesPersonId.lastName || ''}`.trim()
+            : undefined,
+          technicianId: order.technicianId?._id || order.technicianId || null,
+          technicianName: order.technicianId?.fullName || order.technicianId?.firstName
+            ? `${order.technicianId.firstName || ''} ${order.technicianId.lastName || ''}`.trim()
+            : undefined,
+          engineerId: order.engineerId?._id || order.engineerId || null,
+          engineerName: order.engineerId?.fullName || order.engineerName || undefined,
         };
       });
 
@@ -135,6 +146,20 @@ export default function OrderFinancePage() {
     onView: handleViewOrder
   });
 
+  // Default Column Visibility Logic: Essential columns only by default
+  const DEFAULT_VISIBILITY = {
+    invoiceId: false,
+    type: false,
+    hashNumber: false,
+    paymentMethod: false,
+    spareParts: false,
+    quantity: false,
+    cost: false,
+    extraExpenseType: false,
+    extraExpenseAmount: false,
+    notes: false,
+  };
+
   // Calculate local pagination since we fetch bulk data
   const startIdx = (currentPage - 1) * rowsPerPage;
   const currentData = financeData.slice(startIdx, startIdx + rowsPerPage);
@@ -148,7 +173,7 @@ export default function OrderFinancePage() {
   }
 
   return (
-    <div className="space-y-6 pb-8">
+    <div className="h-full flex flex-col min-h-0 space-y-6 pb-4">
       <PageHeader 
         title="Order Finance"
         icon={DollarSign}
@@ -167,6 +192,7 @@ export default function OrderFinancePage() {
           itemsPerPage={rowsPerPage}
           onPageChange={setCurrentPage}
           onRowClick={handleViewOrder}
+          defaultVisibility={DEFAULT_VISIBILITY}
           renderActions={(row) => (
             <button
               onClick={() => handleViewOrder(row)}
