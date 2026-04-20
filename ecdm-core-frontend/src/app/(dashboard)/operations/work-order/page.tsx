@@ -795,7 +795,7 @@ export default function WorkOrderPage() {
                   type="submit"
                   form="work-order-form"
                   disabled={saving}
-                  className="flex-1"
+                  className="protect-mount flex-1"
                 >
                   {saving ? 'Saving…' : 'Save Changes'}
                 </Button>

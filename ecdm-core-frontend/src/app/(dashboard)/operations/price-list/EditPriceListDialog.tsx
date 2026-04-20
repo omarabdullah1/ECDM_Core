@@ -294,7 +294,7 @@ export default function EditPriceListDialog({ item, onClose, onSuccess }: EditPr
                     {effectivelyReadOnly ? (
                         <button
                             type="button"
-                            onClick={() => setInternalPreviewMode(false)}
+                            key="btn-edit" onClick={(e) => { e.preventDefault(); setInternalPreviewMode(false); }}
                             className="px-8 py-2 rounded-xl bg-blue-600 text-white text-sm font-bold shadow-lg hover:bg-blue-700 transition-all flex items-center gap-2"
                         >
                             Edit Item
@@ -304,7 +304,7 @@ export default function EditPriceListDialog({ item, onClose, onSuccess }: EditPr
                             type="submit"
                             form="edit-price-list-form"
                             disabled={saving}
-                            className="px-6 py-2 rounded-xl bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="protect-mount px-6 py-2 rounded-xl bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {saving ? 'Saving...' : 'Save Changes'}
                         </button>

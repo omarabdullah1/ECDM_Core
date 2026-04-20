@@ -317,7 +317,7 @@ export default function EditCustomerDialog({ customer, onClose, onSuccess, readO
             {effectivelyReadOnly ? (
               <Button
                 type="button"
-                onClick={() => setInternalPreviewMode(false)}
+                key="btn-edit" onClick={(e) => { e.preventDefault(); setInternalPreviewMode(false); }}
                 className="flex-1 px-8 rounded-xl bg-[hsl(var(--primary))] hover:opacity-90 transition-all shadow-md active:scale-95"
               >
                 Edit Customer
@@ -327,7 +327,7 @@ export default function EditCustomerDialog({ customer, onClose, onSuccess, readO
                 type="submit"
                 form="edit-customer-form"
                 disabled={saving}
-                className="flex-1 px-8 rounded-xl bg-[hsl(var(--primary))] hover:opacity-90 transition-all shadow-md active:scale-95"
+                className="protect-mount flex-1 px-8 rounded-xl bg-[hsl(var(--primary))] hover:opacity-90 transition-all shadow-md active:scale-95"
               >
                 {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
                 {saving ? 'Saving...' : 'Save Changes'}

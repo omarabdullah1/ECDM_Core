@@ -382,7 +382,7 @@ export default function ContentTrackerPage() {
                             {isReadOnly ? (
                                 <button
                                     type="button"
-                                    onClick={() => setIsReadOnly(false)}
+                                    key="btn-edit" onClick={(e) => { e.preventDefault(); setIsReadOnly(false); }}
                                     className="flex-1 rounded-xl bg-[hsl(var(--primary))] py-3 text-sm font-semibold text-[hsl(var(--primary-foreground))] hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
                                 >
                                     <Edit2 className="h-4 w-4" /> Edit Content
@@ -391,7 +391,7 @@ export default function ContentTrackerPage() {
                                 <button
                                     type="submit"
                                     form="content-form"
-                                    className="flex-1 rounded-xl bg-[hsl(var(--primary))] py-3 text-sm font-semibold text-[hsl(var(--primary-foreground))] hover:opacity-90 transition-opacity disabled:opacity-50"
+                                    className="protect-mount flex-1 rounded-xl bg-[hsl(var(--primary))] py-3 text-sm font-semibold text-[hsl(var(--primary-foreground))] hover:opacity-90 transition-opacity disabled:opacity-50"
                                     disabled={saving}
                                 >
                                     {saving ? 'Saving...' : editing ? 'Update Content' : 'Create Content'}

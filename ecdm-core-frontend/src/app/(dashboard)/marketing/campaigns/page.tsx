@@ -585,7 +585,7 @@ export default function CampaignResultsPage() {
                             {isReadOnly ? (
                                 <button
                                     type="button"
-                                    onClick={() => setIsReadOnly(false)}
+                                    key="btn-edit" onClick={(e) => { e.preventDefault(); setIsReadOnly(false); }}
                                     className="flex-1 rounded-xl bg-[hsl(var(--primary))] py-3 text-sm font-semibold text-[hsl(var(--primary-foreground))] hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
                                 >
                                     <Edit2 className="h-4 w-4" /> Edit Campaign
@@ -594,7 +594,7 @@ export default function CampaignResultsPage() {
                                 <button
                                     type="submit"
                                     form="campaign-form"
-                                    className="flex-1 rounded-xl bg-[hsl(var(--primary))] py-3 text-sm font-semibold text-[hsl(var(--primary-foreground))] hover:opacity-90 transition-opacity disabled:opacity-50"
+                                    className="protect-mount flex-1 rounded-xl bg-[hsl(var(--primary))] py-3 text-sm font-semibold text-[hsl(var(--primary-foreground))] hover:opacity-90 transition-opacity disabled:opacity-50"
                                     disabled={saving}
                                 >
                                     {saving ? 'Saving...' : editing ? 'Update Campaign' : 'Create Campaign'}
@@ -780,7 +780,7 @@ export default function CampaignResultsPage() {
                                         type="submit"
                                         form="sync-form"
                                         disabled={syncing}
-                                        className="flex-1 rounded-xl bg-green-600 py-3 text-sm font-semibold text-white disabled:opacity-60 hover:bg-green-700 transition-colors"
+                                        className="protect-mount flex-1 rounded-xl bg-green-600 py-3 text-sm font-semibold text-white disabled:opacity-60 hover:bg-green-700 transition-colors"
                                     >
                                         {syncing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Sheet className="h-4 w-4 mr-2" />}
                                         {syncing ? 'Syncing…' : 'Sync Sheet'}

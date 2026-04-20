@@ -486,7 +486,7 @@ export default function MarketingLeadsPage() {
               {effectivelyReadOnly ? (
                 <button 
                   type="button" 
-                  onClick={() => setInternalPreviewMode(false)} 
+                  key="btn-edit" onClick={(e) => { e.preventDefault(); setInternalPreviewMode(false); }} 
                   className="flex-1 rounded-xl bg-blue-600 text-white py-3 text-sm font-bold shadow-lg hover:bg-blue-700 transition-all flex items-center justify-center gap-2"
                 >
                   <Edit2 className="h-4 w-4" />
@@ -497,7 +497,7 @@ export default function MarketingLeadsPage() {
                   type="submit" 
                   form="lead-form" 
                   disabled={saving} 
-                  className="flex-1 rounded-xl bg-[hsl(var(--primary))] text-white py-3 text-sm font-semibold disabled:opacity-60 transition-all"
+                  className="protect-mount flex-1 rounded-xl bg-[hsl(var(--primary))] text-white py-3 text-sm font-semibold disabled:opacity-60 transition-all"
                 >
                   {saving ? 'Saving...' : (isAdding ? 'Add Lead' : 'Save Changes')}
                 </button>
@@ -605,7 +605,7 @@ export default function MarketingLeadsPage() {
           </DialogBody>
           <DialogFooter>
              {syncStep === 'config' && (
-               <button type="submit" form="sync-config-form" disabled={syncing} className="w-full rounded-xl bg-green-600 py-3 text-sm font-semibold text-white">
+               <button type="submit" form="sync-config-form" disabled={syncing} className="protect-mount w-full rounded-xl bg-green-600 py-3 text-sm font-semibold text-white">
                  {syncing ? 'Analyzing...' : 'Analyze Sheet'}
                </button>
              )}

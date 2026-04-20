@@ -373,7 +373,7 @@ export default function EditCustomerOrderDialog({ order, onClose, onSuccess, rea
           {effectivelyReadOnly ? (
             <button
               type="button"
-              onClick={() => setInternalPreviewMode(false)}
+              key="btn-edit" onClick={(e) => { e.preventDefault(); setInternalPreviewMode(false); }}
               className="flex-1 rounded-xl bg-[hsl(var(--primary))] py-3 text-sm font-semibold text-[hsl(var(--primary-foreground))] hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
             >
               Edit Order
@@ -383,7 +383,7 @@ export default function EditCustomerOrderDialog({ order, onClose, onSuccess, rea
               type="submit"
               form="edit-customer-order-form"
               disabled={saving}
-              className="flex-1 rounded-xl bg-[hsl(var(--primary))] py-3 text-sm font-semibold text-[hsl(var(--primary-foreground))] hover:opacity-90 transition-opacity disabled:opacity-60 disabled:cursor-not-allowed"
+              className="protect-mount flex-1 rounded-xl bg-[hsl(var(--primary))] py-3 text-sm font-semibold text-[hsl(var(--primary-foreground))] hover:opacity-90 transition-opacity disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {saving ? 'Saving...' : 'Save Changes'}
             </button>

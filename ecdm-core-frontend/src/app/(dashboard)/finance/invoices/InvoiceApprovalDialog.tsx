@@ -364,7 +364,7 @@ export default function InvoiceApprovalDialog({ invoice: initialInvoice, open, o
                     </Button>
                     {effectivelyReadOnly && (
                         <Button
-                            onClick={() => setInternalPreviewMode(false)}
+                            key="btn-edit" onClick={(e) => { e.preventDefault(); setInternalPreviewMode(false); }}
                             className="rounded-xl px-8 h-11 text-xs font-black bg-blue-600 hover:bg-blue-700 text-white transition-all uppercase tracking-widest shadow-lg active:scale-95"
                         >
                             Open Actions & Payments

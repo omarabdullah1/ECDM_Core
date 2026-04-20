@@ -454,7 +454,7 @@ export default function SalesDataPage() {
                 {isReadOnly ? (
                   <button
                     type="button"
-                    onClick={() => setIsReadOnly(false)}
+                    key="btn-edit" onClick={(e) => { e.preventDefault(); setIsReadOnly(false); }}
                     className="flex-1 rounded-md bg-[hsl(var(--primary))] py-2 text-sm font-medium text-[hsl(var(--primary-foreground))] shadow-sm hover:opacity-90 transition-all focus-visible:outline-none"
                   >
                     Edit
@@ -464,7 +464,7 @@ export default function SalesDataPage() {
                     type="submit"
                     form="sales-data-form"
                     disabled={saving}
-                    className="flex-1 rounded-md bg-[hsl(var(--primary))] py-2 text-sm font-medium text-[hsl(var(--primary-foreground))] shadow-sm hover:opacity-90 transition-all focus-visible:outline-none disabled:opacity-60"
+                    className="protect-mount flex-1 rounded-md bg-[hsl(var(--primary))] py-2 text-sm font-medium text-[hsl(var(--primary-foreground))] shadow-sm hover:opacity-90 transition-all focus-visible:outline-none disabled:opacity-60"
                   >
                     {saving ? 'Saving...' : 'Save'}
                   </button>

@@ -277,7 +277,7 @@ export default function EditFeedbackDialog({ feedback, isNew, prefillData, onClo
             {effectivelyReadOnly ? (
               <Button
                 type="button"
-                onClick={() => setInternalPreviewMode(false)}
+                key="btn-edit" onClick={(e) => { e.preventDefault(); setInternalPreviewMode(false); }}
                 className="flex-1 px-8 rounded-xl bg-[hsl(var(--primary))] hover:opacity-90 transition-all shadow-md active:scale-95"
               >
                 Edit Feedback
@@ -287,7 +287,7 @@ export default function EditFeedbackDialog({ feedback, isNew, prefillData, onClo
                 type="submit"
                 form="edit-feedback-form"
                 disabled={saving}
-                className="flex-1 px-8 rounded-xl bg-[hsl(var(--primary))] hover:opacity-90 transition-all shadow-md active:scale-95"
+                className="protect-mount flex-1 px-8 rounded-xl bg-[hsl(var(--primary))] hover:opacity-90 transition-all shadow-md active:scale-95"
               >
                 {saving ? 'Saving...' : isNew ? 'Create Feedback' : 'Save Changes'}
               </Button>

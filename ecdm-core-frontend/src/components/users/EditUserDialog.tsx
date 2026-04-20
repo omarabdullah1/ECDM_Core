@@ -238,7 +238,7 @@ export default function EditUserDialog({ user, isOpen, onClose, onSuccess }: Edi
                         {effectivelyReadOnly ? (
                             <button
                                 type="button"
-                                onClick={() => setInternalPreviewMode(false)}
+                                key="btn-edit" onClick={(e) => { e.preventDefault(); setInternalPreviewMode(false); }}
                                 className="flex-1 rounded-xl bg-blue-600 text-white py-3 text-sm font-bold shadow-lg hover:bg-blue-700 transition-all flex items-center justify-center gap-2"
                             >
                                 <Edit2 className="h-4 w-4" />
@@ -249,7 +249,7 @@ export default function EditUserDialog({ user, isOpen, onClose, onSuccess }: Edi
                                 type="submit"
                                 form="edit-user-form"
                                 disabled={saving}
-                                className="flex-1 rounded-xl bg-[hsl(var(--primary))] text-white py-3 text-sm font-semibold disabled:opacity-60 transition-all flex items-center justify-center gap-2"
+                                className="flex-1 rounded-xl bg-[hsl(var(--primary))] text-white py-3 text-sm font-semibold disabled:opacity-60 transition-all flex items-center justify-center gap-2 protect-mount"
                             >
                                 {saving && <Loader2 className="h-4 w-4 animate-spin" />}
                                 {saving ? 'Saving...' : 'Update Account'}

@@ -458,7 +458,7 @@ export default function OrderFinanceDialog({
           <div className="ml-auto flex items-center gap-2">
             {!readOnly && internalPreviewMode && (
               <button
-                onClick={() => setInternalPreviewMode(false)}
+                key="btn-edit" onClick={(e) => { e.preventDefault(); setInternalPreviewMode(false); }}
                 className="px-4 py-2 bg-blue-600/10 hover:bg-blue-600/20 text-blue-600 rounded-xl text-xs font-bold transition-all border border-blue-600/20"
               >
                 Edit Finance

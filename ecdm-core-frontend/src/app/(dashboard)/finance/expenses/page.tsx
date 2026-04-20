@@ -573,7 +573,7 @@ export default function ExpensesPage() {
                 {effectivelyReadOnly ? (
                   <button
                     type="button"
-                    onClick={() => setInternalPreviewMode(false)}
+                    key="btn-edit" onClick={(e) => { e.preventDefault(); setInternalPreviewMode(false); }}
                     className="px-8 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition-all shadow-lg flex items-center gap-2"
                   >
                     Edit Expense
@@ -582,7 +582,7 @@ export default function ExpensesPage() {
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="px-5 py-2.5 text-sm font-medium rounded-xl bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] hover:opacity-90 transition-opacity flex items-center gap-2 disabled:opacity-50"
+                    className="protect-mount px-5 py-2.5 text-sm font-medium rounded-xl bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] hover:opacity-90 transition-opacity flex items-center gap-2 disabled:opacity-50"
                   >
                     {isSubmitting ? (
                       <>
