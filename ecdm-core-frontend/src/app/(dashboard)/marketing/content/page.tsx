@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import api from '@/lib/axios';
-import { FileText, Plus, X, Upload } from 'lucide-react';
+import { FileText, Plus, X, Upload, Edit2 } from 'lucide-react';
 import { DataTable } from '@/components/ui/DataTable';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter } from '@/components/ui/dialog';
@@ -225,7 +225,7 @@ export default function ContentTrackerPage() {
             {/* Data Table */}
             <div className="w-full">
                 <DataTable
-                    data={paginatedRows}
+                    data={filteredRows}
                     columns={columns}
                     loading={loading}
                     onRowClick={(c: ContentTracker) => openEdit(c, 'preview')}
@@ -235,14 +235,6 @@ export default function ContentTrackerPage() {
                         notes: false,
                     }}
                 />
-                {!loading && filteredRows.length > 0 && (
-                    <Pagination
-                        currentPage={currentPage}
-                        totalItems={filteredRows.length}
-                        itemsPerPage={itemsPerPage}
-                        onPageChange={setCurrentPage}
-                    />
-                )}
             </div>
 
             {/* Add/Edit Content Dialog */}

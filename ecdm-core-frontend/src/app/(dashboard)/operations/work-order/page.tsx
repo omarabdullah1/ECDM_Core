@@ -778,8 +778,12 @@ export default function WorkOrderPage() {
               </Button>
               {effectivelyReadOnly ? (
                 <Button
+                  key="btn-edit"
                   type="button"
-                  onClick={() => setInternalPreviewMode(false)}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setInternalPreviewMode(false);
+                  }}
                   className="flex-1 gap-2"
                 >
                   <Edit2 className="h-4 w-4" />
@@ -787,6 +791,7 @@ export default function WorkOrderPage() {
                 </Button>
               ) : (
                 <Button
+                  key="btn-save"
                   type="submit"
                   form="work-order-form"
                   disabled={saving}
