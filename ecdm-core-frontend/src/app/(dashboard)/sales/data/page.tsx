@@ -1,22 +1,32 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import api from '@/lib/axios';
-import { FileText, Plus, Edit2, Trash2, X, Download, Upload, History, Lock } from 'lucide-react';
+import { FileText, Plus, Edit2, Trash2, X, Download, Upload, History, Lock, UserPlus } from 'lucide-react';
 import { downloadSalesDataTemplate } from '@/lib/excelTemplate';
 import ImportDataDialog from '@/components/sales/ImportDataDialog';
 import { DataTable } from '@/components/ui/DataTable';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { createSalesDataColumns, SalesData } from './columns';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter } from '@/components/ui/dialog';
 import toast from 'react-hot-toast';
 
 const iCls = 'flex h-9 w-full rounded-md border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] px-3 py-1 text-sm shadow-sm transition-all placeholder:text-[hsl(var(--muted-foreground))] focus-visible:outline-none focus-visible:border-[hsl(var(--primary))]/50 focus-visible:ring-[3px] focus-visible:ring-[hsl(var(--primary))]/10';
 const OUTCOMES = ['Pending', 'No Answer', 'Interested', 'Converted', 'Rejected'];
 const TYPE_OF_ORDER = ['Maintenance', 'General supplies', 'Supply and installation'];
 const SALES_PLATFORM = ['Online', 'In Side', 'Phone', 'Out side', 'Data'];
+const SECTORS = ['B2C', 'B2B', 'B2G', 'Hybrid', 'Other'];
+
 const blank = {
   marketingData: '',
   salesPerson: '',
   customer: '',
+  // New Customer Fields
+  customerName: '',
+  customerPhone: '',
+  customerAddress: '',
+  customerRegion: '',
+  customerSector: '',
+  
   callDate: '',
   callOutcome: 'Pending',
   typeOfOrder: '',
@@ -76,6 +86,7 @@ export default function SalesDataPage() {
     setEditing(row);
     setIsReadOnly(readOnly);
     setForm({
+      ...blank,
       marketingData: row.marketingData?._id || '',
       salesPerson: row.salesPerson?._id || '',
       customer: (row.customer?._id || row.customerId?._id) || '',
@@ -107,7 +118,7 @@ export default function SalesDataPage() {
     setError('');
 
     const pl: Record<string, unknown> = {};
-    // Exclude immutable reference IDs when editing (they cannot be changed)
+    // Exclude immutable reference IDs when editing
     const immutableFields = editing ? ['marketingData', 'salesPerson', 'customer'] : [];
 
     for (const [k, v] of Object.entries(form)) {
@@ -276,38 +287,92 @@ export default function SalesDataPage() {
 
                 {/* Editable fields only shown when creating new record */}
                 {!editing && (
-                  <>
+                  <div className="space-y-4 border-b pb-4 mb-4">
+                    <div className="flex items-center gap-2 text-sm font-semibold text-[hsl(var(--primary))]">
+                      <UserPlus className="h-4 w-4" />
+                      <span>Customer Details</span>
+                    </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="text-sm font-medium mb-1 block">Marketing Data ID</label>
+                        <label className="text-sm font-medium mb-1 block">Customer Name *</label>
                         <input
-                          placeholder="Optional"
-                          value={form.marketingData}
-                          onChange={u('marketingData')}
+                          required
+                          placeholder="Full Name"
+                          value={form.customerName}
+                          onChange={u('customerName')}
                           className={iCls}
                         />
                       </div>
                       <div>
-                        <label className="text-sm font-medium mb-1 block">Sales Person ID</label>
+                        <label className="text-sm font-medium mb-1 block">Customer Phone *</label>
                         <input
-                          placeholder="Optional"
-                          value={form.salesPerson}
-                          onChange={u('salesPerson')}
+                          required
+                          placeholder="Phone Number"
+                          value={form.customerPhone}
+                          onChange={u('customerPhone')}
                           className={iCls}
                         />
                       </div>
                     </div>
-
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-sm font-medium mb-1 block">Address</label>
+                        <input
+                          placeholder="Street, Building"
+                          value={form.customerAddress}
+                          onChange={u('customerAddress')}
+                          className={iCls}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium mb-1 block">Region</label>
+                        <input
+                          placeholder="City/Area"
+                          value={form.customerRegion}
+                          onChange={u('customerRegion')}
+                          className={iCls}
+                        />
+                      </div>
+                    </div>
                     <div>
-                      <label className="text-sm font-medium mb-1 block">Customer ID</label>
+                      <label className="text-sm font-medium mb-1 block">Sector</label>
+                      <select
+                        value={form.customerSector}
+                        onChange={u('customerSector')}
+                        className={iCls}
+                      >
+                        <option value="">Select Sector...</option>
+                        {SECTORS.map(s => <option key={s} value={s}>{s}</option>)}
+                      </select>
+                    </div>
+                    
+                    <div className="text-[10px] text-[hsl(var(--muted-foreground))] italic">
+                      * If phone exists, data will be linked to the existing customer.
+                    </div>
+                  </div>
+                )}
+
+                {!editing && (
+                  <div className="grid grid-cols-2 gap-4 pt-2">
+                    <div>
+                      <label className="text-xs font-medium text-[hsl(var(--muted-foreground))] mb-1 block">Sales Person ID (Optional)</label>
                       <input
-                        placeholder="Optional"
-                        value={form.customer}
-                        onChange={u('customer')}
+                        placeholder="Leave blank for self"
+                        value={form.salesPerson}
+                        onChange={u('salesPerson')}
                         className={iCls}
                       />
                     </div>
-                  </>
+                    <div>
+                      <label className="text-xs font-medium text-[hsl(var(--muted-foreground))] mb-1 block">Marketing ID (Optional)</label>
+                      <input
+                        placeholder="Lead ID"
+                        value={form.marketingData}
+                        onChange={u('marketingData')}
+                        className={iCls}
+                      />
+                    </div>
+                  </div>
                 )}
 
                 <div className="grid grid-cols-2 gap-4">
@@ -512,4 +577,3 @@ export default function SalesDataPage() {
     </div >
   );
 }
-

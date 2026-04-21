@@ -3,6 +3,7 @@ import Customer from '../../shared/models/contact.model';
 import SalesData from '../models/sales-data.model';
 import { AppError } from '../../../utils/apiError';
 import { CustomerType, CustomerSector } from '../../shared/types/contact.types';
+import * as salesDataService from './sales-data.service';
 
 /**
  * Excel Import Service for Sales Data
@@ -83,30 +84,22 @@ const mapSector = (sectorStr?: string): CustomerSector => {
  */
 const parseExcelRow = (row: ExcelRow): ParsedRow => {
     return {
-        name: (row.Name || '').trim(),
-        phone: (row.Phone || '').trim(),
-        address: (row.Address || '').trim(),
-        region: (row.Region || '').trim(),
-        date: row.Date ? (row.Date || '').trim() : undefined,
-        sector: row.Sector ? (row.Sector || '').trim() : undefined,
-        status: row.Status ? (row.Status || '').trim() : undefined,
-        typeOfOrder: row['Type Of Order'] ? (row['Type Of Order'] || '').trim() : undefined,
-        salesPlatform: row['Sales platform'] ? (row['Sales platform'] || '').trim() : undefined,
-        order: row.Order ? (row.Order || '').trim() : undefined,
-        notes: row.Notes ? (row.Notes || '').trim() : undefined,
+        name: String(row.Name || '').trim(),
+        phone: String(row.Phone || '').trim(),
+        address: String(row.Address || '').trim(),
+        region: String(row.Region || '').trim(),
+        date: row.Date ? String(row.Date || '').trim() : undefined,
+        sector: row.Sector ? String(row.Sector || '').trim() : undefined,
+        status: row.Status ? String(row.Status || '').trim() : undefined,
+        typeOfOrder: row['Type Of Order'] ? String(row['Type Of Order'] || '').trim() : undefined,
+        salesPlatform: row['Sales platform'] ? String(row['Sales platform'] || '').trim() : undefined,
+        order: row.Order ? String(row.Order || '').trim() : undefined,
+        notes: row.Notes ? String(row.Notes || '').trim() : undefined,
     };
 };
 
 /**
  * STEP 1: Analyze Excel file
- * 
- * Parses the uploaded Excel file and validates mandatory fields.
- * Checks SSOT (Customer collection) for duplicates and existing SalesData records.
- * 
- * Categories:
- * - newLeads: Valid rows that need to be imported (either new customer or existing customer without SalesData)
- * - skipped: Rows where both Customer AND SalesData already exist
- * - errors: Rows missing mandatory fields (Name, Phone, Address, Region)
  */
 export const analyzeExcelFile = async (fileBuffer: Buffer): Promise<AnalysisResult> => {
     const result: AnalysisResult = {
@@ -116,29 +109,19 @@ export const analyzeExcelFile = async (fileBuffer: Buffer): Promise<AnalysisResu
     };
 
     try {
-        // Parse Excel file
         const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
         const firstSheetName = workbook.SheetNames[0];
-        
-        if (!firstSheetName) {
-            throw new AppError('Excel file is empty or has no sheets', 400);
-        }
-
+        if (!firstSheetName) throw new AppError('Excel file is empty or has no sheets', 400);
         const worksheet = workbook.Sheets[firstSheetName];
         const rawData = XLSX.utils.sheet_to_json(worksheet) as ExcelRow[];
 
-        if (rawData.length === 0) {
-            throw new AppError('Excel file contains no data rows', 400);
-        }
+        if (rawData.length === 0) throw new AppError('Excel file contains no data rows', 400);
 
-        // Process each row
         for (let i = 0; i < rawData.length; i++) {
-            const rowIndex = i + 2; // +2 for header row and 0-index
+            const rowIndex = i + 2;
             const excelRow = rawData[i];
             const parsed = parseExcelRow(excelRow);
 
-            // STRICT MANDATORY FIELD VALIDATION
-            // Name, Phone, Address, and Region are REQUIRED
             const missingFields: string[] = [];
             if (!parsed.name) missingFields.push('Name');
             if (!parsed.phone) missingFields.push('Phone');
@@ -146,63 +129,34 @@ export const analyzeExcelFile = async (fileBuffer: Buffer): Promise<AnalysisResu
             if (!parsed.region) missingFields.push('Region');
 
             if (missingFields.length > 0) {
-                result.errors.push({
-                    rowIndex,
-                    data: parsed,
-                    error: `Missing mandatory fields: ${missingFields.join(', ')}`,
-                });
+                result.errors.push({ rowIndex, data: parsed, error: `Missing mandatory fields: ${missingFields.join(', ')}` });
                 continue;
             }
 
-            // Normalize phone for lookup
             const normalizedPhone = normalizePhone(parsed.phone);
-
-            // SSOT Cross-Reference: Check Customer collection
             const existingCustomer = await Customer.findOne({ phone: normalizedPhone }).lean();
 
             if (!existingCustomer) {
-                // Case A: Brand new customer - needs creation
-                result.newLeads.push({
-                    rowIndex,
-                    data: parsed,
-                });
+                result.newLeads.push({ rowIndex, data: parsed });
             } else {
-                // Case B: Customer exists - check if SalesData exists
-                const existingSalesData = await SalesData.findOne({ 
-                    customer: existingCustomer._id 
-                }).lean();
-
+                const existingSalesData = await SalesData.findOne({ customer: existingCustomer._id }).lean();
                 if (!existingSalesData) {
-                    // Case B1: Customer exists but NO SalesData - needs linking
-                    result.newLeads.push({
-                        rowIndex,
-                        data: parsed,
-                    });
+                    result.newLeads.push({ rowIndex, data: parsed });
                 } else {
-                    // Case B2: Both Customer AND SalesData exist - skip
-                    result.skipped.push({
-                        rowIndex,
-                        data: parsed,
-                    });
+                    result.skipped.push({ rowIndex, data: parsed });
                 }
             }
         }
-
         return result;
     } catch (error) {
-        if (error instanceof AppError) {
-            throw error;
-        }
-        const err = error as { message?: string };
-        throw new AppError(`Failed to parse Excel file: ${err.message}`, 500);
+        if (error instanceof AppError) throw error;
+        throw new AppError(`Failed to parse Excel file: ${(error as any).message}`, 500);
     }
 };
 
 /**
  * STEP 2: Commit approved leads
- * 
- * Creates/updates Customer records (SSOT) and creates SalesData records.
- * Follows the dual-insertion pattern: Customer first, then SalesData.
+ * Uses the centralized salesDataService.create to ensure full synchronization.
  */
 export const commitLeads = async (newLeads: AnalyzedLead[]): Promise<CommitResult> => {
     const result: CommitResult = {
@@ -211,90 +165,28 @@ export const commitLeads = async (newLeads: AnalyzedLead[]): Promise<CommitResul
         errors: [],
     };
 
-    // ═══════════════════════════════════════════════════════════════════════
-    // SMART AUTO-INCREMENT SETUP
-    // Instead of relying on the counter, we use mathematical analysis to find
-    // the highest existing customer ID to prevent E11000 duplicate key errors
-    // ═══════════════════════════════════════════════════════════════════════
-    const existingCustomersForId = await Customer.find({}, { customerId: 1 }).lean();
-    let currentMaxId = 0;
-    for (const c of existingCustomersForId) {
-        if (c.customerId && c.customerId.startsWith('CUS-')) {
-            const num = parseInt(c.customerId.replace('CUS-', ''), 10);
-            if (!isNaN(num) && num > currentMaxId) currentMaxId = num;
-        }
-    }
-
-    console.log(`📊 Smart Auto-Increment (Sales Import): Starting from CUS-${currentMaxId + 1}`);
-
     for (const lead of newLeads) {
         try {
-            const normalizedPhone = normalizePhone(lead.data.phone);
-
-            // ═══════════════════════════════════════════════════════════════════════
-            // STEP 1: SSOT Upsert - Create or retrieve Customer document
-            // Use .findOne() + .save() to ensure pre('save') hook fires for customerId
-            // ═══════════════════════════════════════════════════════════════════════
-            let customerDoc = await Customer.findOne({ phone: normalizedPhone });
-
-            if (!customerDoc) {
-                // Create new customer with smart auto-increment ID
-                currentMaxId++;
-                const newCustomerId = `CUS-${currentMaxId}`;
-                
-                customerDoc = new Customer({
-                    customerId: newCustomerId,  // Explicitly assign to bypass pre-save hook
-                    phone: normalizedPhone,
-                    name: lead.data.name,
-                    address: lead.data.address,
-                    region: lead.data.region,
-                    sector: mapSector(lead.data.sector),
-                    type: CustomerType.Other, // Default type
-                    notes: lead.data.notes,
-                });
-                await customerDoc.save();
-                console.log(`✅ Created customer with ID: ${newCustomerId}`);
-            }
-            // If customer exists, we don't update it - we only create the SalesData link
-
-            // Null guard
-            if (!customerDoc || !customerDoc._id) {
-                throw new AppError(`Failed to create/retrieve Customer for phone: ${normalizedPhone}`, 500);
-            }
-
-            // ═══════════════════════════════════════════════════════════════════════
-            // STEP 2: Module Creation - Create SalesData document
-            // Reference the Customer _id and populate remaining fields from Excel
-            // ═══════════════════════════════════════════════════════════════════════
-            
-            // Double-check: SalesData should not exist (analyze phase should have filtered)
-            const existingSalesData = await SalesData.findOne({ customer: customerDoc._id });
-            
-            if (existingSalesData) {
-                result.skipped++;
-                continue;
-            }
-
-            // Create new SalesData record
-            await SalesData.create({
-                customer: customerDoc._id,
-                // Note: The current SalesData model requires marketingData and salesPerson
-                // These fields need to be optional or we need to provide defaults
-                // For now, we'll handle this in the model update or provide dummy values
-                callDate: lead.data.date ? new Date(lead.data.date) : new Date(),
-                callOutcome: lead.data.status || 'Pending',
-                notes: [
-                    lead.data.notes,
-                    lead.data.order ? `Order: ${lead.data.order}` : null,
-                    lead.data.typeOfOrder ? `Type: ${lead.data.typeOfOrder}` : null,
-                    lead.data.salesPlatform ? `Platform: ${lead.data.salesPlatform}` : null,
-                ].filter(Boolean).join(' | '),
+            // Offload full resolution and sync to the robust Service layer
+            await salesDataService.create({
+                customerName: lead.data.name,
+                customerPhone: lead.data.phone,
+                customerAddress: lead.data.address,
+                customerRegion: lead.data.region,
+                customerSector: mapSector(lead.data.sector),
+                callDate: lead.data.date ? new Date(lead.data.date).toISOString() : new Date().toISOString(),
+                callOutcome: (lead.data.status as any) || 'Pending',
+                typeOfOrder: (lead.data.typeOfOrder as any) || '',
+                salesPlatform: (lead.data.salesPlatform as any) || '',
+                order: (lead.data.order as any) || '',
+                notes: lead.data.notes,
+                // Note: followUp is currently not mapped from Excel, but we could add it if requested
+                followUp: lead.data.status === 'Interested' ? 'Yes' : 'No', 
             });
 
             result.created++;
         } catch (err) {
-            const error = err as { message?: string };
-            result.errors.push(`Row ${lead.rowIndex}: ${error.message || 'Failed to create'}`);
+            result.errors.push(`Row ${lead.rowIndex}: ${(err as any).message || 'Failed to create'}`);
         }
     }
 

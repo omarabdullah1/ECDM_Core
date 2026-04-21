@@ -5,12 +5,28 @@ export const create = async (data: any) => {
   return Expense.create(data);
 };
 
+/**
+ * Intelligent upsert for automated expenses.
+ * Prevents duplicates for internal records (like monthly salaries).
+ */
+export const upsertExpense = async (criteria: Record<string, any>, data: any) => {
+  const existing = await Expense.findOne(criteria);
+  if (existing) {
+    return Expense.findByIdAndUpdate(existing._id, data, { new: true });
+  }
+  return Expense.create(data);
+};
+
 export const getAll = async (query: Record<string, unknown>) => {
   const { page = 1, limit = 1000 } = query;
   const skip = (Number(page) - 1) * Number(limit);
   
   const [data, total] = await Promise.all([
-    Expense.find().skip(skip).limit(Number(limit)),
+    Expense.find()
+      .populate('employeeId', 'firstName lastName')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(Number(limit)),
     Expense.countDocuments(),
   ]);
   
@@ -18,7 +34,7 @@ export const getAll = async (query: Record<string, unknown>) => {
 };
 
 export const getById = async (id: string) => {
-  const expense = await Expense.findById(id);
+  const expense = await Expense.findById(id).populate('employeeId', 'firstName lastName');
   if (!expense) throw new AppError('Expense not found', 404);
   return expense;
 };

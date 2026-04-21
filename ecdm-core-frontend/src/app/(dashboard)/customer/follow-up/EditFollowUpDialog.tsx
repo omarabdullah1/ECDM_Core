@@ -87,6 +87,8 @@ export default function EditFollowUpDialog({ followUp, onClose, onSuccess, onOpe
   const orderContext = (followUp.orderContext as Record<string, unknown>) || {};
   const customer = followUp.customer as Record<string, unknown> | undefined;
   const order = followUp.customerOrderId as Record<string, unknown> | undefined;
+  const salesData = followUp.salesDataId as any;
+  const lead = followUp.leadId as any;
 
   const getContextValue = (key: string): string => {
     const raw = orderContext[key];
@@ -175,8 +177,8 @@ export default function EditFollowUpDialog({ followUp, onClose, onSuccess, onOpe
   return (
     <>
       <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
-        <DialogContent className="p-6 outline-none">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-hidden flex flex-col p-0 outline-none">
+          <DialogHeader className="p-6 pb-2">
             <DialogTitle>{effectivelyReadOnly ? 'Follow Up Preview' : 'Edit Follow Up'}</DialogTitle>
             <p className="text-xs text-[hsl(var(--muted-foreground))] mt-0.5">
               Follow Up ID: {followUp._id}
@@ -184,7 +186,8 @@ export default function EditFollowUpDialog({ followUp, onClose, onSuccess, onOpe
             </p>
           </DialogHeader>
 
-          <form onSubmit={form.handleSubmit(onSubmit, onError)} className="space-y-6">
+          <div className="flex-1 overflow-y-auto px-6 py-4 scrollbar-thin">
+            <form onSubmit={form.handleSubmit(onSubmit, onError)} className="space-y-6 pb-4">
             <div className="mb-6 space-y-4 rounded-lg bg-[hsl(var(--muted))]/50 p-4 border border-[hsl(var(--border))]">
               <h3 className="text-xs font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">
                 Section A: Order Context (Read-Only - Single Source of Truth)
@@ -215,9 +218,9 @@ export default function EditFollowUpDialog({ followUp, onClose, onSuccess, onOpe
                   </div>
                 </div>
                 <div>
-                  <label className="text-[hsl(var(--muted-foreground))] text-xs mb-1 block">Visit Date</label>
+                  <label className="text-[hsl(var(--muted-foreground))] text-xs mb-1 block">Visit/Call Date</label>
                   <div className={readOnlyCls}>
-                    {formatDate(String(getContextValue('actualVisitDate') || getContextValue('visitDate') || order?.actualVisitDate))}
+                    {formatDate(String(getContextValue('actualVisitDate') || getContextValue('visitDate') || order?.actualVisitDate || salesData?.callDate || lead?.date))}
                   </div>
                 </div>
                 <div>
@@ -239,9 +242,9 @@ export default function EditFollowUpDialog({ followUp, onClose, onSuccess, onOpe
                   </div>
                 </div>
                 <div className="col-span-2">
-                  <label className="text-[hsl(var(--muted-foreground))] text-xs mb-1 block">Original Issue</label>
-                  <div className={`${readOnlyCls} truncate`} title={String(order?.issue || '')}>
-                    {String(order?.issue || '-')}
+                  <label className="text-[hsl(var(--muted-foreground))] text-xs mb-1 block">Original Issue / Goal</label>
+                  <div className={`${readOnlyCls} truncate`} title={String(order?.issue || salesData?.issue || lead?.issue || '')}>
+                    {String(order?.issue || salesData?.issue || lead?.issue || '-')}
                   </div>
                 </div>
               </div>
@@ -371,6 +374,7 @@ export default function EditFollowUpDialog({ followUp, onClose, onSuccess, onOpe
               )}
             </div>
           </form>
+          </div>
         </DialogContent>
       </Dialog>
 

@@ -1,5 +1,6 @@
 import mongoose, { Schema, Model } from 'mongoose';
 import { IFollowUpDocument, FollowUpStatus } from '../types/follow-up.types';
+import { populateOrderContext } from '../utils/follow-up-context';
 
 const followUpSchema = new Schema<IFollowUpDocument>(
     {
@@ -49,6 +50,31 @@ const followUpSchema = new Schema<IFollowUpDocument>(
     },
     { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } },
 );
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Middleware: Auto-populate Order Context
+// ─────────────────────────────────────────────────────────────────────────────
+followUpSchema.pre('save', async function (next) {
+    // Only populate if orderContext is missing or empty
+    const hasContext = this.orderContext && (this.orderContext.customerName || this.orderContext.customerId);
+    
+    if (!hasContext) {
+        try {
+            const context = await populateOrderContext(
+                this.customerOrderId,
+                this.customer,
+                this.salesDataId,
+                this.leadId
+            );
+            if (context) {
+                this.orderContext = context;
+            }
+        } catch (error) {
+            console.error('⚠️ FollowUp Middleware: Failed to populate orderContext:', error);
+        }
+    }
+    next();
+});
 
 followUpSchema.index({ workOrder:       1 });
 followUpSchema.index({ leadId:          1 });

@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { Edit2, X, AlertCircle, Loader2 } from 'lucide-react';
+import { Edit2, X, AlertCircle, Loader2, TrendingUp, Briefcase } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter } from '@/components/ui/dialog';
 import api from '@/lib/axios';
 import toast from 'react-hot-toast';
@@ -18,6 +18,9 @@ interface User {
     targetBudget?: number;
     targetSales?: number;
     maxDiscountPercentage?: number;
+    commissionPercentage?: number;
+    salary?: number;
+    department?: string;
 }
 
 interface EditUserDialogProps {
@@ -39,7 +42,18 @@ const ROLES = [
     { value: 'CustomerService', label: 'Customer Service' },
     { value: 'Marketing', label: 'Marketing' },
     { value: 'R&D', label: 'R&D' },
+    { value: 'Finance', label: 'Finance' },
 ] as const;
+
+const DEPARTMENTS = [
+    'Engineering',
+    'Sales',
+    'Marketing',
+    'HR',
+    'Finance',
+    'Operations',
+    'Other'
+];
 
 const inputClass = 'w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-4 py-3 text-sm placeholder:text-[hsl(var(--muted-foreground))] focus:border-[hsl(var(--primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/20 transition-all disabled:opacity-60 disabled:cursor-not-allowed';
 
@@ -56,6 +70,9 @@ export default function EditUserDialog({ user, isOpen, onClose, onSuccess }: Edi
         phone: user.phone || '',
         isActive: user.isActive ?? true,
         maxDiscountPercentage: user.maxDiscountPercentage || 0,
+        commissionPercentage: user.commissionPercentage || 0,
+        salary: user.salary || 0,
+        department: user.department || '',
     });
 
     const effectivelyReadOnly = internalPreviewMode;
@@ -74,6 +91,9 @@ export default function EditUserDialog({ user, isOpen, onClose, onSuccess }: Edi
                 phone: form.phone,
                 isActive: form.isActive,
                 maxDiscountPercentage: form.maxDiscountPercentage,
+                commissionPercentage: form.commissionPercentage,
+                salary: Number(form.salary),
+                department: form.department,
             };
             if (form.password) {
                 payload.password = form.password;
@@ -106,7 +126,7 @@ export default function EditUserDialog({ user, isOpen, onClose, onSuccess }: Edi
                 </DialogHeader>
 
                 <DialogBody>
-                    <form id="edit-user-form" onSubmit={handleUpdate} className="space-y-4">
+                    <form id="edit-user-form" onSubmit={handleUpdate} className="space-y-4 max-h-[60vh] overflow-y-auto px-1 custom-scrollbar">
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-1.5">
                                 <label className="text-xs font-bold uppercase text-[hsl(var(--muted-foreground))]">First Name</label>
@@ -144,21 +164,6 @@ export default function EditUserDialog({ user, isOpen, onClose, onSuccess }: Edi
                             />
                         </div>
 
-                        {!effectivelyReadOnly && (
-                            <div className="space-y-1.5">
-                                <label className="text-xs font-bold uppercase text-[hsl(var(--muted-foreground))]">
-                                    Password <span className="lowercase text-xs opacity-70">(leave blank to keep current)</span>
-                                </label>
-                                <input
-                                    type="password"
-                                    value={form.password}
-                                    onChange={(e) => setForm(prev => ({ ...prev, password: e.target.value }))}
-                                    placeholder="Enter new password"
-                                    className={inputClass}
-                                />
-                            </div>
-                        )}
-
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-1.5">
                                 <label className="text-xs font-bold uppercase text-[hsl(var(--muted-foreground))]">Role</label>
@@ -188,9 +193,55 @@ export default function EditUserDialog({ user, isOpen, onClose, onSuccess }: Edi
                             </div>
                         </div>
 
-                        {form.role === 'Sales' && (
+                        <div className="grid grid-cols-2 gap-4">
+                             <div className="space-y-1.5">
+                                <label className="text-xs font-bold uppercase text-[hsl(var(--muted-foreground))] flex items-center gap-1">
+                                    <Briefcase className="h-3 w-3" />
+                                    Department
+                                </label>
+                                <select
+                                    value={form.department}
+                                    onChange={(e) => setForm(prev => ({ ...prev, department: e.target.value }))}
+                                    className={inputClass}
+                                    disabled={effectivelyReadOnly}
+                                >
+                                    <option value="">Select Department</option>
+                                    {DEPARTMENTS.map(dept => (
+                                        <option key={dept} value={dept}>{dept}</option>
+                                    ))}
+                                </select>
+                            </div>
                             <div className="space-y-1.5">
-                                <label className="text-xs font-bold uppercase text-[hsl(var(--muted-foreground))]">Max Discount Allowed %</label>
+                                <label className="text-xs font-bold uppercase text-[hsl(var(--muted-foreground))]">Basic Salary (EGP)</label>
+                                <input
+                                    type="number"
+                                    value={form.salary}
+                                    onChange={(e) => setForm(prev => ({ ...prev, salary: Number(e.target.value) }))}
+                                    min="0"
+                                    className={inputClass}
+                                    disabled={effectivelyReadOnly}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-bold uppercase text-[hsl(var(--muted-foreground))] flex items-center gap-1">
+                                    <TrendingUp className="h-3 w-3" />
+                                    Commission %
+                                </label>
+                                <input
+                                    type="number"
+                                    value={form.commissionPercentage}
+                                    onChange={(e) => setForm(prev => ({ ...prev, commissionPercentage: Number(e.target.value) }))}
+                                    min="0"
+                                    max="100"
+                                    className={inputClass}
+                                    disabled={effectivelyReadOnly}
+                                />
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-bold uppercase text-[hsl(var(--muted-foreground))]">Max Discount %</label>
                                 <input
                                     type="number"
                                     value={form.maxDiscountPercentage}
@@ -199,6 +250,21 @@ export default function EditUserDialog({ user, isOpen, onClose, onSuccess }: Edi
                                     max="100"
                                     className={inputClass}
                                     disabled={effectivelyReadOnly}
+                                />
+                            </div>
+                        </div>
+
+                        {!effectivelyReadOnly && (
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-bold uppercase text-[hsl(var(--muted-foreground))]">
+                                    Password <span className="lowercase text-xs opacity-70">(leave blank to keep current)</span>
+                                </label>
+                                <input
+                                    type="password"
+                                    value={form.password}
+                                    onChange={(e) => setForm(prev => ({ ...prev, password: e.target.value }))}
+                                    placeholder="Enter new password"
+                                    className="w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-4 py-3 text-sm placeholder:text-[hsl(var(--muted-foreground))] focus:border-[hsl(var(--primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/20 transition-all"
                                 />
                             </div>
                         )}

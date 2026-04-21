@@ -153,7 +153,7 @@ export default function ImportDataDialog({ isOpen, onClose, onSuccess }: ImportD
                                     <input type="file" accept=".xlsx,.xls,.csv" onChange={handleFileSelect} className="hidden" id="file-upload" />
                                     <label
                                         htmlFor="file-upload"
-                                        className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-white hover:opacity-90 cursor-pointer shadow-lg shadow-primary/20 transition-all"
+                                        className="inline-flex items-center gap-2 rounded-xl bg-[hsl(var(--primary))] px-5 py-2.5 text-sm font-bold text-[hsl(var(--primary-foreground))] hover:opacity-90 cursor-pointer shadow-lg shadow-[hsl(var(--primary))]/20 transition-all font-inter"
                                     >
                                         Select File
                                     </label>

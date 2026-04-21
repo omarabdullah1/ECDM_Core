@@ -102,11 +102,11 @@ export default function WorkOrderPage() {
           const priceData = priceRes.data?.data?.data || priceRes.data?.data || priceRes.data || [];
           const ordersData = ordersRes.data?.data?.data || ordersRes.data?.data || ordersRes.data || [];
           const usersData = usersRes.data?.data?.data || usersRes.data?.data || usersRes.data || [];
-          
+
           setPriceList(Array.isArray(priceData) ? priceData : []);
           setCustomerOrders(Array.isArray(ordersData) ? ordersData : []);
-          
-          const engineerList = Array.isArray(usersData) 
+
+          const engineerList = Array.isArray(usersData)
             ? usersData.filter(u => u.role === 'MaintenanceEngineer' || u.role === 'Technician')
             : [];
           setEngineers(engineerList);
@@ -141,15 +141,15 @@ export default function WorkOrderPage() {
 
       // Auto-fill details when inventory item changes
       if (field === 'inventoryItemId') {
-        const item = priceList.find(i => 
-          (i._id && String(i._id) === String(value)) || 
+        const item = priceList.find(i =>
+          (i._id && String(i._id) === String(value)) ||
           (i.sparePartsId && String(i.sparePartsId) === String(value))
         );
         if (item) {
           updated.unitCost = item.unitPrice || 0;
           updated.itemName = item.itemName || '';
           // Always standardize to the primary _id string
-          updated.inventoryItemId = String(item._id); 
+          updated.inventoryItemId = String(item._id);
         }
       }
 
@@ -190,10 +190,10 @@ export default function WorkOrderPage() {
     setEditing(r);
     setInternalPreviewMode(mode === 'preview');
     // customerOrderId can be either an Object (populated) or string (ID only)
-    const orderId = typeof r.customerOrderId === 'object' && r.customerOrderId !== null 
-      ? r.customerOrderId._id 
+    const orderId = typeof r.customerOrderId === 'object' && r.customerOrderId !== null
+      ? r.customerOrderId._id
       : (r.customerOrderId as any) || '';
-    
+
     // Initialize partsUsed from existing work order
     const existingParts: PartEntry[] = [];
     if (r.partsUsed && r.partsUsed.length > 0) {
@@ -201,13 +201,13 @@ export default function WorkOrderPage() {
         // The backend schema uses priceListId, but legacy might use inventoryItemId
         const rawId = part.priceListId || part.inventoryItemId;
         const partId = typeof rawId === 'object' ? rawId?._id : rawId;
-        
+
         // Find in priceList (matching either _id or legacy sparePartsId)
-        const itemInList = priceList.find(i => 
-          (i._id && String(i._id) === String(partId)) || 
+        const itemInList = priceList.find(i =>
+          (i._id && String(i._id) === String(partId)) ||
           (i.sparePartsId && String(i.sparePartsId) === String(partId))
         );
-        
+
         existingParts.push({
           id: generatePartId(),
           inventoryItemId: itemInList ? String(itemInList._id) : (partId ? String(partId) : ''),
@@ -290,17 +290,17 @@ export default function WorkOrderPage() {
         let changed = false;
         const next = prev.map(p => {
           // Robust lookup
-          const itemInList = priceList.find(i => 
-            (i._id && String(i._id) === String(p.inventoryItemId)) || 
+          const itemInList = priceList.find(i =>
+            (i._id && String(i._id) === String(p.inventoryItemId)) ||
             (i.sparePartsId && String(i.sparePartsId) === String(p.inventoryItemId))
           );
-          
+
           if (itemInList) {
             const currentId = String(p.inventoryItemId);
             const targetId = String(itemInList._id);
             const currentName = p.itemName || '';
             const targetName = itemInList.itemName || '';
-            
+
             // If ID needs standardization or name/cost is missing
             if (currentId !== targetId || !currentName || p.unitCost === 0) {
               changed = true;
@@ -475,7 +475,7 @@ export default function WorkOrderPage() {
               )}
             </div>
           </DialogHeader>
-          
+
           <DialogBody>
             <form id="work-order-form" onSubmit={save} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -486,13 +486,13 @@ export default function WorkOrderPage() {
                     <span className="text-xs text-green-600 ml-2">(Auto-linked)</span>
                   </label>
                   <div className={`${iCls} bg-gray-50 flex items-center text-gray-600 font-medium border-dashed cursor-not-allowed overflow-hidden truncate`} title={(() => {
-                      const selected = customerOrders.find(o => o._id === form.customerOrderId);
-                      const base = selected || (editing?.customerOrderId && typeof editing.customerOrderId === 'object' ? editing.customerOrderId : null);
-                      if (base) {
-                        return `[ID: ${base.orderId || base._id?.substring(0,8)}] ${base.customerId?.name || 'Unknown'} - ${base.issue || 'No Issue Title'}`;
-                      }
-                      return form.customerOrderId || 'No Order Linked';
-                    })()}>
+                    const selected = customerOrders.find(o => o._id === form.customerOrderId);
+                    const base = selected || (editing?.customerOrderId && typeof editing.customerOrderId === 'object' ? editing.customerOrderId : null);
+                    if (base) {
+                      return `[ID: ${base.orderId || base._id?.substring(0, 8)}] ${base.customerId?.name || 'Unknown'} - ${base.issue || 'No Issue Title'}`;
+                    }
+                    return form.customerOrderId || 'No Order Linked';
+                  })()}>
                     {(() => {
                       const selected = customerOrders.find(o => o._id === form.customerOrderId);
                       const base = selected || (editing?.customerOrderId && typeof editing.customerOrderId === 'object' ? editing.customerOrderId : null);
@@ -618,12 +618,11 @@ export default function WorkOrderPage() {
                         key={star}
                         className="p-1 transition-transform"
                       >
-                        <Star 
-                          className={`h-6 w-6 ${
-                            star <= parseInt(form.rating || '0') 
-                              ? 'fill-amber-400 text-amber-400' 
+                        <Star
+                          className={`h-6 w-6 ${star <= parseInt(form.rating || '0')
+                              ? 'fill-amber-400 text-amber-400'
                               : 'text-gray-300'
-                          }`} 
+                            }`}
                         />
                       </div>
                     ))}
@@ -639,9 +638,8 @@ export default function WorkOrderPage() {
                     Spare Parts Availability
                     <span className="text-xs text-blue-600 ml-2">(Auto)</span>
                   </label>
-                  <div className={`${iCls} bg-blue-50/30 flex items-center font-bold px-3 py-1 ${
-                    form.sparePartsAvailability === 'Available' ? 'text-emerald-600' : 'text-amber-600'
-                  }`}>
+                  <div className={`${iCls} bg-blue-50/30 flex items-center font-bold px-3 py-1 ${form.sparePartsAvailability === 'Available' ? 'text-emerald-600' : 'text-amber-600'
+                    }`}>
                     {form.sparePartsAvailability || 'Not Needed'}
                   </div>
                 </div>
@@ -678,14 +676,14 @@ export default function WorkOrderPage() {
                       <div className="col-span-2">Cost</div>
                       <div className="col-span-2">Total</div>
                     </div>
-                    
+
                     {/* Parts List */}
                     {partsUsed.map((part, index) => (
                       <div key={part.id} className="grid grid-cols-12 gap-2 items-center bg-[hsl(var(--accent))]/30 rounded-lg p-2">
                         <div className="col-span-1 text-xs font-medium text-[hsl(var(--muted-foreground))]">
                           {index + 1}
                         </div>
-                        
+
                         <div className="col-span-5">
                           <Select
                             value={part.inventoryItemId}
@@ -700,7 +698,7 @@ export default function WorkOrderPage() {
                             ))}
                           </Select>
                         </div>
-                        
+
                         <div className="col-span-2">
                           <Input
                             type="number"
@@ -710,7 +708,7 @@ export default function WorkOrderPage() {
                             disabled={effectivelyReadOnly}
                           />
                         </div>
-                        
+
                         <div className="col-span-2">
                           <Input
                             type="number"
@@ -719,7 +717,7 @@ export default function WorkOrderPage() {
                             className="bg-gray-50"
                           />
                         </div>
-                        
+
                         <div className="col-span-2 flex items-center justify-between">
                           <span className="text-xs font-medium">
                             {(part.quantity * part.unitCost).toFixed(0)}
@@ -736,7 +734,7 @@ export default function WorkOrderPage() {
                         </div>
                       </div>
                     ))}
-                    
+
                     <div className="flex justify-end pt-2 border-t border-[hsl(var(--border))]">
                       <span className="text-sm font-semibold">
                         Total Parts Cost: EGP {partsUsed.reduce((sum, p) => sum + (p.quantity * p.unitCost), 0).toFixed(2)}
@@ -762,7 +760,7 @@ export default function WorkOrderPage() {
               {error && <p className="text-sm text-destructive">{error}</p>}
             </form>
           </DialogBody>
-          
+
           <DialogFooter>
             <div className="flex gap-3 w-full">
               <Button
@@ -795,7 +793,7 @@ export default function WorkOrderPage() {
                   type="submit"
                   form="work-order-form"
                   disabled={saving}
-                  className="protect-mount flex-1"
+                  className="flex-1"
                 >
                   {saving ? 'Saving…' : 'Save Changes'}
                 </Button>

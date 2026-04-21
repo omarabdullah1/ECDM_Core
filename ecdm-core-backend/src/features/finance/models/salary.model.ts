@@ -1,7 +1,7 @@
 import { Schema, model, Document, Types } from 'mongoose';
 
 export interface ISalary extends Document {
-  employeeId: Types.ObjectId;  // ObjectId reference to Employee (migrated from String)
+  employeeId: Types.ObjectId;  // ObjectId reference to User (Unified from Employee)
   employeeName: string;
   department: string;
   basicSalary: number;
@@ -27,7 +27,7 @@ export interface ISalary extends Document {
 }
 
 const SalarySchema = new Schema<ISalary>({
-  employeeId: { type: Schema.Types.ObjectId, ref: 'Employee', required: true },
+  employeeId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   employeeName: { type: String, required: true },
   department: { type: String, required: true },
   basicSalary: { type: Number, required: true },

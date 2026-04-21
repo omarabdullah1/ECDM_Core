@@ -6,30 +6,142 @@ import { CreateSalesDataInput, UpdateSalesDataInput } from '../validation/sales-
 import { ISalesDataDocument } from '../types/sales-data.types';
 import { OrderStatus } from '../types/sales-order.types';
 import { AppError } from '../../../utils/apiError';
+import Customer from '../../shared/models/contact.model';
+import * as customerService from '../../shared/services/customer.service';
+import { CustomerType } from '../../shared/types/contact.types';
 
-export const create = async (data: CreateSalesDataInput): Promise<ISalesDataDocument> => {
-    const record = await SalesData.create(data);
-    console.log('✅ Sales Data record created:', record._id);
+/**
+ * Normalize phone number for consistent matching
+ */
+const normalizePhone = (phone: string): string => {
+    return phone.replace(/\s+/g, '').replace(/[^\d+]/g, '');
+};
 
-    // AUTOMATION: If follow-up is required, auto-create a FollowUp record
-    if (data.followUp === 'Yes') {
-        try {
-            const existingFollowUp = await FollowUp.findOne({ salesDataId: record._id });
+/**
+ * Unified logic to sync SalesData state with Order and FollowUp modules
+ */
+const syncSalesDataState = async (doc: ISalesDataDocument, fields: { followUp?: string, order?: string }) => {
+    const { followUp, order } = fields;
+
+    // --- FollowUp Sync Logic ---
+    if (followUp !== undefined) {
+        if (followUp === 'Yes') {
+            const existingFollowUp = await FollowUp.findOne({ salesDataId: doc._id });
             if (!existingFollowUp) {
-                const newFollowUp = await FollowUp.create({
-                    salesDataId: record._id,
-                    customer: record.customer,
-                    csr: record.salesPerson,
+                await FollowUp.create({
+                    salesDataId: doc._id,
+                    customer: doc.customer,
+                    csr: doc.salesPerson,
                     status: FollowUpStatus.Pending,
-                    followUpDate: record.followUpDate || new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), // Use record date or default 3 days
+                    solvedIssue: '',
+                    followUpDate: doc.followUpDate || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // Default: 7 days
                 });
-                console.log('✅ Follow-up auto-created from Sales Data create:', newFollowUp._id);
+                console.log(`✅ Follow-up auto-created for SalesData: ${doc._id}`);
             }
-        } catch (error) {
-            console.error('⚠️ Failed to auto-create Follow-up from Sales Data create:', error);
-            // Don't fail the entire operation if follow-up creation fails
+        } else if (followUp === 'No') {
+            const existingFollowUp = await FollowUp.findOne({ salesDataId: doc._id });
+            if (existingFollowUp) {
+                if (existingFollowUp.status !== FollowUpStatus.Pending) {
+                    throw new AppError(
+                        'Cannot change Follow-up to No. The team has already started working on it (Status: ' + existingFollowUp.status + ').',
+                        400
+                    );
+                }
+                await FollowUp.findByIdAndDelete(existingFollowUp._id);
+            }
         }
     }
+
+    // --- Order (SalesOrder) Sync Logic ---
+    if (order !== undefined) {
+        if (order === 'Yes') {
+            const existingOrder = await SalesOrder.findOne({ salesData: doc._id });
+            if (!existingOrder) {
+                await SalesOrder.create({
+                    salesData: doc._id,
+                    customer: doc.customer,
+                    salesPerson: doc.salesPerson,
+                    orderStatus: OrderStatus.Pending,
+                    issueDescription: `Order from Sales Data Lead`,
+                    typeOfOrder: doc.typeOfOrder,
+                    salesPlatform: doc.salesPlatform,
+                });
+                console.log(`✅ Sales Order auto-created for SalesData: ${doc._id}`);
+            }
+        } else if (order === 'No') {
+            const existingOrder = await SalesOrder.findOne({ salesData: doc._id });
+            if (existingOrder) {
+                const hasProgressed =
+                    !!existingOrder.quotationFileUrl ||
+                    existingOrder.isTechnicalInspectionRequired === true ||
+                    !!existingOrder.siteInspectionDate ||
+                    !!existingOrder.salesPlatform ||
+                    !!existingOrder.followUpFirst ||
+                    existingOrder.orderStatus !== OrderStatus.Pending;
+
+                if (hasProgressed) {
+                    throw new AppError(
+                        `Cannot change Order to No. The Sales Order has already progressed and cannot be deleted.`,
+                        400
+                    );
+                }
+                await SalesOrder.findByIdAndDelete(existingOrder._id);
+            }
+        }
+    }
+};
+
+export const create = async (payload: CreateSalesDataInput): Promise<ISalesDataDocument> => {
+    let customerId = payload.customer;
+
+    // --- STEP 1: Customer Resolution ---
+    // If no customer ID is provided, try to find or create by phone
+    if (!customerId && payload.customerPhone) {
+        const normalizedPhone = normalizePhone(payload.customerPhone);
+        
+        // Search for existing customer
+        const existingCustomer = await Customer.findOne({ phone: normalizedPhone });
+        
+        if (existingCustomer) {
+            customerId = existingCustomer._id.toString();
+            console.log(`🔗 Linked to existing customer: ${existingCustomer.customerId} (${normalizedPhone})`);
+        } else {
+            // Create brand new customer
+            if (!payload.customerName) {
+                throw new AppError('Customer Name is required for new leads', 400);
+            }
+
+            const nextId = await customerService.getNextCustomerId();
+            const newCustomer = await Customer.create({
+                customerId: nextId,
+                name: payload.customerName,
+                phone: normalizedPhone,
+                address: payload.customerAddress,
+                region: payload.customerRegion,
+                sector: payload.customerSector,
+                type: CustomerType.Other, // Default source for manual sales data
+            });
+            customerId = newCustomer._id.toString();
+            console.log(`✨ Created new customer: ${nextId} (${normalizedPhone})`);
+        }
+    }
+
+    if (!customerId) {
+        throw new AppError('Customer reference or phone number is required', 400);
+    }
+
+    // --- STEP 2: Create SalesData ---
+    const record = await SalesData.create({
+        ...payload,
+        customer: customerId
+    });
+    console.log('✅ Sales Data record created:', record._id);
+
+    // --- STEP 3: Sync Modules ---
+    await syncSalesDataState(record, { 
+        followUp: payload.followUp, 
+        order: payload.order 
+    });
 
     return record;
 };
@@ -50,14 +162,11 @@ export const getAll = async (query: Record<string, unknown>) => {
         SalesData.countDocuments(filter),
     ]);
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Step 1: Attach Lock State Flags for UI Lock Indicators
-    // ─────────────────────────────────────────────────────────────────────────
+    // Attach Lock State Flags for UI
     const dataWithLockFlags = await Promise.all(
         data.map(async (record) => {
             const recordObj: any = record.toObject();
 
-            // Check FollowUp lock state
             if (recordObj.followUp === 'Yes') {
                 const linkedFollowUp = await FollowUp.findOne({ salesDataId: record._id }).select('status');
                 if (linkedFollowUp && linkedFollowUp.status !== FollowUpStatus.Pending) {
@@ -65,12 +174,10 @@ export const getAll = async (query: Record<string, unknown>) => {
                 }
             }
 
-            // Check Order lock state (Broadened: ANY meaningful progression)
             if (recordObj.order === 'Yes') {
                 const linkedOrder = await SalesOrder.findOne({ salesData: record._id })
                     .select('orderStatus quotationFileUrl isTechnicalInspectionRequired siteInspectionDate salesPlatform followUpFirst notes');
                 if (linkedOrder) {
-                    // An order is considered "Locked" (Actioned) if ANY progression field is filled
                     const hasProgressed =
                         linkedOrder.orderStatus !== OrderStatus.Pending ||
                         !!linkedOrder.quotationFileUrl ||
@@ -108,111 +215,11 @@ export const update = async (id: string, data: UpdateSalesDataInput): Promise<IS
     const doc = await SalesData.findByIdAndUpdate(id, data, { new: true, runValidators: true });
     if (!doc) throw new AppError('Sales data record not found', 404);
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Bi-directional Smart Sync Logic
-    // ─────────────────────────────────────────────────────────────────────────
-
-    const { followUp, order } = data;
-
-    // --- FollowUp Sync Logic ---
-    if (followUp !== undefined) {
-        try {
-            if (followUp === 'Yes') {
-                // Create FollowUp if it doesn't exist
-                const existingFollowUp = await FollowUp.findOne({ salesDataId: doc._id });
-                if (!existingFollowUp) {
-                    await FollowUp.create({
-                        salesDataId: doc._id,
-                        customer: doc.customer,
-                        csr: doc.salesPerson,
-                        status: FollowUpStatus.Pending,
-                        solvedIssue: false,
-                        followUpDate: doc.followUpDate || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // Default: 7 days
-                    });
-                }
-            } else if (followUp === 'No') {
-                // Explicit Validation Guard: Check if locked before attempting deletion
-                const existingFollowUp = await FollowUp.findOne({ salesDataId: doc._id });
-                if (existingFollowUp) {
-                    if (existingFollowUp.status !== FollowUpStatus.Pending) {
-                        // THROW EXPLICIT ERROR - Do not silently ignore
-                        throw new AppError(
-                            'Cannot change Follow-up to No. The team has already started working on it (Status: ' + existingFollowUp.status + ').',
-                            400
-                        );
-                    }
-                    // Only delete if status is still Pending
-                    await FollowUp.findByIdAndDelete(existingFollowUp._id);
-                }
-            }
-        } catch (err) {
-            // Re-throw validation errors (AppError) - user must be notified
-            if (err instanceof AppError) {
-                throw err;
-            }
-            // Only log technical/database errors - main update succeeded, sync is secondary
-            console.error('[SalesData Sync] FollowUp sync error:', err);
-        }
-    }
-
-    // --- Order (SalesOrder) Sync Logic ---
-    if (order !== undefined) {
-        try {
-            if (order === 'Yes') {
-                // Create SalesOrder if it doesn't exist for this SalesData
-                const existingOrder = await SalesOrder.findOne({ salesData: doc._id });
-                if (!existingOrder) {
-                    await SalesOrder.create({
-                        salesData: doc._id,
-                        customer: doc.customer,
-                        salesPerson: doc.salesPerson, // Ensure order is linked to the logged-in user!
-                        orderStatus: OrderStatus.Pending,
-                        issueDescription: `Order from Sales Data Lead`,
-                        typeOfOrder: doc.typeOfOrder,
-                        salesPlatform: doc.salesPlatform,
-                    });
-                }
-            } else if (order === 'No') {
-                // Explicit Validation Guard: Check if locked before attempting deletion
-                const existingOrder = await SalesOrder.findOne({ salesData: doc._id });
-                if (existingOrder) {
-                    // Broadened Protection: Check if ANY progression field has been filled
-                    const hasProgressed =
-                        !!existingOrder.quotationFileUrl ||
-                        existingOrder.isTechnicalInspectionRequired === true ||
-                        !!existingOrder.siteInspectionDate ||
-                        !!existingOrder.salesPlatform ||
-                        !!existingOrder.followUpFirst ||
-                        existingOrder.orderStatus !== OrderStatus.Pending;
-
-                    if (hasProgressed) {
-                        // THROW EXPLICIT ERROR - Do not silently ignore
-                        const reasons = [];
-                        if (existingOrder.quotationFileUrl) reasons.push('quotation uploaded');
-                        if (existingOrder.isTechnicalInspectionRequired) reasons.push('technical inspection required');
-                        if (existingOrder.siteInspectionDate) reasons.push('site inspection scheduled');
-                        if (existingOrder.salesPlatform) reasons.push('sales platform set');
-                        if (existingOrder.followUpFirst) reasons.push('follow-up initiated');
-                        if (existingOrder.orderStatus !== OrderStatus.Pending) reasons.push(`status: ${existingOrder.orderStatus}`);
-
-                        throw new AppError(
-                            `Cannot change Order to No. The Sales Order already contains: ${reasons.join(', ')}.`,
-                            400
-                        );
-                    }
-                    // Only delete if untouched
-                    await SalesOrder.findByIdAndDelete(existingOrder._id);
-                }
-            }
-        } catch (err) {
-            // Re-throw validation errors (AppError) - user must be notified
-            if (err instanceof AppError) {
-                throw err;
-            }
-            // Only log technical/database errors - main update succeeded, sync is secondary
-            console.error('[SalesData Sync] Order sync error:', err);
-        }
-    }
+    // Sync state changes
+    await syncSalesDataState(doc, { 
+        followUp: data.followUp, 
+        order: data.order 
+    });
 
     return doc;
 };
@@ -220,4 +227,9 @@ export const update = async (id: string, data: UpdateSalesDataInput): Promise<IS
 export const remove = async (id: string): Promise<void> => {
     const doc = await SalesData.findByIdAndDelete(id);
     if (!doc) throw new AppError('Sales data record not found', 404);
+};
+
+export const bulkRemove = async (ids: string[]): Promise<{ deletedCount: number }> => {
+    const result = await SalesData.deleteMany({ _id: { $in: ids } });
+    return { deletedCount: result.deletedCount };
 };

@@ -1,34 +1,18 @@
 import FollowUp from '../models/follow-up.model';
 import CustomerOrder from '../models/customer-order.model';
+import { populateOrderContext } from '../utils/follow-up-context';
 import { CreateFollowUpInput, UpdateFollowUpInput } from '../validation/follow-up.validation';
-import { IFollowUpDocument, IOrderContext } from '../types/follow-up.types';
+import { IFollowUpDocument } from '../types/follow-up.types';
 import { AppError } from '../../../utils/apiError';
 
-const populateOrderContext = async (customerOrderId?: string, customerId?: string): Promise<IOrderContext | undefined> => {
-    if (!customerOrderId) return undefined;
-    
-    const order = await CustomerOrder.findById(customerOrderId).populate('customerId', 'name phone customerId');
-    if (!order) return undefined;
-    
-    const customer = order.customerId as unknown as { name?: string; phone?: string; customerId?: string };
-    
-    return {
-        customerName: customer?.name || '',
-        customerPhone: customer?.phone || '',
-        customerId: customer?.customerId || String(customerId) || '',
-        engineerName: order.engineerName || '',
-        visitDate: order.actualVisitDate || order.scheduledVisitDate,
-        scheduledVisitDate: order.scheduledVisitDate,
-        actualVisitDate: order.actualVisitDate,
-        startDate: order.startDate,
-        endDate: order.endDate,
-        dealStatus: order.deal || '',
-        orderId: String(customerOrderId),
-    };
-};
 
 export const create = async (data: CreateFollowUpInput): Promise<IFollowUpDocument> => {
-    const orderContext = await populateOrderContext(data.customerOrderId, data.customer);
+    const orderContext = await populateOrderContext(
+        data.customerOrderId, 
+        data.customer, 
+        data.salesDataId, 
+        data.leadId
+    );
     const payload = {
         ...data,
         orderContext,
@@ -54,7 +38,7 @@ export const getAll = async (query: Record<string, unknown>) => {
     // Fetches only approved order IDs once, then gates customerOrderId-linked follow-ups.
     // All other source types (SalesData, WorkOrder, Lead, Manual) pass through freely.
     const approvedOrders = await CustomerOrder.find({ deal: 'Approved' }).select('_id');
-    const approvedOrderIds = approvedOrders.map(order => order._id);
+    const approvedOrderIds = approvedOrders.map((order: any) => order._id);
 
     const dealCondition = {
         $or: [
@@ -106,7 +90,10 @@ export const update = async (id: string, data: UpdateFollowUpInput): Promise<IFo
     
     const customerOrderId = data.customerOrderId || existing.customerOrderId?.toString();
     const customerId = data.customer || existing.customer?.toString();
-    const orderContext = await populateOrderContext(customerOrderId, customerId);
+    const salesDataId = data.salesDataId || existing.salesDataId?.toString();
+    const leadId = data.leadId || existing.leadId?.toString();
+
+    const orderContext = await populateOrderContext(customerOrderId, customerId, salesDataId, leadId);
     
     const updateData = {
         ...data,

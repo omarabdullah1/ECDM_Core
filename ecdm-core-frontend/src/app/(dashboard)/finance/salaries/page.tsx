@@ -1,82 +1,41 @@
 'use client';
-
+import { useState, useEffect } from 'react';
+import { 
+  Plus, 
+  Search, 
+  Calculator, 
+  Wallet,
+  AlertCircle,
+  Loader2
+} from 'lucide-react';
 import { useAuthStore } from '@/features/auth/useAuth';
+import { useRouter } from 'next/navigation';
 import api from '@/lib/axios';
 import toast from 'react-hot-toast';
-import { TableSkeleton } from '@/components/ui/skeleton';
-import {
-  Banknote,
-  Loader2,
-  RefreshCw,
-  ShieldAlert,
-  Trash2,
-  UserPlus,
-  X,
-} from 'lucide-react';
-import { PageHeader } from '@/components/layout/PageHeader';
-import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import { DataTable } from '@/components/ui/DataTable';
+import DataTable from '@/components/ui/DataTable';
 import { columns, SalaryRow } from './columns';
+import SalaryDialog from '@/components/finance/SalaryDialog';
 
-const iCls = 'flex h-9 w-full rounded-md border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] px-3 py-1 text-sm shadow-sm transition-all placeholder:text-[hsl(var(--muted-foreground))] focus-visible:outline-none focus-visible:border-[hsl(var(--primary))]/50 focus-visible:ring-[3px] focus-visible:ring-[hsl(var(--primary))]/10';
-const iClsRo = 'w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--muted))]/50 px-4 py-3 text-sm text-[hsl(var(--muted-foreground))] cursor-not-allowed';
-const labelCls = 'block text-sm font-medium text-[hsl(var(--foreground))] mb-1';
+const months = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December'
+];
 
-const initialFormData: SalaryFormData = {
-  employeeId: '',
-  employeeName: '',
-  department: '',
-  basicSalary: '',
-  allowances: '',
-  overtime: '',
-  bonuses: '',
-  percentage: '0%',
-  tax: '',
-  insurance: '',
-  absenceDeduction: '',
-  otherDeductions: '',
-  notes: ''
-};
+const years = Array.from({ length: 10 }, (_, i) => String(new Date().getFullYear() - i));
 
 export default function SalariesPage() {
   const { user } = useAuthStore();
   const router = useRouter();
+  
+  // State
+  const [salaries, setSalaries] = useState<SalaryRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [syncing, setSyncing] = useState(false);
-  const [salariesData, setSalariesData] = useState<SalaryRow[]>([]);
-  const [apiError, setApiError] = useState<string | null>(null);
+  const [generating, setGenerating] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [selectedMonth, setSelectedMonth] = useState(String(new Date().getMonth() + 1));
+  const [selectedYear, setSelectedYear] = useState(String(new Date().getFullYear()));
   const [searchTerm, setSearchTerm] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
-
-  // Default Visibility: Only ID, Name, Dept, Basic Salary by default
-  const DEFAULT_VISIBILITY = {
-    allowances: false,
-    overtime: false,
-    bonuses: false,
-    percentage: false,
-    tax: false,
-    insurance: false,
-    absenceDeduction: false,
-    otherDeductions: false,
-    notes: false,
-  };
-
-  const [modalOpen, setModalOpen] = useState(false);
-  const [selectedSalary, setSelectedSalary] = useState<any>(null);
-  const [internalPreviewMode, setInternalPreviewMode] = useState(true);
-  const [formData, setFormData] = useState<SalaryFormData>(initialFormData);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
-
-  const effectivelyReadOnly = modalOpen && selectedSalary && internalPreviewMode;
-  const isActuallyEditing = modalOpen && selectedSalary && !internalPreviewMode;
-  const isAdding = modalOpen && !selectedSalary;
-
-  // Employees for dropdown
-  const [employees, setEmployees] = useState<any[]>([]);
-  const [loadingEmployees, setLoadingEmployees] = useState(false);
+  const [apiError, setApiError] = useState<string | null>(null);
 
   const universalExtract = (rawData: any): any[] => {
     if (!rawData) return [];
@@ -92,60 +51,48 @@ export default function SalariesPage() {
     return isNaN(num) ? 'EGP 0.00' : `EGP ${num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
-  // Fetch employees when modal opens
-  useEffect(() => {
-    if (modalOpen) {
-      setLoadingEmployees(true);
-      api.get('/hr/users?limit=1000')
-        .then(res => {
-          const emps = universalExtract(res.data);
-          setEmployees(Array.isArray(emps) ? emps : []);
-        })
-        .catch(() => setEmployees([]))
-        .finally(() => setLoadingEmployees(false));
-    }
-  }, [modalOpen]);
-
-  const fetchSalariesData = async (isSync = false) => {
-    if (isSync) {
-      setSyncing(true);
-    } else {
-      setIsLoading(true);
-    }
+  const fetchSalariesData = async (isSilent = false) => {
+    if (!isSilent) setIsLoading(true);
     setApiError(null);
 
     try {
-      const [salariesRes] = await Promise.all([
-        api.get('/finance/salaries?limit=1000').catch(() => ({ data: [] }))
-      ]);
+      const res = await api.get('/finance/salaries', {
+          params: {
+              limit: 1000,
+              month: selectedMonth,
+              year: selectedYear
+          }
+      });
 
-      const rawSalaries = universalExtract(salariesRes.data || salariesRes);
+      const rawSalaries = universalExtract(res.data);
 
       const rows: SalaryRow[] = rawSalaries.map((item: any) => ({
         _id: String(item._id || ''),
-        employeeId: String(item.employeeId || '-'),
+        employeeId: String(item.employeeId?.employeeId || item.employeeId || '-'),
         employeeName: String(item.employeeName || 'Unknown'),
         department: String(item.department || '-'),
         basicSalary: formatMoney(item.basicSalary),
         allowances: formatMoney(item.allowances),
         overtime: formatMoney(item.overtime),
         bonuses: formatMoney(item.bonuses),
-        percentage: String(item.percentage || '0%'),
+        percentage: item.percentage || '0%',
         tax: formatMoney(item.tax),
         insurance: formatMoney(item.insurance),
         absenceDeduction: formatMoney(item.absenceDeduction),
         otherDeductions: formatMoney(item.otherDeductions),
-        notes: String(item.notes || '-'),
-        _raw: item // Keep raw item for editing
+        notes: item.notes || '',
       }));
 
-      setSalariesData(rows);
+      setSalaries(rows);
     } catch (error: any) {
       console.error('Failed to fetch salaries:', error);
-      setApiError(error.message || 'Unknown fetching error');
+      const msg = error.code === 'ERR_NETWORK' 
+        ? 'Backend Connection Error. Please verify the server is running.' 
+        : (error.response?.data?.message || 'Failed to load records.');
+      setApiError(msg);
+      toast.error(msg);
     } finally {
       setIsLoading(false);
-      setSyncing(false);
     }
   };
 
@@ -153,482 +100,170 @@ export default function SalariesPage() {
     if (!user) return;
 
     const role = user.role;
-    if (role !== 'Admin' && role !== 'SuperAdmin') {
+    if (role !== 'Admin' && role !== 'SuperAdmin' && role !== 'HR') {
       router.push('/dashboard');
       return;
     }
 
     fetchSalariesData();
-  }, [user, router]);
+  }, [user, router, selectedMonth, selectedYear]);
 
-  const handleSync = () => {
-    fetchSalariesData(true);
-  };
-
-  const handleDelete = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this salary record? This action cannot be undone.')) return;
+  const handleGenerate = async () => {
+    if (!confirm(`Process and sync salaries for ${months[Number(selectedMonth) - 1]} ${selectedYear}? This will update existing records with the latest basic salaries and attendance data.`)) return;
     
+    setGenerating(true);
     try {
-      await api.delete(`/finance/salaries/${id}`);
-      toast.success('Salary record deleted successfully');
-      fetchSalariesData(true);
-    } catch (error: any) {
-      console.error('Failed to delete salary:', error);
-      toast.error(error.response?.data?.message || 'Failed to delete salary record');
-    }
-  };
-
-  const filteredData = salariesData.filter((row) => {
-    if (!searchTerm.trim()) return true;
-    const q = searchTerm.toLowerCase();
-    return (
-      row.employeeId.toLowerCase().includes(q) ||
-      row.employeeName.toLowerCase().includes(q) ||
-      row.department.toLowerCase().includes(q) ||
-      row.percentage.toLowerCase().includes(q) ||
-      row.notes.toLowerCase().includes(q)
-    );
-  });
-
-  const openAdd = () => {
-    setSelectedSalary(null);
-    setFormData(initialFormData);
-    setInternalPreviewMode(false);
-    setModalOpen(true);
-  };
-
-  const openPreview = (salary: SalaryRow) => {
-    const raw = (salary as any)._raw || salary;
-    setSelectedSalary(raw);
-    setFormData({
-      employeeId: raw.employeeId?._id || raw.employeeId || '',
-      employeeName: raw.employeeName || '',
-      department: raw.department || '',
-      basicSalary: raw.basicSalary || '',
-      allowances: raw.allowances || '',
-      overtime: raw.overtime || '',
-      bonuses: raw.bonuses || '',
-      percentage: raw.percentage || '0%',
-      tax: raw.tax || '',
-      insurance: raw.insurance || '',
-      absenceDeduction: raw.absenceDeduction || '',
-      otherDeductions: raw.otherDeductions || '',
-      notes: raw.notes || ''
-    });
-    setInternalPreviewMode(true);
-    setModalOpen(true);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    setSubmitError(null);
-
-    try {
-      const payload = {
-        employeeId: formData.employeeId,
-        employeeName: formData.employeeName,
-        department: formData.department,
-        basicSalary: Number(formData.basicSalary) || 0,
-        allowances: Number(formData.allowances) || 0,
-        overtime: Number(formData.overtime) || 0,
-        bonuses: Number(formData.bonuses) || 0,
-        percentage: formData.percentage || '0%',
-        tax: Number(formData.tax) || 0,
-        insurance: Number(formData.insurance) || 0,
-        absenceDeduction: Number(formData.absenceDeduction) || 0,
-        otherDeductions: Number(formData.otherDeductions) || 0,
-        notes: formData.notes || undefined
-      };
-
-      if (isAdding) {
-        await api.post('/finance/salaries', payload);
-        toast.success('Salary record added successfully');
+      const res = await api.post('/finance/salaries/generate/monthly', {
+          month: selectedMonth,
+          year: selectedYear
+      });
+      
+      const result = res.data.data;
+      const { generated, updated, failed, errors } = result;
+      
+      if (generated > 0 || updated > 0) {
+        toast.success(`Success: ${generated} new records and ${updated} updated records.`);
+      } else if (failed > 0) {
+        const firstError = errors && errors[0] ? errors[0] : '';
+        toast.error(`Processing Error: ${firstError || 'Check system logs.'}`);
       } else {
-        await api.put(`/finance/salaries/${selectedSalary._id}`, payload);
-        toast.success('Salary record updated successfully');
+        toast.error('No active employees found to process.');
       }
 
-      setFormData(initialFormData);
-      setModalOpen(false);
-      await fetchSalariesData(true);
+      fetchSalariesData(true);
     } catch (error: any) {
-      console.error('Failed to add salary:', error);
-      const msg = error.response?.data?.message || error.message || 'Failed to add salary record';
-      setSubmitError(msg);
+      console.error('Failed to generate salaries:', error);
+      toast.error(error.response?.data?.message || 'Payroll generation failed. Check network connection.');
     } finally {
-      setIsSubmitting(false);
+      setGenerating(false);
     }
   };
 
-  if (!user) return null;
+  const filteredSalaries = salaries.filter(s => 
+    s.employeeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    s.employeeId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    s.department.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
-    <div className="space-y-6 pb-8">
-      <PageHeader
-        title="Salaries"
-        icon={Banknote}
-        description="Employee payroll management"
-        actions={
-          <>
-            <button
-              onClick={handleSync}
-              disabled={syncing}
-              className="flex items-center gap-2 rounded-md border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] px-4 py-2 text-sm font-medium shadow-sm hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--accent-foreground))] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[hsl(var(--primary))]/10 transition-all disabled:opacity-50"
-            >
-              {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-              {syncing ? 'Syncing...' : 'Sync Report'}
-            </button>
-            <button
-              onClick={openAdd}
-              className="flex items-center gap-2 rounded-md bg-[hsl(var(--primary))] px-4 py-2 text-sm font-medium text-[hsl(var(--primary-foreground))] shadow-sm hover:opacity-90 border-0 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[hsl(var(--primary))]/10 transition-all"
-            >
-              <UserPlus className="h-4 w-4" />
-              Add Salary
-            </button>
-          </>
-        }
-      />
-
-      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
-        <div className="p-6 pb-0 flex items-center justify-between">
-            <div className="flex items-center gap-3 flex-1">
-                <input
-                    type="text"
-                    placeholder="Search salaries..."
-                    value={searchTerm}
-                    onChange={(e) => {
-                        setSearchTerm(e.target.value);
-                        setCurrentPage(1);
-                    }}
-                    className="max-w-sm w-full h-9 rounded-full border border-slate-200 dark:border-slate-800 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                />
-                <span className="text-sm text-slate-500">{filteredData.length} records</span>
-            </div>
+    <div className="space-y-6 container mx-auto px-4 py-8">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-2xl">
+            <Wallet className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white">Salaries</h1>
+            <p className="text-slate-500 dark:text-slate-400 font-medium">
+              Payroll management for {months[Number(selectedMonth) - 1]} {selectedYear}
+            </p>
+          </div>
         </div>
 
-        {apiError && (
-          <div className="m-6 flex items-center gap-2 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-            <ShieldAlert className="h-4 w-4" />
-            {apiError}
-          </div>
-        )}
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            onClick={handleGenerate}
+            disabled={generating || isLoading}
+            className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-bold shadow-lg shadow-blue-500/20 hover:bg-blue-700 transition-all disabled:opacity-50"
+          >
+            {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Calculator className="h-4 w-4" />}
+            {generating ? 'Processing...' : 'Process & Sync Month'}
+          </button>
 
-        <div className="mt-4">
-          <DataTable
-            data={filteredData}
-            columns={columns}
-            loading={isLoading}
-            page={currentPage}
-            totalPages={Math.ceil(filteredData.length / itemsPerPage)}
-            totalItems={filteredData.length}
-            itemsPerPage={itemsPerPage}
-            onPageChange={setCurrentPage}
-            onRowClick={openPreview}
-            defaultVisibility={DEFAULT_VISIBILITY}
-            renderActions={(row) => (
-              <button
-                onClick={() => handleDelete(row._id)}
-                className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                title="Delete"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
-            )}
-            emptyMessage={searchTerm ? 'No salaries match your search' : 'No salary data found'}
-          />
+          <button
+            onClick={() => setIsDialogOpen(true)}
+            className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-sm font-bold shadow-lg shadow-black/10 dark:shadow-white/10 hover:opacity-90 transition-all"
+          >
+            <Plus className="h-4 w-4" />
+            Add Manual Record
+          </button>
         </div>
       </div>
 
-      {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm transition-opacity">
-          <div className="rounded-2xl border border-[hsl(var(--border))] modern-glass-card premium-shadow animate-in-slide m-auto relative shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+      {/* Filters & Seaarch */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+        <div className="lg:col-span-6 relative group">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+          <input
+            type="text"
+            placeholder="Search employees, IDs or departments..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full bg-slate-50 dark:bg-slate-800/50 border-none rounded-xl py-3 pl-12 pr-4 text-sm focus:ring-2 focus:ring-blue-500/20 transition-all"
+          />
+        </div>
 
-            <div className="px-6 py-4 border-b border-[hsl(var(--border))] flex justify-between items-center bg-[hsl(var(--muted))]/50">
-              <div>
-                <h3 className="text-xl font-bold text-[hsl(var(--foreground))]">
-                  {isAdding ? 'Add New Salary' : (effectivelyReadOnly ? 'Salary Preview' : 'Edit Salary')}
-                </h3>
-                <p className="text-sm text-[hsl(var(--muted-foreground))] mt-1">
-                  {isAdding ? 'Fill out the details below to record employee salary.' : (effectivelyReadOnly ? 'Viewing salary record in read-only mode.' : 'Modify the details of this salary record below.')}
-                  {effectivelyReadOnly && <span className="ml-2 text-amber-600 font-semibold">• Preview Mode</span>}
-                </p>
+        <div className="lg:col-span-3">
+          <select
+            value={selectedMonth}
+            onChange={(e) => setSelectedMonth(e.target.value)}
+            className="w-full bg-slate-50 dark:bg-slate-800/50 border-none rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-blue-500/20 transition-all font-bold"
+          >
+            {months.map((m, i) => (
+              <option key={m} value={i + 1}>{m}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="lg:col-span-2">
+          <select
+            value={selectedYear}
+            onChange={(e) => setSelectedYear(e.target.value)}
+            className="w-full bg-slate-50 dark:bg-slate-800/50 border-none rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-blue-500/20 transition-all font-bold"
+          >
+            {years.map(y => (
+              <option key={y} value={y}>{y}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="lg:col-span-1 text-center font-mono text-xs text-slate-400 font-bold">
+          {filteredSalaries.length} Records
+        </div>
+      </div>
+
+      {/* Data Table */}
+      <div className="relative group">
+        <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-3xl blur opacity-0 group-hover:opacity-10 transition duration-1000 group-hover:duration-200"></div>
+        <div className="relative bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden min-h-[400px]">
+          {apiError ? (
+            <div className="h-full flex flex-col items-center justify-center p-12 text-center">
+              <div className="p-4 bg-red-100 dark:bg-red-900/30 rounded-full mb-4">
+                <AlertCircle className="h-10 w-10 text-red-600 dark:text-red-400" />
               </div>
-              <button
-                onClick={() => setModalOpen(false)}
-                className="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] transition-colors p-2 rounded-full hover:bg-[hsl(var(--muted))]"
+              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Error Loading Data</h3>
+              <p className="text-slate-500 dark:text-slate-400 max-w-md mb-6">{apiError}</p>
+              <button 
+                onClick={() => fetchSalariesData()} 
+                className="px-6 py-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl font-bold hover:scale-105 transition-transform"
               >
-                <X className="h-4 w-4" />
+                Try Again
               </button>
             </div>
-
-            {submitError && (
-              <div className="px-6 py-4 mb-4 mx-6 mt-6 first:mt-0 rounded-lg bg-destructive/10 border border-destructive/20">
-                <p className="text-sm text-destructive font-medium">{submitError}</p>
-              </div>
-            )}
-
-            <div className="p-6 overflow-y-auto">
-              <form className="space-y-5" onSubmit={handleSubmit}>
-
-                {/* Employee Selection */}
-                <div>
-                  <label className={labelCls}>Employee</label>
-                  <select
-                    value={formData.employeeId}
-                    onChange={(e) => {
-                      const selected = employees.find(emp => emp._id === e.target.value);
-                      if (selected) {
-                        setFormData({
-                          ...formData,
-                          employeeId: selected._id,
-                          employeeName: `${selected.firstName} ${selected.lastName}`,
-                          department: selected.department || '',
-                          basicSalary: selected.salary || '',
-                        });
-                      } else {
-                        setFormData({
-                          ...formData,
-                          employeeId: '',
-                          employeeName: '',
-                          department: '',
-                          basicSalary: '',
-                        });
-                      }
-                    }}
-                    className={iCls}
-                    required
-                    disabled={effectivelyReadOnly || !isAdding}
-                  >
-                    <option value="">Select Employee</option>
-                    {loadingEmployees ? (
-                      <option disabled>Loading employees...</option>
-                    ) : employees.length === 0 ? (
-                      <option disabled>No employees available</option>
-                    ) : (
-                      employees.map(emp => (
-                        <option key={emp._id} value={emp._id}>
-                          {emp.firstName} {emp.lastName} {emp.department ? `(${emp.department})` : ''}
-                        </option>
-                      ))
-                    )}
-                  </select>
-                </div>
-
-                <div>
-                  <label className={labelCls}>
-                    Department
-                    {formData.department && <span className="text-xs text-green-600 ml-2">(Auto-filled)</span>}
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.department}
-                    readOnly
-                    className={iClsRo}
-                    placeholder="Select employee to auto-fill"
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  <div>
-                    <label className={labelCls}>
-                      Basic Salary (EGP)
-                      {formData.basicSalary && <span className="text-xs text-green-600 ml-2">(Auto-filled)</span>}
-                    </label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={formData.basicSalary === '' ? '' : String(formData.basicSalary)}
-                      onChange={(e) => setFormData({ ...formData, basicSalary: e.target.value === '' ? '' : parseFloat(e.target.value) || 0 })}
-                      className={iClsRo}
-                      placeholder="0.00"
-                    />
-                  </div>
-                  <div>
-                    <label className={labelCls}>Allowances (EGP)</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={formData.allowances === '' ? '' : String(formData.allowances)}
-                      onChange={(e) => setFormData({ ...formData, allowances: e.target.value === '' ? '' : parseFloat(e.target.value) || 0 })}
-                      className={iCls}
-                      placeholder="0.00"
-                      disabled={effectivelyReadOnly}
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Overtime (EGP)</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={formData.overtime === '' ? '' : String(formData.overtime)}
-                      onChange={(e) => setFormData({ ...formData, overtime: e.target.value === '' ? '' : parseFloat(e.target.value) || 0 })}
-                      className={iCls}
-                      placeholder="0.00"
-                      disabled={effectivelyReadOnly}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Bonuses (EGP)</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={formData.bonuses === '' ? '' : String(formData.bonuses)}
-                      onChange={(e) => setFormData({ ...formData, bonuses: e.target.value === '' ? '' : parseFloat(e.target.value) || 0 })}
-                      className={iCls}
-                      placeholder="0.00"
-                      disabled={effectivelyReadOnly}
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Percentage (%)</label>
-                    <input
-                      type="text"
-                      value={formData.percentage}
-                      onChange={(e) => setFormData({ ...formData, percentage: e.target.value })}
-                      className={iCls}
-                      placeholder="e.g. 5%"
-                      disabled={effectivelyReadOnly}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tax (EGP)</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={formData.tax === '' ? '' : String(formData.tax)}
-                      onChange={(e) => setFormData({ ...formData, tax: e.target.value === '' ? '' : parseFloat(e.target.value) || 0 })}
-                      className={iCls}
-                      placeholder="0.00"
-                      disabled={effectivelyReadOnly}
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Insurance (EGP)</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={formData.insurance === '' ? '' : String(formData.insurance)}
-                      onChange={(e) => setFormData({ ...formData, insurance: e.target.value === '' ? '' : parseFloat(e.target.value) || 0 })}
-                      className={iCls}
-                      placeholder="0.00"
-                      disabled={effectivelyReadOnly}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Absence Deduction (EGP)</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={formData.absenceDeduction === '' ? '' : String(formData.absenceDeduction)}
-                      onChange={(e) => setFormData({ ...formData, absenceDeduction: e.target.value === '' ? '' : parseFloat(e.target.value) || 0 })}
-                      className={iCls}
-                      placeholder="0.00"
-                      disabled={effectivelyReadOnly}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Other Deductions (EGP)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={formData.otherDeductions === '' ? '' : String(formData.otherDeductions)}
-                    onChange={(e) => setFormData({ ...formData, otherDeductions: e.target.value === '' ? '' : parseFloat(e.target.value) || 0 })}
-                    className={iCls}
-                    placeholder="0.00"
-                    disabled={effectivelyReadOnly}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notes</label>
-                  <textarea
-                    value={formData.notes}
-                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                    className={`${iCls} resize-none`}
-                    placeholder="Any additional notes..."
-                    rows={3}
-                    disabled={effectivelyReadOnly}
-                  />
-                </div>
-
-                <div className="pt-4 mt-2 border-t border-gray-200 dark:border-gray-800 flex justify-end gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setModalOpen(false)}
-                    className="px-5 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-800 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
-                  >
-                    {effectivelyReadOnly ? 'Close' : 'Cancel'}
-                  </button>
-                  {effectivelyReadOnly ? (
-                    <button
-                      type="button"
-                      key="btn-edit" onClick={(e) => { e.preventDefault(); setInternalPreviewMode(false); }}
-                      className="px-8 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition-all shadow-lg flex items-center gap-2"
-                    >
-                      Edit Salary
-                    </button>
-                  ) : (
-                    <button
-                      type="submit"
-                      disabled={isSubmitting}
-                      className="protect-mount px-5 py-2.5 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 shadow-sm transition-colors flex items-center gap-2 disabled:opacity-50"
-                    >
-                      {isSubmitting ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          {isAdding ? 'Adding...' : 'Saving...'}
-                        </>
-                      ) : (
-                        <>
-                          <UserPlus className="h-4 w-4" />
-                          {isAdding ? 'Add Salary' : 'Save Changes'}
-                        </>
-                      )}
-                    </button>
-                  )}
-                </div>
-
-              </form>
-            </div>
-          </div>
+          ) : (
+            <DataTable
+              columns={columns}
+              data={filteredSalaries}
+              loading={isLoading}
+              key={salaries.length} // Force re-render when count changes
+              emptyMessage="No salary records found for this period"
+            />
+          )}
         </div>
-      )}
+      </div>
+
+      {/* Manual Add Dialog */}
+      <SalaryDialog
+        isOpen={isDialogOpen}
+        onClose={() => setIsDialogOpen(false)}
+        onSuccess={() => {
+          setIsDialogOpen(false);
+          fetchSalariesData(true);
+        }}
+        initialMonth={selectedMonth}
+        initialYear={selectedYear}
+      />
     </div>
   );
 }
-
-type SalaryFormData = {
-  employeeId: string;
-  employeeName: string;
-  department: string;
-  basicSalary: number | string;
-  allowances: number | string;
-  overtime: number | string;
-  bonuses: number | string;
-  percentage: string;
-  tax: number | string;
-  insurance: number | string;
-  absenceDeduction: number | string;
-  otherDeductions: number | string;
-  notes: string;
-};

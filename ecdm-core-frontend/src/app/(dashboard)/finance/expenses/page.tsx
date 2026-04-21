@@ -21,6 +21,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 interface ExpenseRow {
+  _id: string;
   sparePartsId: string;
   expenseId: string;
   expenseDate: string;
@@ -31,7 +32,11 @@ interface ExpenseRow {
   paymentMethod: string;
   paidBy: string;
   notes: string;
+  invoiceFile?: string;
+  source?: string;
+  employeeId?: any;
 }
+
 
 const universalExtract = (rawData: any): any[] => {
   if (!rawData) return [];
@@ -73,23 +78,28 @@ export default function ExpensesPage() {
   const isEditing = modalOpen && selectedExpense && !internalPreviewMode;
   const isAdding = modalOpen && !selectedExpense;
 
-  // Inventory items for dropdown
+  // Selection data
   const [inventoryItems, setInventoryItems] = useState<any[]>([]);
-  const [loadingInventory, setLoadingInventory] = useState(false);
+  const [employeeItems, setEmployeeItems] = useState<any[]>([]);
+  const [loadingSelections, setLoadingSelections] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
-  // Fetch inventory items when modal opens
+  // Fetch selection items when modal opens
   useEffect(() => {
     if (modalOpen) {
-      setLoadingInventory(true);
-      api.get('/finance/inventory?limit=1000')
-        .then(res => {
-          const items = res.data?.data || res.data || [];
-          setInventoryItems(Array.isArray(items) ? items : []);
-        })
-        .catch(() => setInventoryItems([]))
-        .finally(() => setLoadingInventory(false));
+      setLoadingSelections(true);
+      Promise.all([
+        api.get('/operations/price-list?limit=1000').catch(() => ({ data: [] })),
+        api.get('/hr/users?limit=1000').catch(() => ({ data: [] }))
+      ]).then(([priceListRes, employeesRes]) => {
+        const pItems = priceListRes.data?.data || priceListRes.data || [];
+        const eItems = employeesRes.data?.data || employeesRes.data || [];
+        setInventoryItems(Array.isArray(pItems) ? pItems : []);
+        setEmployeeItems(Array.isArray(eItems) ? eItems : []);
+      }).finally(() => setLoadingSelections(false));
     }
   }, [modalOpen]);
+
 
   const fetchExpensesData = async (isSync = false) => {
     if (isSync) {
@@ -210,48 +220,49 @@ export default function ExpensesPage() {
     setSubmitError(null);
 
     try {
+      const payload = new FormData();
+      if (formData.sparePartsId) payload.append('sparePartsId', formData.sparePartsId);
+      if (!isAdding) payload.append('expenseId', formData.expenseId);
+      if (formData.expenseDate) payload.append('expenseDate', new Date(formData.expenseDate).toISOString());
+      payload.append('expenseType', formData.expenseType);
+      payload.append('description', formData.description);
+      payload.append('amount', String(formData.amount || 0));
+      payload.append('paymentMethod', formData.paymentMethod);
+      payload.append('paidBy', formData.paidBy);
+      if (formData.employeeId) payload.append('employeeId', formData.employeeId);
+      if (formData.notes) payload.append('notes', formData.notes);
+      
+      if (selectedFile) {
+        payload.append('invoice', selectedFile);
+      } else if (formData.invoicesUrl) {
+        payload.append('invoicesUrl', formData.invoicesUrl);
+      }
+
       if (isAdding) {
-        await api.post('/finance/expenses', {
-          sparePartsId: formData.sparePartsId || undefined,
-          expenseId: formData.expenseId,
-          expenseDate: formData.expenseDate ? new Date(formData.expenseDate).toISOString() : undefined,
-          expenseType: formData.expenseType,
-          invoicesUrl: formData.invoicesUrl || undefined,
-          description: formData.description,
-          amount: Number(formData.amount) || 0,
-          paymentMethod: formData.paymentMethod,
-          paidBy: formData.paidBy,
-          notes: formData.notes || undefined
+        await api.post('/finance/expenses', payload, {
+          headers: { 'Content-Type': 'multipart/form-data' }
         });
         toast.success('Expense added successfully');
       } else {
-        await api.put(`/finance/expenses/${selectedExpense._id}`, {
-          sparePartsId: formData.sparePartsId || undefined,
-          expenseId: formData.expenseId,
-          expenseDate: formData.expenseDate ? new Date(formData.expenseDate).toISOString() : undefined,
-          expenseType: formData.expenseType,
-          invoicesUrl: formData.invoicesUrl || undefined,
-          description: formData.description,
-          amount: Number(formData.amount) || 0,
-          paymentMethod: formData.paymentMethod,
-          paidBy: formData.paidBy,
-          notes: formData.notes || undefined
+        await api.put(`/finance/expenses/${selectedExpense._id}`, payload, {
+          headers: { 'Content-Type': 'multipart/form-data' }
         });
         toast.success('Expense updated successfully');
       }
 
       setFormData(initialFormData);
+      setSelectedFile(null);
       setModalOpen(false);
-      await fetchExpensesData(true); // Refresh data
+      await fetchExpensesData(true);
     } catch (error: any) {
-      console.error('Failed to add expense:', error);
-      console.error('Error response:', error.response);
-      const msg = error.response?.data?.message || error.message || 'Failed to add expense';
+      console.error('Failed to save expense:', error);
+      const msg = error.response?.data?.message || error.message || 'Failed to save expense';
       setSubmitError(msg);
     } finally {
       setIsSubmitting(false);
     }
   };
+
 
   if (!user) return null;
 
@@ -338,13 +349,32 @@ export default function ExpensesPage() {
                     </tr>
                   ) : (
                     currentRows.map((row) => (
-                      <tr key={row.expenseId} className="hover:bg-muted/50 cursor-pointer" onClick={() => openPreview(row)}>
-                        <td className="border-b px-3 py-2">{row.sparePartsId}</td>
-                        <td className="border-b px-3 py-2 font-medium">{row.expenseId}</td>
+                      <tr key={row._id || row.expenseId} className="hover:bg-muted/50 cursor-pointer" onClick={() => openPreview(row)}>
+                        <td className="border-b px-3 py-2 text-xs font-mono">{row.sparePartsId}</td>
+                        <td className="border-b px-3 py-2 font-medium">
+                          <div className="flex items-center gap-2">
+                            {row.source === 'Salary' && <TrendingUp className="h-3 w-3 text-blue-500" title="Salary Expense" />}
+                            {row.source === 'Inventory' && <Search className="h-3 w-3 text-orange-500" title="Inventory Expense" />}
+                            {row.expenseId}
+                          </div>
+                        </td>
                         <td className="border-b px-3 py-2">{row.expenseDate}</td>
-                        <td className="border-b px-3 py-2">{row.expenseType}</td>
-                        <td className="border-b px-3 py-2 text-center">
-                          <FileSpreadsheet className="h-4 w-4 text-muted-foreground" />
+                        <td className="border-b px-3 py-2">
+                          <span className="inline-flex rounded-md bg-muted px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider">
+                            {row.expenseType}
+                          </span>
+                        </td>
+                        <td className="border-b px-3 py-2 text-center" onClick={(e) => e.stopPropagation()}>
+                          {(row.invoiceFile || row.invoices === 'File') ? (
+                            <a 
+                              href={row.invoiceFile ? `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}${row.invoiceFile}` : '#'} 
+                              target="_blank" 
+                              rel="noreferrer"
+                              className="text-primary hover:underline hover:scale-110 transition-transform inline-block"
+                            >
+                              <FileSpreadsheet className="h-4 w-4" />
+                            </a>
+                          ) : '-'}
                         </td>
                         <td className="border-b px-3 py-2 text-sm truncate max-w-[150px]" title={row.description}>{row.description}</td>
                         <td className="border-b px-3 py-2 font-bold">{row.amount}</td>
@@ -357,6 +387,7 @@ export default function ExpensesPage() {
                         <td className="border-b px-3 py-2 text-muted-foreground text-sm truncate max-w-[100px]" title={row.notes}>{row.notes}</td>
                       </tr>
                     ))
+
                   )}
                 </tbody>
               </table>
@@ -413,14 +444,15 @@ export default function ExpensesPage() {
                   <label className={labelCls}>Expense ID</label>
                   <input
                     type="text"
-                    value={formData.expenseId}
+                    value={isAdding ? 'Auto-generated' : formData.expenseId}
                     onChange={(e) => setFormData({ ...formData, expenseId: e.target.value })}
-                    className={iCls}
+                    className={`${iCls} font-mono`}
                     placeholder="e.g. EXP-001"
-                    required
-                    disabled={effectivelyReadOnly || !isAdding} // ID usually shouldn't change
+                    required={!isAdding}
+                    disabled={effectivelyReadOnly || isAdding}
                   />
                 </div>
+
                 <div>
                   <label className={labelCls}>Expense Date</label>
                   <input
@@ -438,16 +470,23 @@ export default function ExpensesPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
                   <label className={labelCls}>Expense Type</label>
-                  <input
-                    type="text"
+                  <select
                     value={formData.expenseType}
                     onChange={(e) => setFormData({ ...formData, expenseType: e.target.value })}
                     className={iCls}
-                    placeholder="e.g. Utility, Maintenance"
                     required
                     disabled={effectivelyReadOnly}
-                  />
+                  >
+                    <option value="">Select Category</option>
+                    <option value="Salaries">Salaries</option>
+                    <option value="Utility">Utility</option>
+                    <option value="Maintenance">Maintenance</option>
+                    <option value="Rent">Rent</option>
+                    <option value="Supplies">Supplies</option>
+                    <option value="Other">Other</option>
+                  </select>
                 </div>
+
                 <div>
                   <label className={labelCls}>Amount (EGP)</label>
                   <input
@@ -483,16 +522,44 @@ export default function ExpensesPage() {
                 </div>
                 <div>
                   <label className={labelCls}>Paid By</label>
-                  <input
-                    type="text"
-                    value={formData.paidBy}
-                    onChange={(e) => setFormData({ ...formData, paidBy: e.target.value })}
+                  <select
+                    value={formData.employeeId || (formData.paidBy === 'Other' ? 'other' : '')}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === 'other') {
+                        setFormData({ ...formData, employeeId: '', paidBy: '' });
+                      } else {
+                        const emp = employeeItems.find(item => item._id === val);
+                        setFormData({ 
+                          ...formData, 
+                          employeeId: val, 
+                          paidBy: emp ? `${emp.firstName} ${emp.lastName}` : '' 
+                        });
+                      }
+                    }}
                     className={iCls}
-                    placeholder="Name of payer"
                     required
                     disabled={effectivelyReadOnly}
-                  />
+                  >
+                    <option value="">Select Employee</option>
+                    {employeeItems.map(emp => (
+                      <option key={emp._id} value={emp._id}>{emp.firstName} {emp.lastName}</option>
+                    ))}
+                    <option value="other">Other (Manual Entry)</option>
+                  </select>
+                  {(!formData.employeeId || formData.employeeId === '') && (
+                    <input
+                      type="text"
+                      value={formData.paidBy}
+                      onChange={(e) => setFormData({ ...formData, paidBy: e.target.value })}
+                      className={`${iCls} mt-2`}
+                      placeholder="Name of payer"
+                      required
+                      disabled={effectivelyReadOnly}
+                    />
+                  )}
                 </div>
+
               </div>
 
               {/* Row 4 */}
@@ -520,32 +587,42 @@ export default function ExpensesPage() {
                     disabled={effectivelyReadOnly}
                   >
                     <option value="">Select Spare Part (Optional)</option>
-                    {loadingInventory ? (
+                    {loadingSelections ? (
                       <option disabled>Loading items...</option>
                     ) : inventoryItems.length === 0 ? (
                       <option disabled>No items available</option>
                     ) : (
                       inventoryItems
-                        .filter(item => item.stockNumber > 0 || (selectedExpense && item._id === formData.sparePartsId)) // Show if in stock OR already selected
                         .map(item => (
-                          <option key={item._id} value={item._id}>
-                            {item.itemName} (Stock: {item.stockNumber})
+                          <option key={item._id} value={item.sparePartsId || item._id}>
+                            {item.itemName} ({item.sparePartsId})
                           </option>
                         ))
                     )}
                   </select>
+
                 </div>
                 <div>
-                  <label className={labelCls}>Upload Invoice (URL/File)</label>
-                  <input
-                    type="text"
-                    value={formData.invoicesUrl}
-                    onChange={(e) => setFormData({ ...formData, invoicesUrl: e.target.value })}
-                    className={iCls}
-                    placeholder="Link to invoice..."
-                    disabled={effectivelyReadOnly}
-                  />
+                  <label className={labelCls}>Invoice (File or URL)</label>
+                  <div className="flex flex-col gap-2">
+                    <input
+                      type="file"
+                      onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                      className={iCls}
+                      accept="application/pdf,image/*"
+                      disabled={effectivelyReadOnly}
+                    />
+                    <input
+                      type="text"
+                      value={formData.invoicesUrl}
+                      onChange={(e) => setFormData({ ...formData, invoicesUrl: e.target.value })}
+                      className={iCls}
+                      placeholder="Or enter URL if hosted externally..."
+                      disabled={effectivelyReadOnly}
+                    />
+                  </div>
                 </div>
+
               </div>
 
               {/* Notes */}
@@ -616,9 +693,10 @@ type ExpenseFormData = {
   expenseType: string;
   invoicesUrl: string;
   description: string;
-  amount: number | string; // allow empty string for uncontrolled input
+  amount: number | string;
   paymentMethod: string;
   paidBy: string;
+  employeeId?: string;
   notes: string;
 };
 
@@ -629,8 +707,9 @@ const initialFormData: ExpenseFormData = {
   expenseType: '',
   invoicesUrl: '',
   description: '',
-  amount: '', // start empty so it's not 0
+  amount: '',
   paymentMethod: 'Cash',
   paidBy: '',
+  employeeId: '',
   notes: ''
-};
+};

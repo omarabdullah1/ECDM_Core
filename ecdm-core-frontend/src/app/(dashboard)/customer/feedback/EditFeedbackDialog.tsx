@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { X } from 'lucide-react';
+import { X, Star } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '@/lib/axios';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter } from '@/components/ui/dialog';
@@ -158,9 +158,48 @@ export default function EditFeedbackDialog({ feedback, isNew, prefillData, onClo
     }
   };
 
+  const StarRating = ({ value, onChange, disabled, label }: { value: string, onChange: (val: string) => void, disabled: boolean, label: string }) => {
+    const currentRating = parseInt(value) || 0;
+    
+    return (
+      <div className="space-y-1.5">
+        <label className={labelCls}>{label}</label>
+        <div className="flex items-center gap-1.5 p-1.5 bg-white/50 rounded-lg border border-[hsl(var(--border))]/30 shadow-sm w-fit">
+          {[1, 2, 3, 4, 5].map((star) => (
+            <button
+              key={star}
+              type="button"
+              disabled={disabled}
+              onClick={() => onChange(String(star))}
+              className={`transition-all duration-200 transform ${!disabled ? 'hover:scale-125 cursor-pointer' : 'cursor-default'} ${
+                star <= currentRating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-200 fill-gray-100'
+              }`}
+            >
+              <Star size={22} strokeWidth={2} />
+            </button>
+          ))}
+          {currentRating > 0 && !disabled && (
+            <button 
+              type="button" 
+              onClick={() => onChange('')} 
+              className="ml-2 text-[10px] text-gray-400 hover:text-red-400 font-bold uppercase transition-colors"
+            >
+              Clear
+            </button>
+          )}
+          {currentRating > 0 && (
+            <span className="ml-2 px-2 py-0.5 bg-yellow-50 text-yellow-700 text-[10px] font-bold rounded-full border border-yellow-100">
+              {currentRating}/5
+            </span>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-hidden flex flex-col p-0">
         <DialogHeader>
           <DialogTitle>
             {isNew ? 'Create Feedback' : (effectivelyReadOnly ? 'Feedback Preview' : 'Edit Feedback')}
@@ -173,7 +212,8 @@ export default function EditFeedbackDialog({ feedback, isNew, prefillData, onClo
           )}
         </DialogHeader>
 
-        <DialogBody>
+        <div className="flex-1 overflow-y-auto px-6 py-4 scrollbar-thin">
+          <DialogBody className="p-0">
           <form id="edit-feedback-form" onSubmit={form.handleSubmit(onSubmit, onError)} className="space-y-6">
             <div className="space-y-4">
               <div className="flex items-center gap-2 pb-2 border-b border-gray-100">
@@ -186,23 +226,23 @@ export default function EditFeedbackDialog({ feedback, isNew, prefillData, onClo
               <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50/50 rounded-xl border border-gray-100">
                 <div>
                   <label className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter mb-1 block">Customer Name</label>
-                  <div className={readOnlyCls}>{getContextValue('customerName') || customer?.name || '-'}</div>
+                  <div className={readOnlyCls}>{String(getContextValue('customerName') || customer?.name || '-')}</div>
                 </div>
                 <div>
                   <label className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter mb-1 block">Phone Number</label>
-                  <div className={readOnlyCls}>{getContextValue('customerPhone') || customer?.phone || '-'}</div>
+                  <div className={readOnlyCls}>{String(getContextValue('customerPhone') || customer?.phone || '-')}</div>
                 </div>
                 <div>
                   <label className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter mb-1 block">Customer ID</label>
-                  <div className={`${readOnlyCls} font-mono text-xs text-gray-400`}>{getContextValue('customerId') || customer?.customerId || customer?._id || '-'}</div>
+                  <div className={`${readOnlyCls} font-mono text-xs text-gray-400`}>{String(getContextValue('customerId') || customer?.customerId || customer?._id || '-')}</div>
                 </div>
                 <div>
                   <label className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter mb-1 block">Engineer Name</label>
-                  <div className={readOnlyCls}>{getContextValue('engineerName') || '-'}</div>
+                  <div className={readOnlyCls}>{String(getContextValue('engineerName') || (order as any)?.engineerName || '-')}</div>
                 </div>
                 <div>
                   <label className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter mb-1 block">Actual Visit Date</label>
-                  <div className={readOnlyCls}>{formatDate(getContextValue('actualVisitDate') || getContextValue('visitDate'))}</div>
+                  <div className={readOnlyCls}>{formatDate(String(getContextValue('actualVisitDate') || getContextValue('visitDate') || (order as any)?.actualVisitDate))}</div>
                 </div>
                 <div>
                   <label className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter mb-1 block">Deal Status</label>
@@ -238,15 +278,19 @@ export default function EditFeedbackDialog({ feedback, isNew, prefillData, onClo
                   </select>
                 </div>
 
-                <div className="space-y-1">
-                  <label className={labelCls}>Operation Rating</label>
-                  <input type="text" placeholder="e.g., 5/5, Excellent" {...form.register('ratingOperation')} className={iCls} disabled={effectivelyReadOnly} />
-                </div>
+                <StarRating 
+                  label="Operation Rating" 
+                  value={form.watch('ratingOperation') || ''} 
+                  disabled={effectivelyReadOnly} 
+                  onChange={(val) => form.setValue('ratingOperation', val)}
+                />
 
-                <div className="space-y-1">
-                  <label className={labelCls}>Support Rating</label>
-                  <input type="text" placeholder="e.g., 5/5, Excellent" {...form.register('ratingCustomerService')} className={iCls} disabled={effectivelyReadOnly} />
-                </div>
+                <StarRating 
+                  label="Support Rating" 
+                  value={form.watch('ratingCustomerService') || ''} 
+                  disabled={effectivelyReadOnly} 
+                  onChange={(val) => form.setValue('ratingCustomerService', val)}
+                />
               </div>
 
               <div className="space-y-1">
@@ -262,6 +306,7 @@ export default function EditFeedbackDialog({ feedback, isNew, prefillData, onClo
             </div>
           </form>
         </DialogBody>
+        </div>
 
         <DialogFooter className="bg-white/50 backdrop-blur-md border-t border-[hsl(var(--border))]/30">
           <div className="flex gap-3 w-full">

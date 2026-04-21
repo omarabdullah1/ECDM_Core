@@ -352,3 +352,81 @@ export const handleMarketingFileUpload = (req: Request, _res: Response, next: Ne
     }
     next();
 };
+
+// ══════════════════════════════════════════════════════════════════════════════
+// EXPENSE INVOICE UPLOAD (Finance Module)
+// PDFs and Images for general expense invoices
+// ══════════════════════════════════════════════════════════════════════════════
+
+// Ensure expenses directory exists
+const expensesDir = path.join(__dirname, '../../uploads/expenses');
+if (!fs.existsSync(expensesDir)) {
+    fs.mkdirSync(expensesDir, { recursive: true });
+}
+
+// Configure Multer Storage for Expense Files
+const expenseFileStorage = multer?.diskStorage ? multer.diskStorage({
+    destination: (_req: any, _file: any, cb: any) => {
+        cb(null, expensesDir);
+    },
+    filename: (_req: any, file: any, cb: any) => {
+        // Generate unique filename: expense-{timestamp}-{random}.ext
+        const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1E9)}`;
+        const ext = path.extname(file.originalname);
+        cb(null, `expense-${uniqueSuffix}${ext}`);
+    }
+}) : undefined;
+
+// File Filter for Expense Files - Allow images and PDFs
+const expenseFileFilter = (_req: any, file: any, cb: any) => {
+    const allowedMimes = [
+        'image/jpeg',
+        'image/png',
+        'image/gif',
+        'image/webp',
+        'application/pdf',
+    ];
+    const allowedExts = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.pdf'];
+    
+    const ext = path.extname(file.originalname).toLowerCase();
+    
+    if (allowedMimes.includes(file.mimetype) && allowedExts.includes(ext)) {
+        cb(null, true);
+    } else {
+        cb(new Error('Invalid file type. Only images (JPG, PNG, GIF, WebP) and PDF files are allowed.'));
+    }
+};
+
+// Multer Upload Configuration for Expense Files
+export const uploadExpenseFile = multer && expenseFileStorage ? multer({
+    storage: expenseFileStorage,
+    fileFilter: expenseFileFilter,
+    limits: {
+        fileSize: 10 * 1024 * 1024, // 10MB max
+    },
+}) : {
+    single: () => (_req: Request, _res: Response, next: NextFunction) => {
+        console.error('❌ Multer not configured. Install multer package.');
+        next(new Error('File upload not configured'));
+    }
+};
+
+/**
+ * Middleware to handle expense invoice upload
+ * Attaches file URL to req.body.invoiceFile if file is uploaded
+ */
+export const handleExpenseFileUpload = (req: Request, _res: Response, next: NextFunction): void => {
+    if (req.file) {
+        let dbPath = `/uploads/expenses/${req.file.filename}`;
+        dbPath = dbPath.replace(/\\/g, '/');
+        dbPath = dbPath.replace(/^\/public\//, '/').replace(/^public\//, '/');
+        if (!dbPath.startsWith('/')) dbPath = '/' + dbPath;
+        dbPath = dbPath.replace(/\/+/g, '/');
+        
+        console.log('📎 Normalized expense invoice path:', dbPath);
+        
+        req.body.invoiceFile = dbPath;
+    }
+    next();
+};
+

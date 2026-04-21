@@ -1,5 +1,6 @@
 import mongoose, { Schema, Model } from 'mongoose';
 import { IFeedbackDocument } from '../types/feedback.types';
+import { populateOrderContext } from '../utils/follow-up-context';
 
 const feedbackSchema = new Schema<IFeedbackDocument>(
     {
@@ -33,6 +34,29 @@ const feedbackSchema = new Schema<IFeedbackDocument>(
     },
     { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } },
 );
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Middleware: Auto-populate Order Context
+// ─────────────────────────────────────────────────────────────────────────────
+feedbackSchema.pre('save', async function (next) {
+    // Feedback is primarily linked to CustomerOrder
+    const hasContext = this.orderContext && (this.orderContext.customerName || this.orderContext.customerId);
+    
+    if (!hasContext) {
+        try {
+            const context = await populateOrderContext(
+                this.customerOrderId,
+                this.customerId
+            );
+            if (context) {
+                this.orderContext = context as any;
+            }
+        } catch (error) {
+            console.error('⚠️ Feedback Middleware: Failed to populate orderContext:', error);
+        }
+    }
+    next();
+});
 
 feedbackSchema.index({ customerId: 1 });
 feedbackSchema.index({ customerOrderId: 1 });

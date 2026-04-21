@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import api from '@/lib/axios';
-import { TrendingUp, Plus, X, Upload, RefreshCw, Sheet, Database, Save, Loader2, Check, AlertTriangle } from 'lucide-react';
+import { TrendingUp, Plus, X, Upload, RefreshCw, Sheet, Database, Save, Loader2, Check, AlertTriangle, Edit2 } from 'lucide-react';
 import { DataTable } from '@/components/ui/DataTable';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter } from '@/components/ui/dialog';
