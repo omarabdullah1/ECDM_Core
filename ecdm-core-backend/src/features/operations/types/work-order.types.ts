@@ -27,6 +27,7 @@ export enum SparePartsAvailability {
     Available    = 'Available',
     NotAvailable = 'Not Available',
     Requested    = 'Requested',
+    NotNeeded    = 'Not Needed',
     Empty        = '',
 }
 
@@ -59,7 +60,7 @@ export enum DevicePickupType {
  * Part used in a work order
  */
 export interface IWorkOrderPart {
-    priceListId: Types.ObjectId;      // Reference to PriceList
+    inventoryId: Types.ObjectId;      // Reference to Inventory
     quantity: number;                 // Quantity used
     unitCost: number;                 // Unit cost
 }
@@ -114,3 +115,5 @@ export interface IWorkOrder {
 export interface IWorkOrderDocument extends IWorkOrder, Document {
     _id: Types.ObjectId;
 }
+
+

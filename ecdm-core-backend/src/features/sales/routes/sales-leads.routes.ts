@@ -13,7 +13,8 @@ router.get('/',            authorise(UserRole.SuperAdmin, UserRole.Manager, User
 router.get('/:id',         authorise(UserRole.SuperAdmin, UserRole.Manager, UserRole.Sales, UserRole.Marketing), ctrl.getById);
 router.put('/:id',         authorise(UserRole.SuperAdmin, UserRole.Manager, UserRole.Sales, UserRole.Marketing), validate(updateSalesLeadSchema), ctrl.update);
 router.patch('/:id',       authorise(UserRole.SuperAdmin, UserRole.Manager, UserRole.Sales, UserRole.Marketing), validate(updateSalesLeadSchema), ctrl.patch);  // Auto-tracks salesPerson
-router.delete('/:id',      authorise(UserRole.SuperAdmin, UserRole.Manager), ctrl.remove);
+router.delete('/:id',      authorise(UserRole.SuperAdmin, UserRole.Admin), ctrl.remove);
 router.post('/bulk-delete', isAdmin, ctrl.bulkDelete);  // Admin-only bulk delete
 
 export default router;
+

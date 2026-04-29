@@ -9,7 +9,7 @@ const router = Router();
 router.use(authenticate);
 
 // All routes are restricted to SuperAdmin and Manager (Admin roles)
-router.use(authorise(UserRole.SuperAdmin, UserRole.Manager));
+router.use(authorise(UserRole.SuperAdmin, UserRole.Admin));
 
 /**
  * @route   GET /api/admin/audit-logs
@@ -34,3 +34,4 @@ router.get('/stats/summary', ctrl.getAuditLogStats);
 router.get('/:id', ctrl.getAuditLogById);
 
 export default router;
+

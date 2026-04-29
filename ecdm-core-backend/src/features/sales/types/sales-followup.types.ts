@@ -29,3 +29,4 @@ export interface ISalesFollowUp {
 export interface ISalesFollowUpDocument extends ISalesFollowUp, Document {
     _id: Types.ObjectId;
 }
+

@@ -15,6 +15,7 @@ export interface IAuditLog {
     action: AuditAction;
     moduleName: string;
     recordId?: Types.ObjectId;
+    resourceIdentity?: string;
     details: Record<string, any>;
     ipAddress: string;
     createdAt: Date;
@@ -25,3 +26,4 @@ export interface IAuditLog {
 export interface IAuditLogDocument extends IAuditLog, Document {
     _id: Types.ObjectId;
 }
+

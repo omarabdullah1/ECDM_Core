@@ -5,6 +5,7 @@ import api from '@/lib/axios';
 import toast from 'react-hot-toast';
 import { TrendingUp, Plus, Edit2, Trash2, X, Sheet, Upload, Loader2, AlertTriangle, Check, RefreshCw, Save, Database } from 'lucide-react';
 import { DataTable } from '@/components/ui/DataTable';
+import { useAuthStore } from '@/features/auth/useAuth';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter } from '@/components/ui/dialog';
 
@@ -58,6 +59,9 @@ const SECTORS = ['B2B', 'B2C', 'B2G', 'Hybrid', 'Other'];
 const blank = { name: '', phone: '', type: '', sector: 'B2C', date: '', notes: '' };
 
 export default function MarketingLeadsPage() {
+  const { user } = useAuthStore();
+  const isAdmin = user?.role === 'SuperAdmin' || user?.role === 'Admin';
+
   const [rows, setRows] = useState<MarketingLead[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -296,6 +300,11 @@ export default function MarketingLeadsPage() {
     setSyncModal(true);
   };
 
+  const closeSyncModal = () => {
+    setSyncModal(false);
+    setSyncStep('config');
+  };
+
   const formatDate = (dateStr: string) => {
     if (!dateStr) return '—';
     try {
@@ -337,7 +346,7 @@ export default function MarketingLeadsPage() {
           <option value="">All Sectors</option>
           {SECTORS.map(s => <option key={s} value={s}>{s}</option>)}
         </select>
-        {selectedRows.size > 0 && (
+        {isAdmin && selectedRows.size > 0 && (
           <button
             onClick={() => setShowBulkDeleteConfirm(true)}
             className="flex items-center gap-2 rounded-md bg-[hsl(var(--destructive))] px-4 py-2 text-sm font-medium text-[hsl(var(--destructive-foreground))] shadow-sm hover:opacity-90 ml-auto"
@@ -419,9 +428,11 @@ export default function MarketingLeadsPage() {
               <button onClick={() => openE(row, 'edit')} className="p-2 hover:bg-[hsl(var(--accent))] rounded-lg transition-colors">
                 <Edit2 className="h-4 w-4" />
               </button>
-              <button onClick={() => setDelId(row._id)} className="p-2 hover:bg-destructive/10 text-destructive rounded-lg transition-colors">
-                <Trash2 className="h-4 w-4" />
-              </button>
+              {isAdmin && (
+                <button onClick={() => setDelId(row._id)} className="p-2 hover:bg-destructive/10 text-destructive rounded-lg transition-colors">
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              )}
             </div>
           )}
         />
@@ -650,3 +661,4 @@ export default function MarketingLeadsPage() {
     </div>
   );
 }
+

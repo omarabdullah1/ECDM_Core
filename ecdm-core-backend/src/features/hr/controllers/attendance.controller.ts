@@ -177,6 +177,68 @@ export const uploadExcel = async (req: Request, res: Response, next: NextFunctio
             }
 
             console.log(`✅ Found headers at row ${headerRowIndex + 1}:`, mappedHeaders);
+            
+            // --- Logic for status calculation ---
+            const getMinutes = (timeStr: string): number => {
+                if (!timeStr) return 0;
+                
+                // Handle cases like "09:15 AM" or "05:05 PM"
+                const ampmMatch = timeStr.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+                if (ampmMatch) {
+                    let h = parseInt(ampmMatch[1], 10);
+                    const m = parseInt(ampmMatch[2], 10);
+                    const isPm = ampmMatch[3].toUpperCase() === 'PM';
+                    if (isPm && h < 12) h += 12;
+                    if (!isPm && h === 12) h = 0;
+                    return h * 60 + m;
+                }
+
+                // Handle 24h format "17:05"
+                const standardMatch = timeStr.match(/^(\d{1,2}):(\d{2})$/);
+                if (standardMatch) {
+                    const h = parseInt(standardMatch[1], 10);
+                    const m = parseInt(standardMatch[2], 10);
+                    return h * 60 + m;
+                }
+
+                return 0;
+            };
+
+            const calculateAutoStatus = (
+                checkIn: string, 
+                checkOut: string, 
+                workStart: string, 
+                workEnd: string, 
+                grace: number = 15, 
+                halfDayHrs: number = 4.5
+            ): string => {
+                if (!checkIn) return 'Absent';
+
+                const inMins = getMinutes(checkIn);
+                const outMins = getMinutes(checkOut);
+                const startMins = getMinutes(workStart);
+                const endMins = getMinutes(workEnd);
+
+                // 1. Calculate Shift Duration vs Work Duration
+                let workDurationMins = 0;
+                if (outMins > inMins) {
+                    workDurationMins = outMins - inMins;
+                }
+
+                // 2. Check for Half-day (Threshold in hours converted to minutes)
+                if (workDurationMins > 0 && workDurationMins < (halfDayHrs * 60)) {
+                    return 'Half-day';
+                }
+
+                // 3. Check for Late (considering grace period)
+                // Add 1-minute buffer (0.1 epsilon) to handle rounding in Excel (e.g. 09:15 vs 09:15)
+                if (inMins > (startMins + Number(grace) + 0.1)) {
+                    return 'Late';
+                }
+
+                return 'Present';
+            };
+            // ------------------------------------
 
             // 3. Extract data rows
             const dataRows = rawData.slice(headerRowIndex + 1);
@@ -205,19 +267,20 @@ export const uploadExcel = async (req: Request, res: Response, next: NextFunctio
                 }
 
                 // Helper to find value based on aggressive string matching
-                const getVal = (possibleKeys: string[]): any => {
+                const getVal = (possibleKeys: string[], exclusive: boolean = false): any => {
                     const index = mappedHeaders.findIndex(h => {
                         const cleanH = String(h).toLowerCase().replace(/[^a-z0-9]/g, '');
                         return possibleKeys.some(pk => {
                             const cleanPk = pk.toLowerCase().replace(/[^a-z0-9]/g, '');
+                            if (exclusive) return cleanH === cleanPk; // Exact match for things like "Name" vs "EmployeeID"
                             return cleanH.includes(cleanPk) || cleanPk.includes(cleanH);
                         });
                     });
                     return index !== -1 ? rowArray[index] : undefined;
                 };
 
-                const empId = getVal(['EmployeeID', 'ID', 'EmployeeId', 'EmpID']);
-                const name = getVal(['Name', 'EmployeeName', 'Employee']);
+                const empId = getVal(['EmployeeID', 'ID', 'EmployeeId', 'EmpID'], false);
+                const name = getVal(['Name', 'EmployeeName'], true); // Stricter match for Name, removed 'Employee'
                 const dateVal = getVal(['Date', 'AttendanceDate']);
 
                 // If core fields are completely missing or empty, skip row
@@ -297,10 +360,17 @@ export const uploadExcel = async (req: Request, res: Response, next: NextFunctio
 
             // 2. Fetch all matching users from the database to validate them
             const User = mongoose.model('User');
-            const existingUsers = await User.find({ employeeId: { $in: uniqueEmployeeIds } }).select('_id employeeId');
+            const existingUsers = await User.find({ employeeId: { $in: uniqueEmployeeIds } })
+                .select('_id employeeId workStartTime workEndTime gracePeriod halfDayThreshold');
 
-            // Create a map for quick lookup: { 'EMP-001': '60d5ec...', ... }
-            const userMap = new Map(existingUsers.map((u: any) => [u.employeeId, u._id.toString()]));
+            // Create a map for quick lookup
+            const userMap = new Map(existingUsers.map((u: any) => [u.employeeId, {
+                _id: u._id.toString(),
+                workStartTime: u.workStartTime || '09:00',
+                workEndTime: u.workEndTime || '17:00',
+                gracePeriod: u.gracePeriod !== undefined ? u.gracePeriod : 15,
+                halfDayThreshold: u.halfDayThreshold !== undefined ? u.halfDayThreshold : 4.5
+            }]));
 
             console.log(`🔗 Linked ${existingUsers.length} out of ${uniqueEmployeeIds.length} unique employees to User accounts`);
 
@@ -309,12 +379,25 @@ export const uploadExcel = async (req: Request, res: Response, next: NextFunctio
             let unlinkedCount = 0;
 
             attendanceRecords.forEach(record => {
-                const matchedUserId = userMap.get(record.employeeId);
+                const matchedUser = userMap.get(record.employeeId);
                 
                 // Track and SKIP unlinked employees (IDs not found in the system)
-                if (!matchedUserId) {
+                if (!matchedUser) {
                     unlinkedCount++;
                     return;
+                }
+
+                // Auto-calculate status if missing
+                let finalStatus = record.status;
+                if (!finalStatus) {
+                    finalStatus = calculateAutoStatus(
+                        record.checkIn, 
+                        record.checkOut,
+                        matchedUser.workStartTime, 
+                        matchedUser.workEndTime,
+                        matchedUser.gracePeriod,
+                        matchedUser.halfDayThreshold
+                    ) as any;
                 }
 
                 // Prepare the update payload
@@ -326,19 +409,18 @@ export const uploadExcel = async (req: Request, res: Response, next: NextFunctio
                     day: record.day,
                     checkIn: record.checkIn,
                     checkOut: record.checkOut,
-                    status: record.status,
+                    status: finalStatus || record.status,
                     notes: record.notes,
-                    userId: matchedUserId || null, // Link if found, null if not
+                    userId: matchedUser._id || null, // Link if found, null if not
                     uploadedAt: new Date(), // Acts as a batch timestamp
                 };
 
                 // Upsert logic: Match by employeeId AND date
                 // Start of the day and end of the day to ensure precise date matching
+                // Upsert logic: Match by employeeId AND date (normalized to day)
                 const recordDate = new Date(record.date);
-                const startOfDay = new Date(recordDate);
-                startOfDay.setUTCHours(0, 0, 0, 0);
-                const endOfDay = new Date(recordDate);
-                endOfDay.setUTCHours(23, 59, 59, 999);
+                const startOfDay = new Date(Date.UTC(recordDate.getUTCFullYear(), recordDate.getUTCMonth(), recordDate.getUTCDate(), 0, 0, 0, 0));
+                const endOfDay = new Date(Date.UTC(recordDate.getUTCFullYear(), recordDate.getUTCMonth(), recordDate.getUTCDate(), 23, 59, 59, 999));
 
                 bulkOps.push({
                     updateOne: {
@@ -492,3 +574,4 @@ export const getEmployeeStats = async (req: Request, res: Response, next: NextFu
         next(e);
     }
 };
+

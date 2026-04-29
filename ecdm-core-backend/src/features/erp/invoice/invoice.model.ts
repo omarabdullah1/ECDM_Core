@@ -62,3 +62,4 @@ invoiceSchema.index({ issueDate: -1 });
 
 const Invoice: Model<IInvoiceDocument> = mongoose.model<IInvoiceDocument>('Invoice', invoiceSchema);
 export default Invoice;
+

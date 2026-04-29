@@ -7,10 +7,11 @@ import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
 import { z } from 'zod';
-import { PRICE_LIST_CATEGORIES, type PriceListItem } from './columns';
+import { INVENTORY_CATEGORIES, type InventoryItem } from './columns';
+import { useAuthStore } from '@/features/auth/useAuth';
 
-interface EditPriceListDialogProps {
-    item: PriceListItem;
+interface EditInventoryDialogProps {
+    item: InventoryItem;
     onClose: () => void;
     onSuccess: () => void;
 }
@@ -34,12 +35,17 @@ const iCls =
 const labelCls =
     'text-xs font-semibold text-[hsl(var(--muted-foreground))] uppercase tracking-wide mb-1.5 block';
 
-export default function EditPriceListDialog({ item, onClose, onSuccess }: EditPriceListDialogProps) {
+export default function EditInventoryDialog({ item, onClose, onSuccess }: EditInventoryDialogProps) {
+    const { user } = useAuthStore();
+    const isOperations = user?.role === 'Operations' || user?.role === 'Maintenance' || user?.role === 'MaintenanceEngineer' || user?.role === 'Technician';
+    
     const [dataSheetFile, setDataSheetFile] = useState<File | null>(null);
     const [saving, setSaving] = useState(false);
+    // Force preview mode for Operations
     const [internalPreviewMode, setInternalPreviewMode] = useState(true);
 
-    const effectivelyReadOnly = internalPreviewMode;
+    const effectivelyReadOnly = isOperations || internalPreviewMode;
+    const showPrice = !isOperations;
 
     const form = useForm<FormSchema>({
         resolver: zodResolver(formSchema),
@@ -93,8 +99,8 @@ export default function EditPriceListDialog({ item, onClose, onSuccess }: EditPr
             if (values.notes !== undefined) formData.append('notes', values.notes);
             if (dataSheetFile) formData.append('dataSheet', dataSheetFile);
 
-            await api.patch(`/operations/price-list/${item._id}`, formData);
-            toast.success('Price list item updated successfully!');
+            await api.patch(`/operations/inventory/${item._id}`, formData);
+            toast.success('Inventory item updated successfully!');
             onSuccess();
             onClose();
         } catch (err: unknown) {
@@ -114,24 +120,16 @@ export default function EditPriceListDialog({ item, onClose, onSuccess }: EditPr
                 <DialogHeader className="flex flex-row items-center justify-between border-b border-[hsl(var(--border))] pb-4 mb-4 space-y-0">
                     <div>
                         <DialogTitle className="text-xl font-bold">
-                            {effectivelyReadOnly ? 'Price List Item Preview' : 'Edit Price List Item'}
+                            {effectivelyReadOnly ? 'Inventory Item Details' : 'Edit Inventory Item'}
                         </DialogTitle>
                         <p className="text-xs text-[hsl(var(--muted-foreground))] mt-0.5">
                             {item.sparePartsId} — {item.itemName}
-                            {effectivelyReadOnly && <span className="ml-2 text-amber-600 font-semibold">• Preview Mode</span>}
                         </p>
                     </div>
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        className="p-2 hover:bg-[hsl(var(--muted))] rounded-lg transition-colors"
-                    >
-                        <X className="h-5 w-5" />
-                    </button>
                 </DialogHeader>
 
                 <DialogBody>
-                    <form id="edit-price-list-form" onSubmit={form.handleSubmit(onSubmit, onError)}>
+                    <form id="edit-inventory-form" onSubmit={form.handleSubmit(onSubmit, onError)}>
                         <div className="space-y-6">
                             {/* Item Name */}
                             <div className="space-y-1.5">
@@ -167,7 +165,7 @@ export default function EditPriceListDialog({ item, onClose, onSuccess }: EditPr
                                 <label className={labelCls}>Category</label>
                                 <select {...form.register('category')} className={iCls} disabled={effectivelyReadOnly}>
                                     <option value="">— Select category —</option>
-                                    {PRICE_LIST_CATEGORIES.map((cat) => (
+                                    {INVENTORY_CATEGORIES.map((cat) => (
                                         <option key={cat} value={cat}>
                                             {cat}
                                         </option>
@@ -177,19 +175,21 @@ export default function EditPriceListDialog({ item, onClose, onSuccess }: EditPr
 
                             {/* Price & Quantity Grid */}
                             <div className="grid grid-cols-2 gap-6">
-                                <div className="space-y-1.5">
-                                    <label className={labelCls}>Unit Price ($)</label>
-                                    <input
-                                        type="number"
-                                        step="0.01"
-                                        min="0"
-                                        {...form.register('unitPrice')}
-                                        placeholder="0.00"
-                                        className={iCls}
-                                        disabled={effectivelyReadOnly}
-                                    />
-                                </div>
-                                <div className="space-y-1.5">
+                                {showPrice && (
+                                    <div className="space-y-1.5">
+                                        <label className={labelCls}>Unit Price ($)</label>
+                                        <input
+                                            type="number"
+                                            step="0.01"
+                                            min="0"
+                                            {...form.register('unitPrice')}
+                                            placeholder="0.00"
+                                            className={iCls}
+                                            disabled={effectivelyReadOnly}
+                                        />
+                                    </div>
+                                )}
+                                <div className={showPrice ? "space-y-1.5" : "space-y-1.5 col-span-2"}>
                                     <label className={`text-xs font-semibold uppercase tracking-wide text-[hsl(var(--primary))]`}>Current Stock Qty</label>
                                     <input
                                         type="number"
@@ -248,34 +248,39 @@ export default function EditPriceListDialog({ item, onClose, onSuccess }: EditPr
                                                     {(dataSheetFile.size / 1024).toFixed(2)} KB
                                                 </p>
                                             </div>
-                                            <button
-                                                type="button"
-                                                onClick={() => setDataSheetFile(null)}
-                                                className="p-1 hover:bg-[hsl(var(--muted))] rounded"
-                                                disabled={effectivelyReadOnly}
-                                            >
-                                                <X className="w-4 h-4" />
-                                            </button>
+                                            {!effectivelyReadOnly && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setDataSheetFile(null)}
+                                                    className="p-1 hover:bg-[hsl(var(--muted))] rounded"
+                                                >
+                                                    <X className="w-4 h-4" />
+                                                </button>
+                                            )}
                                         </div>
                                     ) : (
-                                        <label className="cursor-pointer block">
-                                            <Upload className="w-10 h-10 mx-auto text-[hsl(var(--muted-foreground))] mb-2" />
-                                            <p className="text-sm text-[hsl(var(--muted-foreground))]">
-                                                {item.dataSheetUrl
-                                                    ? 'Click to replace existing data sheet'
-                                                    : 'Click to upload or drag and drop'}
+                                        <div className="block">
+                                            <Upload className="w-10 h-10 mx-auto text-[hsl(var(--muted-foreground))] mb-2 opacity-50" />
+                                            <p className="text-sm text-[hsl(var(--muted-foreground))] font-medium">
+                                                {effectivelyReadOnly 
+                                                    ? (item.dataSheetUrl ? 'Data sheet available' : 'No data sheet uploaded')
+                                                    : (item.dataSheetUrl ? 'Click to replace existing data sheet' : 'Click to upload or drag and drop')
+                                                }
                                             </p>
-                                            <p className="text-xs text-[hsl(var(--muted-foreground))] mt-1">
-                                                PDF files only (max 10MB)
-                                            </p>
-                                            <input
-                                                type="file"
-                                                accept=".pdf,application/pdf"
-                                                onChange={handleFileChange}
-                                                className="hidden"
-                                                disabled={effectivelyReadOnly}
-                                            />
-                                        </label>
+                                            {!effectivelyReadOnly ? (
+                                                <>
+                                                    <p className="text-xs text-[hsl(var(--muted-foreground))] mt-1">
+                                                        PDF files only (max 10MB)
+                                                    </p>
+                                                    <input
+                                                        type="file"
+                                                        accept=".pdf,application/pdf"
+                                                        onChange={handleFileChange}
+                                                        className="hidden"
+                                                    />
+                                                </>
+                                            ) : null}
+                                        </div>
                                     )}
                                 </div>
                             </div>
@@ -284,33 +289,49 @@ export default function EditPriceListDialog({ item, onClose, onSuccess }: EditPr
                 </DialogBody>
 
                 <div className="flex items-center justify-end gap-3 border-t border-[hsl(var(--border))] px-8 py-5 bg-gray-50 flex-none">
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        className="px-4 py-2 rounded-xl border border-[hsl(var(--border))] text-sm font-medium hover:bg-[hsl(var(--muted))] transition-colors"
-                    >
-                        {effectivelyReadOnly ? 'Close' : 'Cancel'}
-                    </button>
                     {effectivelyReadOnly ? (
-                        <button
-                            type="button"
-                            key="btn-edit" onClick={(e) => { e.preventDefault(); setInternalPreviewMode(false); }}
-                            className="px-8 py-2 rounded-xl bg-blue-600 text-white text-sm font-bold shadow-lg hover:bg-blue-700 transition-all flex items-center gap-2"
-                        >
-                            Edit Item
-                        </button>
+                        <>
+                            <button
+                                type="button"
+                                onClick={onClose}
+                                className="px-8 py-2 rounded-xl bg-[hsl(var(--muted))] text-[hsl(var(--foreground))] text-sm font-semibold hover:opacity-90 transition-opacity"
+                            >
+                                Close
+                            </button>
+                            {!isOperations && (
+                                <button
+                                    type="button"
+                                    onClick={(e) => { e.preventDefault(); setInternalPreviewMode(false); }}
+                                    className="px-8 py-2 rounded-xl bg-blue-600 text-white text-sm font-bold shadow-lg hover:bg-blue-700 transition-all flex items-center gap-2"
+                                >
+                                    Edit Item
+                                </button>
+                            )}
+                        </>
                     ) : (
-                        <button
-                            type="submit"
-                            form="edit-price-list-form"
-                            disabled={saving}
-                            className="protect-mount px-6 py-2 rounded-xl bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            {saving ? 'Saving...' : 'Save Changes'}
-                        </button>
+                        <>
+                            <button
+                                type="button"
+                                onClick={onClose}
+                                className="px-4 py-2 rounded-xl border border-[hsl(var(--border))] text-sm font-medium hover:bg-[hsl(var(--muted))] transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="submit"
+                                form="edit-inventory-form"
+                                disabled={saving}
+                                className="protect-mount px-6 py-2 rounded-xl bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {saving ? 'Saving...' : 'Save Changes'}
+                            </button>
+                        </>
                     )}
                 </div>
             </DialogContent>
         </Dialog>
     );
 }
+
+
+

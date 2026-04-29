@@ -2,7 +2,7 @@
 import { Package, CheckCircle2, Clock, XCircle, User, Building2 } from 'lucide-react';
 
 export interface PurchaseOrderItem {
-    priceListId: any;
+    inventoryId: any;
     itemName?: string;
     quantity: number;
     unitPrice: number;
@@ -85,3 +85,5 @@ export const poColumns = [
         ),
     }
 ];
+
+

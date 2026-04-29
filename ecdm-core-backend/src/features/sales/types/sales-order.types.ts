@@ -44,7 +44,7 @@ export interface IQuotationItem {
     quantity: number;
     unitPrice: number;
     total: number;
-    priceListId?: string;
+    inventoryId?: string;
     dataSheetUrl?: string;
 }
 
@@ -119,3 +119,5 @@ export interface ISalesOrder {
 export interface ISalesOrderDocument extends ISalesOrder, Document {
     _id: Types.ObjectId;
 }
+
+

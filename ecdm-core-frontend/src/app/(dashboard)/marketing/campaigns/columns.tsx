@@ -79,13 +79,14 @@ const handleDownload = async (url: string, filename: string) => {
 interface ColumnProps {
     onEdit: (row: Campaign) => void;
     onDelete: (id: string) => void;
+    isAdmin: boolean;
 }
 
-export const getColumns = ({ onEdit, onDelete }: ColumnProps) => [
+export const getColumns = ({ onEdit, onDelete, isAdmin }: ColumnProps) => [
     {
         key: 'campaignId',
         header: 'ID',
-      className: 'md:w-[1%] md:whitespace-nowrap',
+        className: 'md:w-[1%] md:whitespace-nowrap',
         render: (row: Campaign) => (
             <span className="font-mono text-xs">{row.campaignId || '-'}</span>
         ),
@@ -93,7 +94,7 @@ export const getColumns = ({ onEdit, onDelete }: ColumnProps) => [
     {
         key: 'campaignName',
         header: 'Campaign',
-      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
+        className: 'md:w-1/6 md:max-w-[120px] md:truncate',
         render: (row: Campaign) => (
             <span className="font-medium">{row.campaignName}</span>
         ),
@@ -101,7 +102,7 @@ export const getColumns = ({ onEdit, onDelete }: ColumnProps) => [
     {
         key: 'status',
         header: 'Status',
-      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
+        className: 'md:w-1/6 md:max-w-[120px] md:truncate',
         render: (row: Campaign) => {
             const status = row.status;
             const statusColors: Record<string, string> = {
@@ -119,7 +120,7 @@ export const getColumns = ({ onEdit, onDelete }: ColumnProps) => [
     {
         key: 'impressions',
         header: 'Impressions',
-      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
+        className: 'md:w-1/6 md:max-w-[120px] md:truncate',
         render: (row: Campaign) => (
             <span className="font-mono">{Number(row.impressions || 0).toLocaleString()}</span>
         ),
@@ -127,7 +128,7 @@ export const getColumns = ({ onEdit, onDelete }: ColumnProps) => [
     {
         key: 'conversions',
         header: 'Conversions',
-      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
+        className: 'md:w-1/6 md:max-w-[120px] md:truncate',
         render: (row: Campaign) => (
             <span className="font-mono">{Number(row.conversions || 0).toLocaleString()}</span>
         ),
@@ -135,7 +136,7 @@ export const getColumns = ({ onEdit, onDelete }: ColumnProps) => [
     {
         key: 'salesRevenue',
         header: 'Sales Revenue',
-      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
+        className: 'md:w-1/6 md:max-w-[120px] md:truncate',
         render: (row: Campaign) => (
             <span className="font-medium text-emerald-600 dark:text-emerald-400">
                 EGP {Number(row.salesRevenue || row.salesRevenuePercent || 0).toLocaleString()}
@@ -145,25 +146,25 @@ export const getColumns = ({ onEdit, onDelete }: ColumnProps) => [
     {
         key: 'region1',
         header: 'Region 1',
-      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
+        className: 'md:w-1/6 md:max-w-[120px] md:truncate',
         render: (row: Campaign) => row.region1 || '-',
     },
     {
         key: 'region2',
         header: 'Region 2',
-      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
+        className: 'md:w-1/6 md:max-w-[120px] md:truncate',
         render: (row: Campaign) => row.region2 || '-',
     },
     {
         key: 'region3',
         header: 'Region 3',
-      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
+        className: 'md:w-1/6 md:max-w-[120px] md:truncate',
         render: (row: Campaign) => row.region3 || '-',
     },
     {
         key: 'adSpend',
         header: 'Ad Spend',
-      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
+        className: 'md:w-1/6 md:max-w-[120px] md:truncate',
         render: (row: Campaign) => (
             <span className="text-blue-600 dark:text-blue-400">
                 EGP {Number(row.adSpend || 0).toLocaleString()}
@@ -173,7 +174,7 @@ export const getColumns = ({ onEdit, onDelete }: ColumnProps) => [
     {
         key: 'cpa',
         header: 'CPA',
-      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
+        className: 'md:w-1/6 md:max-w-[120px] md:truncate',
         render: (row: Campaign) => (
             <span className="font-mono">{Number(row.cpa || 0).toFixed(2)}</span>
         ),
@@ -181,7 +182,7 @@ export const getColumns = ({ onEdit, onDelete }: ColumnProps) => [
     {
         key: 'roas',
         header: 'ROAS',
-      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
+        className: 'md:w-1/6 md:max-w-[120px] md:truncate',
         render: (row: Campaign) => (
             <span className="font-semibold">{Number(row.roas || 0).toFixed(2)}x</span>
         ),
@@ -189,7 +190,7 @@ export const getColumns = ({ onEdit, onDelete }: ColumnProps) => [
     {
         key: 'nextSteps',
         header: 'Next Steps',
-      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
+        className: 'md:w-1/6 md:max-w-[120px] md:truncate',
         render: (row: Campaign) => {
             const nextSteps = row.nextSteps;
             const stepColors: Record<string, string> = {
@@ -208,7 +209,7 @@ export const getColumns = ({ onEdit, onDelete }: ColumnProps) => [
     {
         key: 'notes',
         header: 'Notes',
-      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
+        className: 'md:w-1/6 md:max-w-[120px] md:truncate',
         render: (row: Campaign) => (
             <span className="truncate max-w-[150px] inline-block" title={row.notes}>
                 {row.notes || '-'}
@@ -218,7 +219,7 @@ export const getColumns = ({ onEdit, onDelete }: ColumnProps) => [
     {
         key: 'file',
         header: 'File',
-      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
+        className: 'md:w-1/6 md:max-w-[120px] md:truncate',
         render: (row: Campaign) => {
             const fileUrl = row.fileUrl;
             const fileName = row.fileName;
@@ -253,7 +254,7 @@ export const getColumns = ({ onEdit, onDelete }: ColumnProps) => [
     {
         key: 'actions',
         header: 'Actions',
-      className: 'md:w-[1%] md:whitespace-nowrap',
+        className: 'md:w-[1%] md:whitespace-nowrap',
         render: (row: Campaign) => (
             <div className="flex flex-wrap items-center gap-2">
                 <button
@@ -263,14 +264,17 @@ export const getColumns = ({ onEdit, onDelete }: ColumnProps) => [
                 >
                     <Edit2 size={16} />
                 </button>
-                <button
-                    onClick={() => onDelete(row._id)}
-                    className="text-red-500 hover:text-red-700 transition-colors"
-                    title="Delete"
-                >
-                    <Trash2 size={16} />
-                </button>
+                {isAdmin && (
+                    <button
+                        onClick={() => onDelete(row._id)}
+                        className="text-red-500 hover:text-red-700 transition-colors"
+                        title="Delete"
+                    >
+                        <Trash2 size={16} />
+                    </button>
+                )}
             </div>
         ),
     },
 ];
+

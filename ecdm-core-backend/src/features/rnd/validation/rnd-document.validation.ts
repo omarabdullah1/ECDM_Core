@@ -17,3 +17,4 @@ export const updateDocumentSchema = z.object({
 
 export type CreateDocumentInput = z.infer<typeof createDocumentSchema>;
 export type UpdateDocumentInput = z.infer<typeof updateDocumentSchema>;
+

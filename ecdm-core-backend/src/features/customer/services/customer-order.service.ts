@@ -4,6 +4,7 @@ import Feedback from '../models/feedback.model';
 import FollowUp from '../models/follow-up.model';
 import { ICustomerOrderDocument } from '../types/customer-order.types';
 import { FollowUpStatus } from '../types/follow-up.types';
+import WorkOrder from '../../operations/models/work-order.model';
 import { CreateCustomerOrderInput, UpdateCustomerOrderInput } from '../validation/customer-order.validation';
 
 export const create = async (data: CreateCustomerOrderInput): Promise<ICustomerOrderDocument> => {
@@ -49,17 +50,45 @@ export const create = async (data: CreateCustomerOrderInput): Promise<ICustomerO
     return newCustomerOrder;
 };
 
-export const getAll = async (query: Record<string, unknown>) => {
+export const getAll = async (query: Record<string, unknown>, user?: any) => {
     const { page = 1, limit = 10, customerId, deal, salesOrderId } = query;
     const filter: Record<string, unknown> = {};
     if (customerId)    filter.customerId    = customerId;
     if (deal)          filter.deal          = deal;
     if (salesOrderId)  filter.salesOrderId  = salesOrderId;
+
+    // ─── Restricted Access for Operation Members ───
+    if (user?.role && (require('../../../utils/makerChecker').isOperationMember(user.role))) {
+        filter.$or = [
+            { technicianId: user.userId },
+            { engineerId:   user.userId }
+        ];
+    }
+
     const skip = (Number(page) - 1) * Number(limit);
     const [data, total] = await Promise.all([
         CustomerOrder.find(filter)
             .populate('customerId',    'customerId name phone region sector address')
-            .populate('salesOrderId',  'salesOrderId issueDescription quotationStatus finalStatus quotation invoiceId')
+            .populate({
+                path: 'salesOrderId',
+                select: 'salesOrderId issueDescription issue typeOfOrder salesPlatform quotationStatus finalStatus orderStatus quotation invoiceId followUpFirst quotationStatusFirstFollowUp reasonOfQuotation followUpSecond statusSecondFollowUp followUpThird finalStatusThirdFollowUp siteInspectionDate isTechnicalInspectionRequired technicalInspectionDate technicalInspectionDetails notes createdAt salesPerson',
+                populate: [
+                    {
+                        path: 'salesLead',
+                        select: 'issue reason status notes salesPerson date',
+                        populate: { path: 'salesPerson', select: 'firstName lastName email' }
+                    },
+                    {
+                        path: 'salesData',
+                        select: 'issue callOutcome callDate salesPerson notes',
+                        populate: { path: 'salesPerson', select: 'firstName lastName email' }
+                    },
+                    {
+                        path: 'salesPerson',
+                        select: 'firstName lastName email'
+                    }
+                ]
+            })
             .populate('updatedBy',     'name email')
             .populate('salesPersonId', 'firstName lastName fullName commissionPercentage role')
             .populate('technicianId',  'firstName lastName fullName commissionPercentage role')
@@ -73,7 +102,26 @@ export const getAll = async (query: Record<string, unknown>) => {
 export const getById = async (id: string): Promise<ICustomerOrderDocument> => {
     const doc = await CustomerOrder.findById(id)
         .populate('customerId',    'customerId name phone region sector address email company')
-        .populate('salesOrderId',  'salesOrderId issueDescription quotationStatus finalStatus siteInspectionDate quotation invoiceId')
+        .populate({
+            path: 'salesOrderId',
+            select: 'salesOrderId issueDescription issue typeOfOrder salesPlatform quotationStatus finalStatus orderStatus quotation invoiceId followUpFirst quotationStatusFirstFollowUp reasonOfQuotation followUpSecond statusSecondFollowUp followUpThird finalStatusThirdFollowUp siteInspectionDate isTechnicalInspectionRequired technicalInspectionDate technicalInspectionDetails notes createdAt salesPerson',
+            populate: [
+                {
+                    path: 'salesLead',
+                    select: 'issue reason status notes salesPerson date',
+                    populate: { path: 'salesPerson', select: 'firstName lastName email' }
+                },
+                {
+                    path: 'salesData',
+                    select: 'issue callOutcome callDate salesPerson notes',
+                    populate: { path: 'salesPerson', select: 'firstName lastName email' }
+                },
+                {
+                    path: 'salesPerson',
+                    select: 'firstName lastName email'
+                }
+            ]
+        })
         .populate('updatedBy',     'name email')
         .populate('salesPersonId', 'firstName lastName fullName commissionPercentage role')
         .populate('technicianId',  'firstName lastName fullName commissionPercentage role')
@@ -85,6 +133,24 @@ export const getById = async (id: string): Promise<ICustomerOrderDocument> => {
 export const update = async (id: string, data: UpdateCustomerOrderInput): Promise<ICustomerOrderDocument> => {
     const doc = await CustomerOrder.findByIdAndUpdate(id, data, { new: true, runValidators: true });
     if (!doc) throw new AppError('Customer order not found', 404);
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // AUTOMATION: Create Work Order when technician and date are assigned
+    // This defers Work Order creation until operational details are ready.
+    // ═════════════════════════════════════════════════════════════════════════
+    if (doc.technicianId && (doc.actualVisitDate || doc.scheduledVisitDate)) {
+        try {
+            const existingWorkOrder = await WorkOrder.findOne({ customerOrderId: doc._id });
+            if (!existingWorkOrder) {
+                await WorkOrder.create({
+                    customerOrderId: doc._id,
+                });
+                console.log('✅ Work Order auto-created from Customer Order update (Technician & Date set)');
+            }
+        } catch (error) {
+            console.error('⚠️ Failed to auto-create Work Order on Customer Order update:', error);
+        }
+    }
 
     // AUTOMATION: If order is now Approved, create a Follow-Up record (if not already existing)
     if (doc.status === 'Approved') {
@@ -121,3 +187,4 @@ export const bulkDelete = async (ids: string[]): Promise<{ deletedCount: number 
     const result = await CustomerOrder.deleteMany({ _id: { $in: ids } });
     return { deletedCount: result.deletedCount };
 };
+

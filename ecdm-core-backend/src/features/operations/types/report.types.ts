@@ -35,3 +35,4 @@ export interface IReportOperation {
 export interface IReportOperationDocument extends IReportOperation, Document {
     _id: Types.ObjectId;
 }
+

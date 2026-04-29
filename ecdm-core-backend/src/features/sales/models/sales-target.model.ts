@@ -47,3 +47,4 @@ const SalesTarget: Model<ISalesTargetDocument> =
     mongoose.model<ISalesTargetDocument>('SalesTarget', salesTargetSchema);
 
 export default SalesTarget;
+

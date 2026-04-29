@@ -55,3 +55,4 @@ export default function OpsChart({ data }: Props) {
         </div>
     );
 }
+

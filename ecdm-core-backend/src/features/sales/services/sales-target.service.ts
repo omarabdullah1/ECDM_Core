@@ -162,14 +162,26 @@ export const calculatePerformance = async (salespersonId: string, month?: number
             year: targetYear,
         });
 
-        const targetAmount = targetDoc ? targetDoc.targetAmount : 0;
-        console.log('[SalesTargetService] Target found:', targetDoc ? targetDoc.targetAmount : 'none (using 0)');
+        let targetAmount = targetDoc ? targetDoc.targetAmount : 0;
+        
+        // Fallback: If no monthly target record, use the targetSales from User document
+        if (!targetDoc) {
+            const user = await User.findById(userObjectId).select('targetSales');
+            targetAmount = user?.targetSales || 0;
+            console.log('[SalesTargetService] No monthly target doc, falling back to user.targetSales:', targetAmount);
+        } else {
+            console.log('[SalesTargetService] Target found in SalesTarget collection:', targetAmount);
+        }
 
-        // 3. Calculate achieved amount from Sales Orders
-        // An order is considered "Won" if ANY of the three follow-up statuses is 'Accepted'
-        console.log('[SalesTargetService] Looking up won orders for:', userObjectId);
+        // 3. Calculate achieved amount from Sales Orders (filtered by month/year)
+        const startOfMonth = new Date(targetYear, targetMonth - 1, 1);
+        const endOfMonth = new Date(targetYear, targetMonth, 0, 23, 59, 59);
+
+        console.log('[SalesTargetService] Filtering orders between:', startOfMonth, 'and', endOfMonth);
+
         const wonOrders = await SalesOrder.find({
             salesPerson: userObjectId,
+            createdAt: { $gte: startOfMonth, $lte: endOfMonth },
             $or: [
                 { quotationStatusFirstFollowUp: ThirdFollowUpStatus.Accepted },
                 { statusSecondFollowUp: ThirdFollowUpStatus.Accepted },
@@ -203,3 +215,4 @@ export const calculatePerformance = async (salespersonId: string, month?: number
         throw error;
     }
 };
+

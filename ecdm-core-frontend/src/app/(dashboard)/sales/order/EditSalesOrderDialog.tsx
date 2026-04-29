@@ -8,7 +8,7 @@ import toast from 'react-hot-toast';
 import api from '@/lib/axios';
 import { SalesOrder } from './columns';
 import AddQuotationDialog from './AddQuotationDialog';
-import { FieldEditRequest } from '@/components/FieldEditRequest';
+
 import { generateQuotationPDF } from '@/utils/generateQuotationPDF';
 import { useAuthStore } from '@/features/auth/useAuth';
 import {
@@ -47,10 +47,10 @@ interface EditSalesOrderDialogProps {
   onClose: () => void;
   onSuccess: () => void;
   readOnly?: boolean;
+  initialEditMode?: boolean;
 }
 
 interface FormData {
-  salesPlatform: string;
   siteInspectionDate: string;
   isTechnicalInspectionRequired: boolean;
   technicalInspectionDate: string;
@@ -73,7 +73,6 @@ interface FormData {
 const formSchema = z.object({
   issue: z.string().optional(),
   typeOfOrder: z.string().optional(),
-  salesPlatform: z.string().optional(),
   siteInspectionDate: z.string().optional(),
   isTechnicalInspectionRequired: z.boolean(),
   technicalInspectionDate: z.string().optional(), // Optional - only required when checkbox is true
@@ -149,27 +148,28 @@ const formatDateDisplay = (isoDate: string | null | undefined): string => {
 /**
  * Format Sales Person for display: "FirstName LastName" or string ID
  */
-const formatSalesPerson = (sp: string | { firstName?: string; lastName?: string } | null | undefined): string => {
+const formatSalesPerson = (sp: string | { firstName?: string; lastName?: string; email?: string } | null | undefined): string => {
   if (!sp) return '-';
   if (typeof sp === 'string') return sp;
-  const name = `${sp.firstName || ''} ${sp.lastName || ''}`.trim();
-  return name || '-';
+  return sp.email || `${sp.firstName || ''} ${sp.lastName || ''}`.trim() || '-';
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Component
 // ─────────────────────────────────────────────────────────────────────────────
 
-export default function EditSalesOrderDialog({ order, onClose, onSuccess, readOnly = false }: EditSalesOrderDialogProps) {
+export default function EditSalesOrderDialog({ order, onClose, onSuccess, readOnly = false, initialEditMode = false }: EditSalesOrderDialogProps) {
   const [quotationFile, setQuotationFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
   const [showApprovalAlert, setShowApprovalAlert] = useState(false);
   const [showQuotationBuilder, setShowQuotationBuilder] = useState(false);
-  const [internalPreviewMode, setInternalPreviewMode] = useState(true);
+  const [internalPreviewMode, setInternalPreviewMode] = useState(!initialEditMode);
 
   useEffect(() => {
-    setInternalPreviewMode(true);
-  }, [order]);
+    if (order) {
+      setInternalPreviewMode(!initialEditMode);
+    }
+  }, [order, initialEditMode]);
 
   // ═══════════════════════════════════════════════════════════════════
   // OWNERSHIP & READ-ONLY LOGIC
@@ -209,7 +209,6 @@ export default function EditSalesOrderDialog({ order, onClose, onSuccess, readOn
       issue: order.issue || '', // STRICTLY the Order Issue
       typeOfOrder: order.typeOfOrder || '',
       // Smart Inheritance: Fallback to Lead/Data values if Order doesn't have them
-      salesPlatform: order.salesPlatform || (order.salesLead as any)?.salesPlatform || (order.salesData as any)?.salesPlatform || '',
       siteInspectionDate: toDateTimeLocal(order.siteInspectionDate),
       isTechnicalInspectionRequired: (order as any).isTechnicalInspectionRequired || false,
       technicalInspectionDate: toDateTimeLocal((order as any).technicalInspectionDate),
@@ -318,7 +317,6 @@ export default function EditSalesOrderDialog({ order, onClose, onSuccess, readOn
       // ─────────────────────────────────────────────────────────────────────────
       const stringFields = [
         'issue',
-        'salesPlatform',
         'technicalInspectionDetails',
         'reasonOfQuotation',
         'notes'
@@ -540,7 +538,8 @@ export default function EditSalesOrderDialog({ order, onClose, onSuccess, readOn
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
               <DialogTitle>
-                {isReadOnly ? 'View Sales Order (Read-Only)' : 'Edit Sales Order'}
+                {effectivelyReadOnly ? 'View Sales Order' : 'Edit Sales Order'}
+                {isReadOnly && ' (Read-Only)'}
               </DialogTitle>
               <p className="text-xs text-[hsl(var(--muted-foreground))] mt-0.5">
                 Order ID: {order.salesOrderId || order._id}
@@ -559,7 +558,7 @@ export default function EditSalesOrderDialog({ order, onClose, onSuccess, readOn
                 <div className="flex items-center gap-2 pb-2 border-b border-[hsl(var(--border))]">
                   <div className="h-1 w-1 rounded-full bg-[hsl(var(--muted-foreground))]"></div>
                   <h3 className="text-sm font-bold text-[hsl(var(--muted-foreground))] uppercase tracking-wider">
-                    Section A: Customer & Lead Context (Read-Only)
+                    Section A: Customer & Source Context (Read-Only)
                   </h3>
                 </div>
 
@@ -603,38 +602,38 @@ export default function EditSalesOrderDialog({ order, onClose, onSuccess, readOn
 
                   {/* Lead Data */}
                   <div>
-                    <label className={labelCls}>Initial Issue (From Lead)</label>
+                    <label className={labelCls}>Initial Issue (From Source)</label>
                     <div className={readOnlyCls}>{order.salesLead?.issue || order.salesData?.issue || '-'}</div>
                   </div>
 
                   <div>
-                    <label className={labelCls}>Order (From Lead)</label>
-                    <div className={readOnlyCls}>{lead?.order || '-'}</div>
+                    <label className={labelCls}>Source Order Status</label>
+                    <div className={readOnlyCls}>{order.salesLead?.order || order.salesData?.order || '-'}</div>
                   </div>
 
                   <div>
-                    <label className={labelCls}>Reason (From Lead)</label>
-                    <div className={readOnlyCls}>{(lead as any)?.reason || '-'}</div>
+                    <label className={labelCls}>Source Outcome</label>
+                    <div className={readOnlyCls}>{(order.salesLead as any)?.reason || order.salesData?.callOutcome || '-'}</div>
                   </div>
 
                   <div>
-                    <label className={labelCls}>SalesPerson</label>
-                    <div className={readOnlyCls}>{formatSalesPerson(lead?.salesPerson)}</div>
+                    <label className={labelCls}>Source Salesperson</label>
+                    <div className={readOnlyCls}>{formatSalesPerson(order.salesLead?.salesPerson || order.salesData?.salesPerson)}</div>
                   </div>
 
                   <div>
-                    <label className={labelCls}>Date (Lead Creation)</label>
-                    <div className={readOnlyCls}>{formatDateDisplay(lead?.date)}</div>
+                    <label className={labelCls}>Source Creation Date</label>
+                    <div className={readOnlyCls}>{formatDateDisplay(order.salesLead?.date || order.salesData?.callDate || (order.salesData as any)?.createdAt)}</div>
                   </div>
 
                   <div>
-                    <label className={labelCls}>Status (Lead)</label>
-                    <div className={readOnlyCls}>{(lead as any)?.status || '-'}</div>
+                    <label className={labelCls}>Source Status</label>
+                    <div className={readOnlyCls}>{(order.salesLead as any)?.status || order.salesData?.callOutcome || '-'}</div>
                   </div>
 
                   <div className="md:col-span-2 lg:col-span-3">
-                    <label className={labelCls}>Notes (Lead)</label>
-                    <div className={readOnlyCls}>{(lead as any)?.notes || '-'}</div>
+                    <label className={labelCls}>Source Notes</label>
+                    <div className={readOnlyCls}>{(order.salesLead as any)?.notes || order.salesData?.notes || '-'}</div>
                   </div>
                 </div>
               </div>
@@ -655,83 +654,37 @@ export default function EditSalesOrderDialog({ order, onClose, onSuccess, readOn
 
                   <div>
                     <label className={labelCls}>Order Issue / Technical Notes</label>
-                    <div className="flex items-center gap-2 mt-1">
-                      <input
-                        type="text"
-                        placeholder="Describe the operational order issue..."
-                        value={form.watch('issue')}
-                        disabled
-                        className={`${iCls} bg-[hsl(var(--muted))]/50`}
-                      />
-                      <FieldEditRequest
-                        label="Order Issue"
-                        fieldKey="issue"
-                        type="text"
-                        currentValue={form.watch('issue')}
-                        apiEndpoint={`/api/sales/orders/${order._id}`}
-                        onSuccess={onSuccess}
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className={labelCls}>Type Of Order</label>
-                    <div className="flex items-center gap-2 mt-1">
-                      <select
-                        value={form.watch('typeOfOrder')}
-                        disabled
-                        className={`${iCls} bg-[hsl(var(--muted))]/50`}
-                      >
-                        <option value="">Select order type...</option>
-                        <option value="Maintenance">Maintenance</option>
-                        <option value="General supplies">General supplies</option>
-                        <option value="Supply and installation">Supply and installation</option>
-                      </select>
-                      <FieldEditRequest
-                        label="Type Of Order"
-                        fieldKey="typeOfOrder"
-                        type="enum"
-                        options={[
-                          { value: 'Maintenance', label: 'Maintenance' },
-                          { value: 'General supplies', label: 'General supplies' },
-                          { value: 'Supply and installation', label: 'Supply and installation' }
-                        ]}
-                        currentValue={form.watch('typeOfOrder')}
-                        apiEndpoint={`/api/sales/orders/${order._id}`}
-                        onSuccess={onSuccess}
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className={labelCls}>Sales Platform</label>
-                    <div className="flex items-center gap-2 mt-1">
-                      <input
-                        type="text"
-                        placeholder="e.g., Website, Phone, WhatsApp"
-                        value={form.watch('salesPlatform')}
-                        disabled
-                        className={`${iCls} bg-[hsl(var(--muted))]/50`}
-                      />
-                      <FieldEditRequest
-                        label="Sales Platform"
-                        fieldKey="salesPlatform"
-                        currentValue={form.watch('salesPlatform')}
-                        apiEndpoint={`/api/sales/orders/${order._id}`}
-                        onSuccess={onSuccess}
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className={labelCls}>Site Inspection Date</label>
                     <input
-                      type="datetime-local"
-                      {...form.register('siteInspectionDate')}
+                      type="text"
+                      placeholder="Describe the operational order issue..."
+                      {...form.register('issue')}
                       disabled={effectivelyReadOnly}
                       className={iCls}
                     />
                   </div>
+
+                  <div>
+                    <label className={labelCls}>Type Of Order</label>
+                    <select
+                      {...form.register('typeOfOrder')}
+                      disabled={effectivelyReadOnly}
+                      className={iCls}
+                    >
+                      <option value="">Select order type...</option>
+                      <option value="Maintenance">Maintenance</option>
+                      <option value="General supplies">General supplies</option>
+                      <option value="Supply and installation">Supply and installation</option>
+                    </select>
+                  </div>
+
+                  {order.salesData && (
+                    <div>
+                      <label className={labelCls}>Sales Platform</label>
+                      <div className={readOnlyCls}>
+                        {order.salesData.salesPlatform || '-'}
+                      </div>
+                    </div>
+                  )}
 
                   {/* ─── Task 1: Conditional Technical Inspection ────────────── */}
                   <div className="md:col-span-2">
@@ -895,7 +848,7 @@ export default function EditSalesOrderDialog({ order, onClose, onSuccess, readOn
                       <input
                         type="datetime-local"
                         {...form.register('followUpFirst')}
-                        disabled={isReadOnly}
+                        disabled={effectivelyReadOnly}
                         className={iCls}
                       />
                     </div>
@@ -922,7 +875,7 @@ export default function EditSalesOrderDialog({ order, onClose, onSuccess, readOn
                       <textarea
                         placeholder="Reason for quotation status"
                         {...form.register('reasonOfQuotation')}
-                        disabled={isReasonDisabled || isReadOnly}
+                        disabled={isReasonDisabled || effectivelyReadOnly}
                         rows={3}
                         className={iCls}
                       />
@@ -947,7 +900,7 @@ export default function EditSalesOrderDialog({ order, onClose, onSuccess, readOn
                       <input
                         type="datetime-local"
                         {...form.register('followUpSecond')}
-                        disabled={disableSecondFollowUp || isReadOnly}
+                        disabled={disableSecondFollowUp || effectivelyReadOnly}
                         className={`${iCls} ${disableSecondFollowUp ? "bg-gray-100 cursor-not-allowed opacity-70" : ""}`}
                       />
                     </div>
@@ -984,7 +937,7 @@ export default function EditSalesOrderDialog({ order, onClose, onSuccess, readOn
                       <input
                         type="datetime-local"
                         {...form.register('followUpThird')}
-                        disabled={disableThirdFollowUp || isReadOnly}
+                        disabled={disableThirdFollowUp || effectivelyReadOnly}
                         className={`${iCls} ${disableThirdFollowUp ? "bg-gray-100 cursor-not-allowed opacity-70" : ""}`}
                       />
                     </div>
@@ -1107,3 +1060,4 @@ export default function EditSalesOrderDialog({ order, onClose, onSuccess, readOn
     </>
   );
 }
+

@@ -55,3 +55,4 @@ export const bulkDelete = async (ids: string[]): Promise<{ deletedCount: number 
     const result = await SalesFollowUp.deleteMany({ _id: { $in: ids } });
     return { deletedCount: result.deletedCount };
 };
+

@@ -6,7 +6,7 @@ import { useAuthStore } from '@/features/auth/useAuth';
 
 export default function Home() {
   const router = useRouter();
-  const { isAuthenticated, loadUser } = useAuthStore();
+  const { isAuthenticated, user, loadUser } = useAuthStore();
 
   useEffect(() => {
     loadUser().then(() => {
@@ -16,11 +16,30 @@ export default function Home() {
 
   useEffect(() => {
     if (isAuthenticated) {
-      router.replace('/dashboard');
+      const role = user?.role;
+      const adminRoles = ['Admin', 'SuperAdmin', 'Manager'];
+
+      if (adminRoles.includes(role || '')) {
+        router.replace('/dashboard');
+      } else if (role === 'Sales') {
+        router.replace('/sales/leads');
+      } else if (role === 'Marketing') {
+        router.replace('/marketing/leads');
+      } else if (role === 'Operations' || role === 'Maintenance' || role === 'MaintenanceEngineer') {
+        router.replace('/operations/work-order');
+      } else if (role === 'HR') {
+        router.replace('/hr/users');
+      } else if (role === 'Finance') {
+        router.replace('/finance/invoices');
+      } else if (role === 'Customer Service' || role === 'CustomerService') {
+        router.replace('/customer/list');
+      } else {
+        router.replace('/profile');
+      }
     } else {
       router.replace('/login');
     }
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, user, router]);
 
   return (
     <div className="flex h-screen items-center justify-center">
@@ -28,3 +47,4 @@ export default function Home() {
     </div>
   );
 }
+

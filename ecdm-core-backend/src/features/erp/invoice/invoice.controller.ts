@@ -26,3 +26,4 @@ export const remove = async (req: Request, res: Response, next: NextFunction): P
     try { await invoiceService.deleteInvoice(req.params.id as string); sendSuccess(res, null, 'Invoice deleted'); }
     catch (err) { next(err); }
 };
+

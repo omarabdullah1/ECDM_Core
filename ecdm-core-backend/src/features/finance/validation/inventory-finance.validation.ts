@@ -26,3 +26,4 @@ export const updateInventoryFinanceSchema = z.object({
 
 export type CreateInventoryFinanceInput = z.infer<typeof createInventoryFinanceSchema>;
 export type UpdateInventoryFinanceInput = z.infer<typeof updateInventoryFinanceSchema>;
+

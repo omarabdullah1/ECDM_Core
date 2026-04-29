@@ -25,6 +25,11 @@ const auditLogSchema = new Schema<IAuditLogDocument>(
             type: Schema.Types.ObjectId,
             index: true,
         },
+        resourceIdentity: {
+            type: String,
+            trim: true,
+            index: true,
+        },
         details: {
             type: Schema.Types.Mixed,
             default: {},
@@ -53,3 +58,4 @@ auditLogSchema.index({ moduleName: 1, action: 1 });
 
 const AuditLog: Model<IAuditLogDocument> = mongoose.model<IAuditLogDocument>('AuditLog', auditLogSchema);
 export default AuditLog;
+

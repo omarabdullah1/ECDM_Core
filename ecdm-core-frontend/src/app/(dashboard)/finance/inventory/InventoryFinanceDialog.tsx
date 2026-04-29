@@ -451,7 +451,7 @@ export default function InventoryFinanceDialog({
                       {workOrder.partsUsed.map((part: any, idx: number) => (
                         <div key={idx} className="flex justify-between text-xs py-1 border-b border-slate-100 dark:border-slate-800 last:border-0 shadow-sm px-2 bg-white/50 dark:bg-slate-800/50 rounded-lg">
                           <span className="text-slate-600 dark:text-slate-400 font-medium">
-                            {part.priceListId?.itemName || 'Item'} (x{part.quantity})
+                            {part.inventoryId?.itemName || 'Item'} (x{part.quantity})
                           </span>
                           <span className="font-bold text-slate-900 dark:text-white">{formatEGP(part.quantity * (part.unitCost || 0))}</span>
                         </div>
@@ -582,3 +582,5 @@ export default function InventoryFinanceDialog({
     </Dialog>
   );
 }
+
+

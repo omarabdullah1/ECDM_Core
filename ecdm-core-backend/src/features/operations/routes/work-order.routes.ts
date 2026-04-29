@@ -13,8 +13,8 @@ router.use(authenticate);
 router.post('/',           validate(createWorkOrderSchema), ctrl.create);
 router.get('/',            ctrl.getAll);
 router.get('/:id',         ctrl.getById);
-router.put('/:id',         validate(updateWorkOrderSchema), ctrl.update);
-router.delete('/:id',      authorise(UserRole.SuperAdmin, UserRole.Manager), ctrl.remove);
+router.put('/:id',         authorise(UserRole.SuperAdmin, UserRole.Admin, UserRole.Manager, UserRole.Operations, UserRole.Maintenance), validate(updateWorkOrderSchema), ctrl.update);
+router.delete('/:id',      authorise(UserRole.SuperAdmin, UserRole.Admin), ctrl.remove);
 router.post('/bulk-delete', isAdmin, ctrl.bulkDelete);  // Admin-only bulk delete
 
 // Inventory Integration endpoints
@@ -25,3 +25,4 @@ router.get('/pending-inventory', authorise(UserRole.SuperAdmin, UserRole.Manager
 router.post('/:id/rollback-inventory', authorise(UserRole.SuperAdmin, UserRole.Manager), invCtrl.rollbackDeduction);
 
 export default router;
+

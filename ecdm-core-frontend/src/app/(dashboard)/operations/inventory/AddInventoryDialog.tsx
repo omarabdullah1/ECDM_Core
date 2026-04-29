@@ -6,12 +6,12 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
 import { z } from 'zod';
-import { PRICE_LIST_CATEGORIES } from './columns';
+import { INVENTORY_CATEGORIES } from './columns';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 
-interface AddPriceListDialogProps {
+interface AddInventoryDialogProps {
     onClose: () => void;
     onSuccess: () => void;
 }
@@ -35,7 +35,7 @@ const iCls =
 const labelCls =
     'text-xs font-semibold text-[hsl(var(--muted-foreground))] uppercase tracking-wide mb-1.5 block';
 
-export default function AddPriceListDialog({ onClose, onSuccess }: AddPriceListDialogProps) {
+export default function AddInventoryDialog({ onClose, onSuccess }: AddInventoryDialogProps) {
     const [dataSheetFile, setDataSheetFile] = useState<File | null>(null);
     const [saving, setSaving] = useState(false);
 
@@ -79,8 +79,8 @@ export default function AddPriceListDialog({ onClose, onSuccess }: AddPriceListD
             if (values.notes) formData.append('notes', values.notes);
             if (dataSheetFile) formData.append('dataSheet', dataSheetFile);
 
-            await api.post('/operations/price-list', formData);
-            toast.success('Price list item created successfully!');
+            await api.post('/operations/inventory', formData);
+            toast.success('Inventory item created successfully!');
             onSuccess();
             onClose();
         } catch (err: unknown) {
@@ -100,14 +100,14 @@ export default function AddPriceListDialog({ onClose, onSuccess }: AddPriceListD
                     <div className="flex items-center gap-3">
                         <FileText className="h-5 w-5 text-primary" />
                         <div>
-                            <DialogTitle>Add Price List Item</DialogTitle>
+                            <DialogTitle>Add Inventory Item</DialogTitle>
                             <p className="text-[10px] font-medium text-gray-400 mt-0.5 uppercase tracking-widest">Pricing & Inventory Management</p>
                         </div>
                     </div>
                 </DialogHeader>
 
                 <DialogBody>
-                    <form id="add-price-list-form" onSubmit={form.handleSubmit(onSubmit, onError)} className="space-y-6">
+                    <form id="add-inventory-form" onSubmit={form.handleSubmit(onSubmit, onError)} className="space-y-6">
                         <div className="space-y-1">
                             <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Item Name</label>
                             <Input {...form.register('itemName')} placeholder="e.g. Industrial Steel Plate" />
@@ -121,7 +121,7 @@ export default function AddPriceListDialog({ onClose, onSuccess }: AddPriceListD
                                 <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Category</label>
                                 <Select {...form.register('category')}>
                                     <option value="">Select Category...</option>
-                                    {PRICE_LIST_CATEGORIES.map((cat) => (
+                                    {INVENTORY_CATEGORIES.map((cat) => (
                                         <option key={cat} value={cat}>{cat}</option>
                                     ))}
                                 </Select>
@@ -202,11 +202,12 @@ export default function AddPriceListDialog({ onClose, onSuccess }: AddPriceListD
 
                 <DialogFooter>
                     <Button variant="ghost" onClick={onClose} disabled={saving}>Cancel</Button>
-                    <Button type="submit" form="add-price-list-form" disabled={saving}>
-                        {saving ? 'Creating Item...' : 'Add to Price List'}
+                    <Button type="submit" form="add-inventory-form" disabled={saving}>
+                        {saving ? 'Creating Item...' : 'Add to Inventory'}
                     </Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
     );
 }
+

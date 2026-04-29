@@ -63,6 +63,10 @@ const customerSchema = new Schema<ICustomerDocument>(
             type:      String,
             maxlength: [2000, 'Notes cannot exceed 2000 characters'],
         },
+        csPerson: {
+            type:    String,
+            default: '',
+        },
     },
     {
         timestamps: true,
@@ -91,3 +95,4 @@ const Customer: Model<ICustomerDocument> = mongoose.model<ICustomerDocument>('Cu
 // Export as both Customer and Contact for backward compatibility
 export default Customer;
 export { Customer as Contact };
+

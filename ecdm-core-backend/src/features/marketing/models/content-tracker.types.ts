@@ -36,3 +36,4 @@ export interface IContentTracker {
 export interface IContentTrackerDocument extends IContentTracker, Document {
     _id: Types.ObjectId;
 }
+

@@ -14,7 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import toast from 'react-hot-toast';
 import type { SalesLead, OrderOption } from './page';
-import { STATUSES, TYPE_OF_ORDER, SALES_PLATFORM } from './page';
+import { STATUSES, TYPE_OF_ORDER } from './page';
 
 interface EditLeadDialogProps {
     isOpen: boolean;
@@ -23,6 +23,7 @@ interface EditLeadDialogProps {
     lead: SalesLead | null;
     onRequiresApproval: () => void;
     isReadOnly?: boolean;
+    initialEditMode?: boolean;
 }
 
 const blankEdit = {
@@ -34,10 +35,9 @@ const blankEdit = {
     address: '',
     region: '',
     typeOfOrder: '',
-    salesPlatform: '',
 };
 
-export function EditLeadDialog({ isOpen, onClose, onSuccess, lead, onRequiresApproval, isReadOnly = false }: EditLeadDialogProps) {
+export function EditLeadDialog({ isOpen, onClose, onSuccess, lead, onRequiresApproval, isReadOnly = false, initialEditMode = false }: EditLeadDialogProps) {
     const [form, setForm] = useState(blankEdit);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
@@ -45,9 +45,9 @@ export function EditLeadDialog({ isOpen, onClose, onSuccess, lead, onRequiresApp
 
     useEffect(() => {
         if (isOpen) {
-            setInternalReadOnly(true);
+            setInternalReadOnly(!initialEditMode);
         }
-    }, [isOpen]);
+    }, [isOpen, initialEditMode]);
 
     useEffect(() => {
         if (lead) {
@@ -61,7 +61,6 @@ export function EditLeadDialog({ isOpen, onClose, onSuccess, lead, onRequiresApp
                 address: lead.customerId?.address || '',
                 region: lead.customerId?.region || '',
                 typeOfOrder: lead.typeOfOrder || '',
-                salesPlatform: lead.salesPlatform || '',
             });
         }
     }, [lead]);
@@ -137,21 +136,12 @@ export function EditLeadDialog({ isOpen, onClose, onSuccess, lead, onRequiresApp
                         </div>
 
                         {/* Editable fields */}
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-1">
-                                <label className="block text-[10px] font-bold uppercase text-gray-400 tracking-widest">Type Of Order</label>
-                                <Select value={form.typeOfOrder} onChange={u('typeOfOrder')} disabled={isReadOnly || internalReadOnly}>
-                                    <option value="">Select...</option>
-                                    {TYPE_OF_ORDER.map(t => <option key={t} value={t}>{t}</option>)}
-                                </Select>
-                            </div>
-                            <div className="space-y-1">
-                                <label className="block text-[10px] font-bold uppercase text-gray-400 tracking-widest">Sales Platform</label>
-                                <Select value={form.salesPlatform} onChange={u('salesPlatform')} disabled={isReadOnly || internalReadOnly}>
-                                    <option value="">Select...</option>
-                                    {SALES_PLATFORM.map(p => <option key={p} value={p}>{p}</option>)}
-                                </Select>
-                            </div>
+                        <div className="space-y-1">
+                            <label className="block text-[10px] font-bold uppercase text-gray-400 tracking-widest">Type Of Order</label>
+                            <Select value={form.typeOfOrder} onChange={u('typeOfOrder')} disabled={isReadOnly || internalReadOnly}>
+                                <option value="">Select...</option>
+                                {TYPE_OF_ORDER.map(t => <option key={t} value={t}>{t}</option>)}
+                            </Select>
                         </div>
 
                         <div className="space-y-1">
@@ -211,13 +201,14 @@ export function EditLeadDialog({ isOpen, onClose, onSuccess, lead, onRequiresApp
                 </DialogBody>
 
                 <DialogFooter>
-                    <Button variant="ghost" onClick={onClose} disabled={saving}>
+                    <Button type="button" variant="ghost" onClick={onClose} disabled={saving}>
                         {(isReadOnly || internalReadOnly) ? 'Close' : 'Cancel'}
                     </Button>
                     {(isReadOnly || internalReadOnly) ? (
                         !isReadOnly && (
                             <Button
-                                onClick={() => setInternalReadOnly(false)}
+                                type="button"
+                                onClick={(e) => { e.preventDefault(); setInternalReadOnly(false); }}
                                 className="bg-[hsl(var(--primary))] hover:opacity-90"
                             >
                                 Edit Lead
@@ -233,3 +224,4 @@ export function EditLeadDialog({ isOpen, onClose, onSuccess, lead, onRequiresApp
         </Dialog>
     );
 }
+

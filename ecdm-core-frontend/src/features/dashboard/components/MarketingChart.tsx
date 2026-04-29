@@ -42,3 +42,4 @@ export default function MarketingChart({ campaigns }: Props) {
         </div>
     );
 }
+

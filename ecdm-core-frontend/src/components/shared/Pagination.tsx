@@ -83,3 +83,4 @@ export function Pagination({ currentPage, totalItems, itemsPerPage, onPageChange
     </div>
   );
 }
+

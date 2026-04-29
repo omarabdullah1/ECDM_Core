@@ -220,3 +220,4 @@ export const getColumns = ({ onEdit, onDelete }: ColumnProps) => [
         ),
     },
 ];
+

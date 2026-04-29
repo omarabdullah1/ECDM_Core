@@ -16,6 +16,7 @@ interface PageProps {
 export default function ProjectDetailPage({ params }: PageProps) {
     const router = useRouter();
     const { user } = useAuthStore();
+    const isAdmin = user?.role === 'SuperAdmin' || user?.role === 'Admin';
     const resolvedParams = use(params);
     const projectId = resolvedParams.id;
     const [activeTab, setActiveTab] = useState('board');
@@ -360,62 +361,64 @@ export default function ProjectDetailPage({ params }: PageProps) {
                     <div className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-4">
                         <div className="flex items-center justify-between mb-4">
                             <h2 className="text-lg font-semibold">Project Kanban Board</h2>
-                            <Dialog open={isOpen} onOpenChange={setIsOpen}>
-                                <DialogTrigger asChild>
-                                    <button className="rounded-lg bg-[hsl(var(--primary))] px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 transition-opacity">
-                                        <Plus size={14} className="inline mr-1" />
-                                        Add Task
-                                    </button>
-                                </DialogTrigger>
-                                <DialogContent>
-                                    <DialogHeader>
-                                        <DialogTitle>Create New Project Task</DialogTitle>
-                                    </DialogHeader>
-                                    <form onSubmit={handleSubmit} className="space-y-4">
-                                        <div>
-                                            <label className="block text-sm font-medium mb-2">Task Title</label>
-                                            <input type="text" value={formData.title} onChange={handleInputChange('title')} className={iCls} required />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium mb-2">Description</label>
-                                            <textarea value={formData.description} onChange={handleInputChange('description')} className={iCls} rows={4} required />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium mb-2">Status</label>
-                                            <select value={formData.status} onChange={handleInputChange('status')} className={iCls}>
-                                                <option value="To Do">To Do</option>
-                                                <option value="In Progress">In Progress</option>
-                                                <option value="Done">Done</option>
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium mb-2">Assign To</label>
-                                            <select value={formData.assigneeId} onChange={handleInputChange('assigneeId')} className={iCls}>
-                                                <option value="">Unassigned</option>
-                                                {project?.members?.map((member: any) => {
-                                                    const memberId = typeof member === 'object' ? member._id : member;
-                                                    const memberName = typeof member === 'object' && member.firstName && member.lastName 
-                                                        ? `${member.firstName} ${member.lastName}` 
-                                                        : typeof member === 'object' && member.name 
-                                                        ? member.name 
-                                                        : 'Unknown User';
-                                                    return (
-                                                        <option key={memberId} value={memberId}>
-                                                            {memberName}
-                                                        </option>
-                                                    );
-                                                })}
-                                            </select>
-                                        </div>
-                                        <div className="flex gap-2 justify-end">
-                                            <button type="button" onClick={() => setIsOpen(false)} className="rounded-xl border px-4 py-2 text-sm font-medium">Cancel</button>
-                                            <button type="submit" disabled={isLoading} className="rounded-xl bg-[hsl(var(--primary))] px-4 py-2 text-sm font-medium text-white disabled:opacity-50">
-                                                {isLoading ? 'Creating...' : 'Create Task'}
-                                            </button>
-                                        </div>
-                                    </form>
-                                </DialogContent>
-                            </Dialog>
+                            {isAdmin && (
+                                <Dialog open={isOpen} onOpenChange={setIsOpen}>
+                                    <DialogTrigger asChild>
+                                        <button className="rounded-lg bg-[hsl(var(--primary))] px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 transition-opacity">
+                                            <Plus size={14} className="inline mr-1" />
+                                            Add Task
+                                        </button>
+                                    </DialogTrigger>
+                                    <DialogContent>
+                                        <DialogHeader>
+                                            <DialogTitle>Create New Project Task</DialogTitle>
+                                        </DialogHeader>
+                                        <form onSubmit={handleSubmit} className="space-y-4">
+                                            <div>
+                                                <label className="block text-sm font-medium mb-2">Task Title</label>
+                                                <input type="text" value={formData.title} onChange={handleInputChange('title')} className={iCls} required />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium mb-2">Description</label>
+                                                <textarea value={formData.description} onChange={handleInputChange('description')} className={iCls} rows={4} required />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium mb-2">Status</label>
+                                                <select value={formData.status} onChange={handleInputChange('status')} className={iCls}>
+                                                    <option value="To Do">To Do</option>
+                                                    <option value="In Progress">In Progress</option>
+                                                    <option value="Done">Done</option>
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium mb-2">Assign To</label>
+                                                <select value={formData.assigneeId} onChange={handleInputChange('assigneeId')} className={iCls}>
+                                                    <option value="">Unassigned</option>
+                                                    {project?.members?.map((member: any) => {
+                                                        const memberId = typeof member === 'object' ? member._id : member;
+                                                        const memberName = typeof member === 'object' && member.firstName && member.lastName 
+                                                            ? `${member.firstName} ${member.lastName}` 
+                                                            : typeof member === 'object' && member.name 
+                                                            ? member.name 
+                                                            : 'Unknown User';
+                                                        return (
+                                                            <option key={memberId} value={memberId}>
+                                                                {memberName}
+                                                            </option>
+                                                        );
+                                                    })}
+                                                </select>
+                                            </div>
+                                            <div className="flex gap-2 justify-end">
+                                                <button type="button" onClick={() => setIsOpen(false)} className="rounded-xl border px-4 py-2 text-sm font-medium">Cancel</button>
+                                                <button type="submit" disabled={isLoading} className="rounded-xl bg-[hsl(var(--primary))] px-4 py-2 text-sm font-medium text-white disabled:opacity-50">
+                                                    {isLoading ? 'Creating...' : 'Create Task'}
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </DialogContent>
+                                </Dialog>
+                            )}
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -444,7 +447,7 @@ export default function ProjectDetailPage({ params }: PageProps) {
                                                     </div>
                                                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                                         <button onClick={() => setEditingTask(task)} className="text-gray-400 hover:text-blue-600 p-1"><Edit2 className="w-3.5 h-3.5" /></button>
-                                                        <button onClick={() => handleDeleteTask(task._id)} className="text-gray-400 hover:text-red-600 p-1"><Trash2 className="w-3.5 h-3.5" /></button>
+                                                        {isAdmin && <button onClick={() => handleDeleteTask(task._id)} className="text-gray-400 hover:text-red-600 p-1"><Trash2 className="w-3.5 h-3.5" /></button>}
                                                     </div>
                                                 </div>
                                             </Card>
@@ -478,7 +481,7 @@ export default function ProjectDetailPage({ params }: PageProps) {
                                                     </div>
                                                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                                         <button onClick={() => setEditingTask(task)} className="text-gray-400 hover:text-blue-600 p-1"><Edit2 className="w-3.5 h-3.5" /></button>
-                                                        <button onClick={() => handleDeleteTask(task._id)} className="text-gray-400 hover:text-red-600 p-1"><Trash2 className="w-3.5 h-3.5" /></button>
+                                                        {isAdmin && <button onClick={() => handleDeleteTask(task._id)} className="text-gray-400 hover:text-red-600 p-1"><Trash2 className="w-3.5 h-3.5" /></button>}
                                                     </div>
                                                 </div>
                                             </Card>
@@ -512,7 +515,7 @@ export default function ProjectDetailPage({ params }: PageProps) {
                                                     </div>
                                                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                                         <button onClick={() => setEditingTask(task)} className="text-gray-400 hover:text-blue-600 p-1"><Edit2 className="w-3.5 h-3.5" /></button>
-                                                        <button onClick={() => handleDeleteTask(task._id)} className="text-gray-400 hover:text-red-600 p-1"><Trash2 className="w-3.5 h-3.5" /></button>
+                                                        {isAdmin && <button onClick={() => handleDeleteTask(task._id)} className="text-gray-400 hover:text-red-600 p-1"><Trash2 className="w-3.5 h-3.5" /></button>}
                                                     </div>
                                                 </div>
                                             </Card>

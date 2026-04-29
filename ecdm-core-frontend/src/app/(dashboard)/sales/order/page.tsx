@@ -10,12 +10,13 @@ import EditSalesOrderDialog from './EditSalesOrderDialog';
 import AddQuotationDialog from './AddQuotationDialog';
 import { SalesPerformanceWidget } from '@/components/sales/SalesPerformanceWidget';
 import { useAuthStore } from '@/features/auth/useAuth';
+import { SearchableSelect } from '@/components/ui/SearchableSelect';
 
 const iCls = 'flex h-9 w-full rounded-md border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] px-3 py-1 text-sm shadow-sm transition-all placeholder:text-[hsl(var(--muted-foreground))] focus-visible:outline-none focus-visible:border-[hsl(var(--primary))]/50 focus-visible:ring-[3px] focus-visible:ring-[hsl(var(--primary))]/10';
 const Q_STATUSES = ['Draft', 'Sent', 'Approved', 'Rejected', 'Revised'];
 const F_STATUSES = ['Pending', 'Won', 'Lost', 'Cancelled'];
 const TYPE_OF_ORDER = ['Maintenance', 'General supplies', 'Supply and installation'];
-const blank = { salesLead: '', quotationStatus: 'Draft', finalStatus: '', totalAmount: '', notes: '' };
+const blank = { customer: '', issueDescription: '' };
 
 export default function SalesOrderPage() {
   const { user } = useAuthStore();
@@ -36,6 +37,8 @@ export default function SalesOrderPage() {
   const [delId, setDelId] = useState<string | null>(null);
   const [salesLeads, setSalesLeads] = useState<any[]>([]);
   const [loadingLeads, setLoadingLeads] = useState(false);
+  const [customers, setCustomers] = useState<any[]>([]);
+  const [loadingCustomers, setLoadingCustomers] = useState(false);
   const lim = 10; const tp = Math.ceil(total / lim);
 
   // Fetch sales leads for dropdown
@@ -53,6 +56,23 @@ export default function SalesOrderPage() {
       })
       .finally(() => setLoadingLeads(false));
   }, []);
+
+  // Fetch customers for dropdown
+  useEffect(() => {
+    setLoadingCustomers(true);
+    api.get('/shared/customers?limit=1000')
+      .then(res => {
+        const custs = res.data?.data?.data || res.data?.data || [];
+        setCustomers(Array.isArray(custs) ? custs : []);
+      })
+      .catch((err) => { 
+        console.error('Failed to fetch customers:', err);
+        toast.error('Failed to load customers for dropdown');
+        setCustomers([]); 
+      })
+      .finally(() => setLoadingCustomers(false));
+  }, []);
+
 
   const fetch_ = useCallback(async () => {
     setLoading(true);
@@ -73,7 +93,14 @@ export default function SalesOrderPage() {
   }, [page, fStatus, fFinalStatus, fTypeOfOrder]);
   useEffect(() => { fetch_(); }, [fetch_]);
 
-  const openC = () => { setEditing(null); setForm(blank); setError(''); setModal(true); setPreviewMode(false); };
+  const openC = () => { 
+    setEditing(null); 
+    setForm(blank); 
+    setError(''); 
+    setModal(true); 
+    setPreviewMode(false); 
+  };
+
   const openE = (r: SalesOrder, isPreview = false) => {
     setEditing(r);
     setPreviewMode(isPreview);
@@ -83,6 +110,19 @@ export default function SalesOrderPage() {
     ev.preventDefault(); setSaving(true); setError('');
     const pl: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(form)) { if (v !== '') pl[k] = k === 'totalAmount' ? Number(v) : v; }
+    
+    // Ensure customer and issueDescription are present for new orders
+    if (!editing) {
+      pl.customer = form.customer;
+      pl.issueDescription = form.issueDescription;
+
+      if (!pl.customer || !pl.issueDescription) {
+        setError('Customer and Issue Description are required.');
+        setSaving(false);
+        return;
+      }
+    }
+
     try {
       if (editing) await api.put(`/sales/orders/${editing._id}`, pl);
       else await api.post('/sales/orders', pl);
@@ -210,7 +250,7 @@ export default function SalesOrderPage() {
       {editing && (
         <EditSalesOrderDialog
           order={editing}
-          readOnly={previewMode}
+          initialEditMode={!previewMode}
           onClose={() => { setEditing(null); setPreviewMode(false); }}
           onSuccess={() => {
             fetch_();
@@ -248,36 +288,38 @@ export default function SalesOrderPage() {
             
             <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
               <form onSubmit={save} className="space-y-4">
-              {/* Sales Lead Dropdown */}
-              <div>
-                <label className="block text-xs font-medium mb-1 text-[hsl(var(--muted-foreground))]">Sales Lead</label>
-                <select 
-                  required 
-                  value={form.salesLead} 
-                  onChange={u('salesLead')} 
-                  className={iCls}
-                >
-                  <option value="">Select Sales Lead...</option>
-                  {loadingLeads ? (
-                    <option disabled>Loading leads...</option>
-                  ) : salesLeads.length === 0 ? (
-                    <option disabled>No leads available</option>
-                  ) : (
-                    salesLeads.map(lead => (
-                      <option key={lead._id} value={lead._id}>
-                        {lead.customerId?.name || 'Customer'} - {(lead.issue || '').substring(0, 40)}{(lead.issue || '').length > 40 ? '...' : ''}
-                      </option>
-                    ))
-                  )}
-                </select>
-              </div>
-              <select required value={form.quotationStatus} onChange={u('quotationStatus')} className={iCls}>{Q_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}</select>
-              <select value={form.finalStatus} onChange={u('finalStatus')} className={iCls}><option value="">Final Status (optional)</option>{F_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}</select>
-              <input type="number" placeholder="Total Amount (EGP)" value={form.totalAmount} onChange={u('totalAmount')} className={iCls} />
-              <div className="flex gap-3 pt-6 mt-4 border-t border-[hsl(var(--border))]/30">
-                <button type="submit" disabled={saving} className="flex-1 rounded-md bg-[hsl(var(--primary))] py-2 text-sm font-medium text-[hsl(var(--primary-foreground))] shadow-sm hover:opacity-90 transition-all focus-visible:outline-none disabled:opacity-60">{saving ? 'Saving…' : 'Save'}</button>
-                <button type="button" onClick={() => setModal(false)} className="flex-1 rounded-md border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] py-2 text-sm font-medium shadow-sm transition-all hover:bg-[hsl(var(--accent))] focus-visible:outline-none">Cancel</button>
-              </div>
+                <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                  <div>
+                    <label className="block text-xs font-medium mb-1 text-[hsl(var(--muted-foreground))]">Select Customer</label>
+                    <SearchableSelect
+                      options={customers.map(c => ({
+                        id: c._id,
+                        label: c.name,
+                        subLabel: c.customerId
+                      }))}
+                      value={form.customer}
+                      onChange={(val) => setForm(p => ({ ...p, customer: val }))}
+                      placeholder="Select Customer..."
+                      loading={loadingCustomers}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium mb-1 text-[hsl(var(--muted-foreground))]">Order Issue / Description</label>
+                    <textarea 
+                      required
+                      placeholder="Describe the issue or purpose of this order..."
+                      value={form.issueDescription}
+                      onChange={u('issueDescription')}
+                      className={`${iCls} h-32 py-3 resize-none`}
+                    />
+                  </div>
+                </div>
+
+                {error && <p className="text-xs text-red-500 font-medium px-1">{error}</p>}
+                <div className="flex gap-3 pt-6 mt-4 border-t border-[hsl(var(--border))]/30">
+                  <button type="submit" disabled={saving} className="flex-1 rounded-md bg-[hsl(var(--primary))] py-2 text-sm font-medium text-[hsl(var(--primary-foreground))] shadow-sm hover:opacity-90 transition-all focus-visible:outline-none disabled:opacity-60">{saving ? 'Saving…' : 'Save'}</button>
+                  <button type="button" onClick={() => setModal(false)} className="flex-1 rounded-md border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] py-2 text-sm font-medium shadow-sm transition-all hover:bg-[hsl(var(--accent))] focus-visible:outline-none">Cancel</button>
+                </div>
             </form>
             </div>
           </div>
@@ -295,4 +337,5 @@ export default function SalesOrderPage() {
     </div>
   );
 }
+
 

@@ -22,7 +22,7 @@ export interface IInvoiceItem {
     quantity: number;
     unitPrice: number;
     inventoryItemId?: Types.ObjectId; // Link to inventory for stock deduction (Legacy)
-    priceListId?: Types.ObjectId;     // Link to PriceList for stock deduction
+    inventoryId?: Types.ObjectId;     // Link to Inventory for stock deduction
 }
 
 export interface IInvoice {
@@ -47,3 +47,5 @@ export interface IInvoice {
 export interface IInvoiceDocument extends IInvoice, Document {
     _id: Types.ObjectId;
 }
+
+

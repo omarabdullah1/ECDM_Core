@@ -71,6 +71,7 @@ router.patch(
 // ─────────────────────────────────────────────────────────────────────────────
 // DELETE
 // ─────────────────────────────────────────────────────────────────────────────
-router.delete('/:id', authorise(UserRole.SuperAdmin, UserRole.Manager), ctrl.remove);
+router.delete('/:id', authorise(UserRole.SuperAdmin, UserRole.Admin), ctrl.remove);
 
 export default router;
+

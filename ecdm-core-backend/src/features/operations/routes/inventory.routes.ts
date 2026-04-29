@@ -2,14 +2,14 @@ import { Router } from 'express';
 import { authenticate, authorise, isAdmin } from '../../../middlewares/auth.middleware';
 import { handleDataSheetUpload, uploadDataSheet } from '../../../middlewares/upload.middleware';
 import { UserRole } from '../../auth/auth.types';
-import * as ctrl from '../controllers/price-list.controller';
+import * as ctrl from '../controllers/inventory.controller';
 
 /**
- * Price List Routes
+ * Inventory Routes
  *
- * Base Path: /api/operations/price-list
+ * Base Path: /api/operations/inventory
  *
- * POST   /                 Create new price list item (multipart/form-data)
+ * POST   /                 Create new Inventory item (multipart/form-data)
  * GET    /                 Get all items (paginated, filterable)
  * GET    /:id              Get item by ID
  * PUT    /:id              Update item (multipart/form-data)
@@ -28,6 +28,10 @@ router.post('/bulk-delete', isAdmin, ctrl.bulkDelete);
 // ─── CREATE ───────────────────────────────────────────────────────────────────
 router.post('/', uploadDataSheet.single('dataSheet'), handleDataSheetUpload, ctrl.create);
 
+// ─── PRICE MANAGEMENT (must be before /:id to avoid route clash) ─────────────
+router.patch('/price/:id', authorise(UserRole.Finance, UserRole.Admin, UserRole.SuperAdmin), ctrl.updatePrice);
+router.post('/confirm-price/:id', authorise(UserRole.Admin, UserRole.SuperAdmin), ctrl.confirmPrice);
+
 // ─── READ ─────────────────────────────────────────────────────────────────────
 router.get('/', ctrl.getAll);
 router.get('/:id', ctrl.getById);
@@ -37,6 +41,7 @@ router.put('/:id', uploadDataSheet.single('dataSheet'), handleDataSheetUpload, c
 router.patch('/:id', uploadDataSheet.single('dataSheet'), handleDataSheetUpload, ctrl.update);
 
 // ─── DELETE ───────────────────────────────────────────────────────────────────
-router.delete('/:id', authorise(UserRole.SuperAdmin, UserRole.Manager), ctrl.remove);
+router.delete('/:id', authorise(UserRole.SuperAdmin, UserRole.Admin), ctrl.remove);
 
 export default router;
+

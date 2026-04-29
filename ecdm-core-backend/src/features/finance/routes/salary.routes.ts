@@ -17,10 +17,11 @@ router.get('/:id', authorise(UserRole.SuperAdmin, UserRole.Manager, UserRole.HR)
 router.get('/employee/:employeeId', authorise(UserRole.SuperAdmin, UserRole.Manager, UserRole.HR), ctrl.getByEmployee);
 router.post('/', authorise(UserRole.SuperAdmin, UserRole.Manager, UserRole.HR), validate(createSalarySchema), ctrl.create);
 router.put('/:id', authorise(UserRole.SuperAdmin, UserRole.Manager, UserRole.HR), validate(updateSalarySchema), ctrl.update);
-router.delete('/:id', authorise(UserRole.SuperAdmin, UserRole.Manager), ctrl.remove);
+router.delete('/:id', authorise(UserRole.SuperAdmin, UserRole.Admin), ctrl.remove);
 
 // Auto-generation endpoints (Finance/HR only)
 router.post('/generate/employee', authorise(UserRole.SuperAdmin, UserRole.Manager, UserRole.HR), ctrl.generateEmployeeSalary);
 router.post('/generate/monthly', authorise(UserRole.SuperAdmin, UserRole.Manager, UserRole.HR), ctrl.generateMonthlySalaries);
 
 export default router;
+

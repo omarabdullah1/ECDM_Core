@@ -31,3 +31,4 @@ export default function LangSwitcher({ className = '', variant = 'full' }: Props
         </button>
     );
 }
+

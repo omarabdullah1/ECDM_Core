@@ -103,17 +103,18 @@ export const update = async (id: string, data: UpdateSalesLeadInput, userInfo?: 
     const previousOrder = doc.order;
     const newOrder = data.order;
 
-    // Auto-tracking: if sales rep is adding issue, order, or reason
-    const isAddingWorkData = data.issue || data.order || data.reason;
+    // Auto-tracking: if sales rep is making any modification (interaction)
+    const hasModifications = Object.keys(data).length > 0;
 
-    // Set salesPerson from user info if adding work data and not already assigned
+    // Set salesPerson from user info if modifying lead and not already assigned
     // This tracks who first started working on this lead
-    if (isAddingWorkData && userInfo && !doc.salesPerson) {
+    if (hasModifications && userInfo && !doc.salesPerson) {
         (data as any).salesPerson = userInfo.email || userInfo.name || '';
     }
 
-    // Auto-set status from New to Contacted if updating work fields
-    if (doc.status === SalesLeadStatus.New && isAddingWorkData) {
+    // Auto-set status from New to Contacted if updating ANYTHING
+    // This ensures leads don't stay "New" once someone starts interacting with them
+    if (doc.status === SalesLeadStatus.New && hasModifications && (!data.status || data.status === SalesLeadStatus.New)) {
         (data as any).status = SalesLeadStatus.Contacted;
     }
 
@@ -140,7 +141,7 @@ export const update = async (id: string, data: UpdateSalesLeadInput, userInfo?: 
                 await existingOrder.save();
             } else {
                 console.log(`📦 Creating new SalesOrder for Lead ${doc._id}`);
-                
+
                 // Map salesPerson from Lead (email/name string) to User ObjectId
                 let salesPersonId = null;
                 if (doc.salesPerson) {
@@ -183,7 +184,7 @@ export const update = async (id: string, data: UpdateSalesLeadInput, userInfo?: 
                 await existingOrder.save();
             } else {
                 console.log(`✨ Creating Archived SalesOrder for Lead ${doc._id}`);
-                
+
                 let salesPersonId = null;
                 if (doc.salesPerson) {
                     const user = await User.findOne({
@@ -219,7 +220,7 @@ export const update = async (id: string, data: UpdateSalesLeadInput, userInfo?: 
     // Apply SalesLead-specific updates
     Object.assign(doc, data);
     if (newOrder !== undefined) doc.order = newOrder;
-    
+
     await doc.save();
 
     // Re-populate to return fresh data with updated Customer fields
@@ -240,3 +241,4 @@ export const bulkDelete = async (ids: string[]): Promise<{ deletedCount: number 
     const result = await SalesLead.deleteMany({ _id: { $in: ids } });
     return { deletedCount: result.deletedCount };
 };
+

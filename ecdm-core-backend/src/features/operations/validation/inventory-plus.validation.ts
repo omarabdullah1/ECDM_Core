@@ -1,7 +1,7 @@
 import { z } from 'zod';
-import { InventoryItemStatus, MovementType } from '../types/inventory-plus.types';
+import { inventoryItemStatus, MovementType } from '../types/inventory-plus.types';
 
-// ── InventoryItem ─────────────────────────────────────────────────────────────
+// ── inventoryItem ─────────────────────────────────────────────────────────────
 const supplierDetailsSchema = z.object({
     supplierId:   z.string().optional(),
     supplierName: z.string().min(1, 'Supplier name is required'),
@@ -9,11 +9,11 @@ const supplierDetailsSchema = z.object({
     address:      z.string().optional(),
 });
 
-export const createInventoryItemSchema = z.object({
+export const createinventoryItemSchema = z.object({
     itemName:        z.string().min(1, 'Item name is required'),
     stockNumber:     z.string().min(1, 'Stock number is required'),
     stockCount:      z.number().int().min(0),
-    status:          z.nativeEnum(InventoryItemStatus).optional(),
+    status:          z.nativeEnum(inventoryItemStatus).optional(),
     price:           z.number().min(0),
     purchaseOrders:  z.array(z.string()).optional(),
     startDate:       z.string().optional(),
@@ -23,9 +23,9 @@ export const createInventoryItemSchema = z.object({
     notes:           z.string().optional(),
 });
 
-export const updateInventoryItemSchema = createInventoryItemSchema.partial();
-export type CreateInventoryItemInput = z.infer<typeof createInventoryItemSchema>;
-export type UpdateInventoryItemInput = z.infer<typeof updateInventoryItemSchema>;
+export const updateinventoryItemSchema = createinventoryItemSchema.partial();
+export type CreateinventoryItemInput = z.infer<typeof createinventoryItemSchema>;
+export type UpdateinventoryItemInput = z.infer<typeof updateinventoryItemSchema>;
 
 // ── Category ──────────────────────────────────────────────────────────────────
 export const createCategorySchema = z.object({
@@ -70,3 +70,5 @@ export const createStockMovementSchema = z.object({
 export const updateStockMovementSchema = createStockMovementSchema.partial();
 export type CreateStockMovementInput = z.infer<typeof createStockMovementSchema>;
 export type UpdateStockMovementInput = z.infer<typeof updateStockMovementSchema>;
+
+

@@ -76,3 +76,4 @@ attendanceSchema.index({ employeeId: 1, date: 1 }, { unique: true }); // Prevent
 const Attendance: Model<IAttendanceDocument> = mongoose.model<IAttendanceDocument>('Attendance', attendanceSchema);
 
 export default Attendance;
+

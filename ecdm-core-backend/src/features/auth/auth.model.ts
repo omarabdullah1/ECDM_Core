@@ -102,6 +102,24 @@ const userSchema = new Schema<IUserDocument>(
             min: 0,
             max: 100,
         },
+        workStartTime: {
+            type: String,
+            default: '09:00',
+            trim: true,
+        },
+        workEndTime: {
+            type: String,
+            default: '17:00',
+            trim: true,
+        },
+        gracePeriod: {
+            type: Number,
+            default: 15, // 15 minutes default
+        },
+        halfDayThreshold: {
+            type: Number,
+            default: 4.5, // 4.5 hours default
+        },
         refreshToken: {
             type: String,
             select: false,
@@ -173,3 +191,4 @@ userSchema.methods.comparePassword = async function (
 const User: Model<IUserDocument> = mongoose.model<IUserDocument>('User', userSchema);
 
 export default User;
+

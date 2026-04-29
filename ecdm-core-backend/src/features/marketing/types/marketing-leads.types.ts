@@ -87,3 +87,4 @@ export interface ISheetSyncConfig {
     sheetRange: string;
     serviceAccountJson: string;
 }
+

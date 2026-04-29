@@ -1,6 +1,6 @@
 import { AppError } from '../../../utils/apiError';
 import PurchaseOrder, { PurchaseOrderStatus } from '../models/purchase-order.model';
-import { adjustStock } from './price-list.service';
+import { adjustStock, receiveStockAndCost } from './inventory.service';
 import mongoose from 'mongoose';
 
 /**
@@ -30,7 +30,7 @@ export const create = async (data: any, createdBy: string) => {
 
 // ─── READ ALL ─────────────────────────────────────────────────────────────────
 
-export const getAll = async (query: any) => {
+export const getAll = async (query: any, user?: any) => {
     const { page = 1, limit = 10, status, supplierName } = query;
     const skip = (Number(page) - 1) * Number(limit);
 
@@ -38,11 +38,21 @@ export const getAll = async (query: any) => {
     if (status) filter.status = status;
     if (supplierName) filter.supplierName = { $regex: supplierName, $options: 'i' };
 
+    // ─── Restricted Access for Operation Members ───
+    if (user?.role && (require('../../../utils/makerChecker').isOperationMember(user.role))) {
+        filter.$or = [
+            { createdBy:         user.userId },
+            { receivedBy:        user.userId },
+            { financeApprovedBy: user.userId }
+        ];
+    }
+
     const [data, total] = await Promise.all([
         PurchaseOrder.find(filter)
             .populate('createdBy', 'firstName lastName')
             .populate('financeApprovedBy', 'firstName lastName')
             .populate('receivedBy', 'firstName lastName')
+            .populate('items.inventoryId')
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(Number(limit)),
@@ -65,7 +75,7 @@ export const getAll = async (query: any) => {
 export const getById = async (id: string) => {
     const po = await PurchaseOrder.findById(id)
         .populate('createdBy', 'firstName lastName')
-        .populate('items.priceListId');
+        .populate('items.inventoryId');
     if (!po) throw new AppError('Purchase Order not found', 404);
     return po;
 };
@@ -78,6 +88,14 @@ export const approveByFinance = async (id: string, userId: string) => {
 
     if (po.status !== PurchaseOrderStatus.PendingFinance) {
         throw new AppError(`Cannot approve PO in ${po.status} status`, 400);
+    }
+
+    if (!po.supplierName) {
+        throw new AppError('Please edit the PO and add a Supplier Name before approving.', 400);
+    }
+    
+    if (po.items.some(item => !item.unitPrice || item.unitPrice <= 0)) {
+        throw new AppError('Please edit the PO and set the Unit Price for all items before approving.', 400);
     }
 
     po.status = PurchaseOrderStatus.ApprovedFinance;
@@ -103,9 +121,9 @@ export const confirmReceipt = async (id: string, userId: string) => {
     po.receivedBy = new mongoose.Types.ObjectId(userId);
     po.receivedAt = new Date();
 
-    // 2. Increment stock for each item in PriceList
+    // 2. Increment stock and update cost for each item in Inventory
     for (const item of po.items) {
-        await adjustStock(item.priceListId.toString(), item.quantity);
+        await receiveStockAndCost(item.inventoryId.toString(), item.quantity, item.unitPrice);
     }
 
     await po.save();
@@ -125,11 +143,12 @@ export const reject = async (id: string, userId: string) => {
 
 // ─── UPDATE ───────────────────────────────────────────────────────────────────
 
-export const update = async (id: string, data: any) => {
+export const update = async (id: string, data: any, user?: any) => {
     const po = await PurchaseOrder.findById(id);
     if (!po) throw new AppError('Purchase Order not found', 404);
 
-    if (po.status !== PurchaseOrderStatus.PendingFinance) {
+    const isAdmin = ['Admin', 'SuperAdmin'].includes(user?.role);
+    if (po.status !== PurchaseOrderStatus.PendingFinance && !isAdmin) {
         throw new AppError(`Cannot update Purchase Order in ${po.status} status`, 400);
     }
 
@@ -150,7 +169,7 @@ export const update = async (id: string, data: any) => {
 
     const updated = await PurchaseOrder.findByIdAndUpdate(id, data, { new: true })
         .populate('createdBy', 'firstName lastName')
-        .populate('items.priceListId');
+        .populate('items.inventoryId');
         
     return updated;
 };
@@ -168,3 +187,5 @@ export const remove = async (id: string) => {
     await PurchaseOrder.findByIdAndDelete(id);
     return { id };
 };
+
+

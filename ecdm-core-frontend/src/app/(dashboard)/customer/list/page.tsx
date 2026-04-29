@@ -6,6 +6,7 @@ import { Users, Eye, X, Clock, TrendingUp, ShoppingCart, FileText, Edit } from '
 import { DataTable } from '@/components/ui/DataTable';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { useAuthStore } from '@/features/auth/useAuth';
+import { cn } from '@/lib/utils';
 import EditCustomerDialog from './EditCustomerDialog';
 
 interface Customer {
@@ -20,6 +21,7 @@ interface Customer {
   company?: string;
   isNonPotential?: boolean;
   createdAt: string;
+  csPerson?: string;
 }
 
 interface HistoryItem {
@@ -59,8 +61,27 @@ export default function CustomerListPage() {
   const [editModal, setEditModal] = useState(false);
   const [customerToEdit, setCustomerToEdit] = useState<Customer | null>(null);
 
-  // Check if user is Admin (SuperAdmin or Manager)
-  const isAdmin = user?.role === 'SuperAdmin' || user?.role === 'Manager';
+  // Check roles
+  const isCS = user?.role === 'Customer Service' || user?.role === 'CustomerService';
+  const isAdminOrManager = user?.role === 'SuperAdmin' || user?.role === 'Admin' || user?.role === 'Manager';
+
+  const canEdit = (row: Customer | null) => {
+    if (!row) return false;
+    if (isAdminOrManager) return true;
+    if (isCS) {
+      if (!row.csPerson) return true; // Unlocked
+      if (row.csPerson === user?.email) return true; // Owner
+    }
+    return false;
+  };
+
+  const isNew = (dateStr: string) => {
+    const createdDate = new Date(dateStr);
+    const now = new Date();
+    const diffTime = Math.abs(now.getTime() - createdDate.getTime());
+    const diffDays = diffTime / (1000 * 60 * 60 * 24);
+    return diffDays <= 1; // Last 24 hours
+  };
 
   const lim = 10;
   const tp = Math.ceil(total / lim);
@@ -126,7 +147,12 @@ export default function CustomerListPage() {
       header: 'Name',
       className: 'md:w-auto md:max-w-[150px] md:truncate',
       render: (row: Customer) => (
-        <span className="font-medium">{row.name}</span>
+        <div className="flex items-center gap-2">
+          <span className="font-medium">{row.name}</span>
+          {isNew(row.createdAt) && (
+            <span className="bg-blue-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md animate-pulse">NEW</span>
+          )}
+        </div>
       ),
     },
     {
@@ -175,6 +201,16 @@ export default function CustomerListPage() {
       ),
     },
     {
+      key: 'csPerson',
+      header: 'CS Person',
+      className: 'hidden xl:table-cell md:w-1/6 md:max-w-[120px] md:truncate',
+      render: (row: Customer) => (
+        <span className="text-xs text-[hsl(var(--muted-foreground))] italic truncate max-w-[150px] block" title={row.csPerson}>
+          {row.csPerson || '—'}
+        </span>
+      ),
+    },
+    {
       key: 'createdAt',
       header: 'Created',
       className: 'md:w-1/6 md:max-w-[120px] md:truncate',
@@ -187,37 +223,44 @@ export default function CustomerListPage() {
   ];
 
   // ─── Row Actions ──────────────────────────────────────────────────────────────
-  const renderActions = (row: Customer) => (
-    <div className="flex flex-wrap items-center gap-2">
-      {isAdmin && (
+  const renderActions = (row: Customer) => {
+    const editAllowed = canEdit(row);
+    
+    return (
+      <div className="flex flex-wrap items-center gap-2">
         <button
           onClick={() => {
             setCustomerToEdit(row);
             setEditModal(true);
           }}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 transition-colors"
-          title="Edit customer (Admin only)"
+          className={cn(
+            "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors",
+            editAllowed 
+              ? "bg-blue-500/10 text-blue-600 hover:bg-blue-500/20" 
+              : "bg-orange-500/10 text-orange-600 hover:bg-orange-500/20"
+          )}
+          title={editAllowed ? "Edit customer" : "View only (Locked by another CS)"}
         >
-          <Edit className="h-3.5 w-3.5" />
-          Edit
+          {editAllowed ? <Edit className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+          {editAllowed ? 'Edit' : 'Preview'}
         </button>
-      )}
-      <Link
-        href={`/customer/list/${row._id}`}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))] hover:bg-[hsl(var(--primary))]/20 transition-colors"
-      >
-        <FileText className="h-3.5 w-3.5" />
-        Report
-      </Link>
-      <button
-        onClick={() => openHistory(row)}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-[hsl(var(--muted))] hover:bg-[hsl(var(--muted))]/80 transition-colors"
-      >
-        <Clock className="h-3.5 w-3.5" />
-        History
-      </button>
-    </div>
-  );
+        <Link
+          href={`/customer/list/${row._id}`}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))] hover:bg-[hsl(var(--primary))]/20 transition-colors"
+        >
+          <FileText className="h-3.5 w-3.5" />
+          Report
+        </Link>
+        <button
+          onClick={() => openHistory(row)}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-[hsl(var(--muted))] hover:bg-[hsl(var(--muted))]/80 transition-colors"
+        >
+          <Clock className="h-3.5 w-3.5" />
+          History
+        </button>
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-6 pb-8">
@@ -365,7 +408,7 @@ export default function CustomerListPage() {
       {editModal && customerToEdit && (
         <EditCustomerDialog
           customer={customerToEdit}
-          readOnly={!isAdmin}
+          readOnly={!canEdit(customerToEdit)}
           onClose={() => {
             setEditModal(false);
             setCustomerToEdit(null);
@@ -380,3 +423,4 @@ export default function CustomerListPage() {
     </div>
   );
 }
+

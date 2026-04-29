@@ -7,7 +7,7 @@ import toast from 'react-hot-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
-interface PriceListOption {
+interface InventoryOption {
     _id: string;
     itemName: string;
     availableQuantity: number;
@@ -21,39 +21,38 @@ interface AddPurchaseOrderDialogProps {
 }
 
 export default function AddPurchaseOrderDialog({ onClose, onSuccess }: AddPurchaseOrderDialogProps) {
-    const [priceList, setPriceList] = useState<PriceListOption[]>([]);
-    const [supplierName, setSupplierName] = useState('');
-    const [selectedItems, setSelectedItems] = useState<{ priceListId: string, itemName: string, quantity: number, unitPrice: number, total: number }[]>([]);
+    const [Inventory, setInventory] = useState<InventoryOption[]>([]);
+    const [selectedItems, setSelectedItems] = useState<{ inventoryId: string, itemName: string, quantity: number, unitPrice: number, total: number }[]>([]);
     const [saving, setSaving] = useState(false);
-    const [loadingPriceList, setLoadingPriceList] = useState(true);
+    const [loadingInventory, setLoadingInventory] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
 
     useEffect(() => {
-        const fetchPriceList = async () => {
+        const fetchInventory = async () => {
             try {
-                const { data } = await api.get('/operations/price-list?limit=1000');
-                setPriceList(data.data.data || []);
+                const { data } = await api.get('/operations/inventory?limit=1000');
+                setInventory(data.data.data || []);
             } catch (err) {
-                toast.error('Failed to load price list');
+                toast.error('Failed to load Inventory');
             } finally {
-                setLoadingPriceList(false);
+                setLoadingInventory(false);
             }
         };
-        fetchPriceList();
+        fetchInventory();
     }, []);
 
-    const lowStockItems = priceList.filter(item => (item.availableQuantity ?? 0) <= (item.minStockLevel ?? 5));
-    const filteredPriceList = priceList.filter(item => 
+    const lowStockItems = Inventory.filter(item => (item.availableQuantity ?? 0) <= (item.minStockLevel ?? 5));
+    const filteredInventory = Inventory.filter(item => 
         item.itemName.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    const addItem = (item: PriceListOption) => {
-        if (selectedItems.find(si => si.priceListId === item._id)) {
+    const addItem = (item: InventoryOption) => {
+        if (selectedItems.find(si => si.inventoryId === item._id)) {
             toast.error('Item already added');
             return;
         }
         setSelectedItems([...selectedItems, {
-            priceListId: item._id,
+            inventoryId: item._id,
             itemName: item.itemName,
             quantity: 1,
             unitPrice: item.unitPrice || 0,
@@ -62,12 +61,12 @@ export default function AddPurchaseOrderDialog({ onClose, onSuccess }: AddPurcha
     };
 
     const removeItem = (id: string) => {
-        setSelectedItems(selectedItems.filter(si => si.priceListId !== id));
+        setSelectedItems(selectedItems.filter(si => si.inventoryId !== id));
     };
 
     const updateItem = (id: string, field: 'quantity' | 'unitPrice', value: number) => {
         setSelectedItems(selectedItems.map(si => {
-            if (si.priceListId === id) {
+            if (si.inventoryId === id) {
                 const updated = { ...si, [field]: value };
                 updated.total = updated.quantity * updated.unitPrice;
                 return updated;
@@ -77,13 +76,11 @@ export default function AddPurchaseOrderDialog({ onClose, onSuccess }: AddPurcha
     };
 
     const onSubmit = async () => {
-        if (!supplierName) return toast.error('Supplier name is required');
         if (selectedItems.length === 0) return toast.error('Add at least one item');
 
         setSaving(true);
         try {
             await api.post('/operations/purchase-orders', {
-                supplierName,
                 items: selectedItems
             });
             toast.success('Purchase Order created successfully!');
@@ -96,7 +93,6 @@ export default function AddPurchaseOrderDialog({ onClose, onSuccess }: AddPurcha
         }
     };
 
-    const totalAmount = selectedItems.reduce((acc, curr) => acc + curr.total, 0);
 
     return (
         <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
@@ -122,7 +118,7 @@ export default function AddPurchaseOrderDialog({ onClose, onSuccess }: AddPurcha
                                 Low Stock Suggestions
                             </label>
                             <div className="space-y-2">
-                                {loadingPriceList ? (
+                                {loadingInventory ? (
                                     <p className="text-xs text-gray-400">Loading catalog...</p>
                                 ) : lowStockItems.length === 0 ? (
                                     <p className="text-xs text-gray-400 italic">No critically low items found.</p>
@@ -159,7 +155,7 @@ export default function AddPurchaseOrderDialog({ onClose, onSuccess }: AddPurcha
                                 />
                             </div>
                             <div className="max-h-[200px] overflow-y-auto space-y-1 pr-1">
-                                {filteredPriceList.map(item => (
+                                {filteredInventory.map(item => (
                                     <button
                                         key={item._id}
                                         onClick={() => addItem(item)}
@@ -175,16 +171,6 @@ export default function AddPurchaseOrderDialog({ onClose, onSuccess }: AddPurcha
 
                     {/* Right Side: PO Details */}
                     <div className="md:col-span-3 space-y-6 overflow-y-auto">
-                        <div className="space-y-1">
-                            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Supplier Name</label>
-                            <Input 
-                                value={supplierName}
-                                onChange={(e) => setSupplierName(e.target.value)}
-                                placeholder="e.g. Acme Industrial Supplies"
-                                className="h-12 font-bold text-base"
-                            />
-                        </div>
-
                         <div className="space-y-3">
                             <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Selected Items</label>
                             {selectedItems.length === 0 ? (
@@ -195,7 +181,7 @@ export default function AddPurchaseOrderDialog({ onClose, onSuccess }: AddPurcha
                             ) : (
                                 <div className="space-y-3">
                                     {selectedItems.map((item, idx) => (
-                                        <div key={item.priceListId} className="flex gap-4 items-end bg-gray-50/50 p-4 rounded-2xl border border-gray-100 animate-in slide-in-from-right-2 fade-in" style={{ animationDelay: `${idx * 50}ms` }}>
+                                        <div key={item.inventoryId} className="flex gap-4 items-end bg-gray-50/50 p-4 rounded-2xl border border-gray-100 animate-in slide-in-from-right-2 fade-in" style={{ animationDelay: `${idx * 50}ms` }}>
                                             <div className="flex-1 min-w-0">
                                                 <p className="text-xs font-black uppercase text-gray-400 mb-2 truncate" title={item.itemName}>{item.itemName}</p>
                                                 <div className="flex gap-4">
@@ -205,24 +191,14 @@ export default function AddPurchaseOrderDialog({ onClose, onSuccess }: AddPurcha
                                                             type="number" 
                                                             min="1" 
                                                             value={item.quantity ?? ''} 
-                                                            onChange={(e) => updateItem(item.priceListId, 'quantity', Number(e.target.value))}
-                                                            className="h-9 px-3 text-sm font-bold"
-                                                        />
-                                                    </div>
-                                                    <div className="space-y-1 flex-1">
-                                                        <label className="text-[9px] font-bold text-gray-400 uppercase">Expected Unit Price ($)</label>
-                                                        <Input 
-                                                            type="number" 
-                                                            step="0.01" 
-                                                            value={item.unitPrice ?? ''} 
-                                                            onChange={(e) => updateItem(item.priceListId, 'unitPrice', Number(e.target.value))}
+                                                            onChange={(e) => updateItem(item.inventoryId, 'quantity', Number(e.target.value))}
                                                             className="h-9 px-3 text-sm font-bold"
                                                         />
                                                     </div>
                                                 </div>
                                             </div>
                                             <button 
-                                                onClick={() => removeItem(item.priceListId)}
+                                                onClick={() => removeItem(item.inventoryId)}
                                                 className="p-2.5 rounded-xl hover:bg-red-50 text-gray-300 hover:text-red-500 transition-colors mb-0.5"
                                             >
                                                 <Trash2 className="w-4 h-4" />
@@ -230,10 +206,7 @@ export default function AddPurchaseOrderDialog({ onClose, onSuccess }: AddPurcha
                                         </div>
                                     ))}
                                     
-                                    <div className="flex justify-between items-center p-4 bg-[hsl(var(--primary))]/5 border border-[hsl(var(--primary))]/10 rounded-2xl">
-                                        <span className="text-xs font-black uppercase text-primary">Estimated Grand Total</span>
-                                        <span className="text-xl font-black text-primary">${totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                                    </div>
+
                                 </div>
                             )}
                         </div>
@@ -254,3 +227,5 @@ export default function AddPurchaseOrderDialog({ onClose, onSuccess }: AddPurcha
         </Dialog>
     );
 }
+
+

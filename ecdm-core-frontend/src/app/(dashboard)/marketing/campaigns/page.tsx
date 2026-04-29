@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFoo
 import { Pagination } from '@/components/shared/Pagination';
 import { getColumns, type Campaign } from './columns';
 import toast from 'react-hot-toast';
+import { useAuthStore } from '@/features/auth/useAuth';
 
 const CAMPAIGN_STATUSES = ['Previous', 'Current', 'Future', ''];
 const NEXT_STEPS = ['Analyse', 'Pause', 'Stop', 'Continue', ''];
@@ -306,9 +307,13 @@ export default function CampaignResultsPage() {
         }
     };
 
+    const { user } = useAuthStore();
+    const isAdmin = user?.role === 'SuperAdmin' || user?.role === 'Admin';
+
     const columns = getColumns({
         onEdit: (c: Campaign) => openEdit(c, 'edit'),
         onDelete: (id: string) => setDelId(id),
+        isAdmin
     });
 
     return (
@@ -833,4 +838,5 @@ export default function CampaignResultsPage() {
         </div>
     );
 }
+
 

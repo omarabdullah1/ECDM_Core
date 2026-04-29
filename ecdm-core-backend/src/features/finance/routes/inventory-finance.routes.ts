@@ -23,9 +23,10 @@ router.post('/', authorise(UserRole.SuperAdmin, UserRole.Manager, UserRole.Admin
 router.put('/:id', authorise(UserRole.SuperAdmin, UserRole.Manager, UserRole.Admin), validate(updateInventoryFinanceSchema), ctrl.update);
 
 // DELETE inventory finance record - Manager, SuperAdmin only
-router.delete('/:id', authorise(UserRole.SuperAdmin, UserRole.Manager), ctrl.remove);
+router.delete('/:id', authorise(UserRole.SuperAdmin, UserRole.Admin), ctrl.remove);
 
 // POST generate invoice from Work Order - Admin, Manager, SuperAdmin only
 router.post('/generate-invoice/:id', authorise(UserRole.SuperAdmin, UserRole.Manager, UserRole.Admin), ctrl.generateInvoice);
 
 export default router;
+

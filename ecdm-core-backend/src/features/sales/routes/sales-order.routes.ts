@@ -15,7 +15,8 @@ router.get('/:id',         authorise(UserRole.SuperAdmin, UserRole.Manager, User
 // File upload routes: Multer handles multipart/form-data, no JSON validation middleware
 router.put('/:id',         authorise(UserRole.SuperAdmin, UserRole.Manager, UserRole.Sales), uploadQuotation.single('quotationFile'), handleQuotationUpload, ctrl.update);
 router.patch('/:id',       authorise(UserRole.SuperAdmin, UserRole.Manager, UserRole.Sales), uploadQuotation.single('quotationFile'), handleQuotationUpload, ctrl.update);
-router.delete('/:id',      authorise(UserRole.SuperAdmin, UserRole.Manager), ctrl.remove);
+router.delete('/:id',      authorise(UserRole.SuperAdmin, UserRole.Admin), ctrl.remove);
 router.post('/bulk-delete', isAdmin, ctrl.bulkDelete);  // Admin-only bulk delete
 
 export default router;
+

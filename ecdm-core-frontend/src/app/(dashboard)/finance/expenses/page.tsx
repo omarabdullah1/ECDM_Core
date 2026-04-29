@@ -79,7 +79,7 @@ export default function ExpensesPage() {
   const isAdding = modalOpen && !selectedExpense;
 
   // Selection data
-  const [inventoryItems, setInventoryItems] = useState<any[]>([]);
+  const [InventoryItems, setInventoryItems] = useState<any[]>([]);
   const [employeeItems, setEmployeeItems] = useState<any[]>([]);
   const [loadingSelections, setLoadingSelections] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -89,10 +89,10 @@ export default function ExpensesPage() {
     if (modalOpen) {
       setLoadingSelections(true);
       Promise.all([
-        api.get('/operations/price-list?limit=1000').catch(() => ({ data: [] })),
+        api.get('/operations/inventory?limit=1000').catch(() => ({ data: [] })),
         api.get('/hr/users?limit=1000').catch(() => ({ data: [] }))
-      ]).then(([priceListRes, employeesRes]) => {
-        const pItems = priceListRes.data?.data || priceListRes.data || [];
+      ]).then(([InventoryRes, employeesRes]) => {
+        const pItems = InventoryRes.data?.data || InventoryRes.data || [];
         const eItems = employeesRes.data?.data || employeesRes.data || [];
         setInventoryItems(Array.isArray(pItems) ? pItems : []);
         setEmployeeItems(Array.isArray(eItems) ? eItems : []);
@@ -589,10 +589,10 @@ export default function ExpensesPage() {
                     <option value="">Select Spare Part (Optional)</option>
                     {loadingSelections ? (
                       <option disabled>Loading items...</option>
-                    ) : inventoryItems.length === 0 ? (
+                    ) : InventoryItems.length === 0 ? (
                       <option disabled>No items available</option>
                     ) : (
-                      inventoryItems
+                      InventoryItems
                         .map(item => (
                           <option key={item._id} value={item.sparePartsId || item._id}>
                             {item.itemName} ({item.sparePartsId})
@@ -712,4 +712,7 @@ const initialFormData: ExpenseFormData = {
   paidBy: '',
   employeeId: '',
   notes: ''
-};
+};
+
+
+

@@ -47,6 +47,7 @@ const followUpSchema = new Schema<IFollowUpDocument>(
         
         // Tracking
         updatedBy:     { type: Schema.Types.ObjectId, ref: 'User' },  // User who last modified this record
+        csPerson:      { type: String, default: '' }, // Email of the CS person who first modified this record
     },
     { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } },
 );
@@ -87,3 +88,4 @@ followUpSchema.index({ solvedIssue:     1 });
 
 const FollowUp: Model<IFollowUpDocument> = mongoose.model<IFollowUpDocument>('FollowUp', followUpSchema);
 export default FollowUp;
+

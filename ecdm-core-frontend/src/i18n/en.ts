@@ -37,6 +37,7 @@ const en: Translations = {
     salesData: 'Sales Data',
     salesFollowUps: 'Sales Follow-ups',
     salesOrders: 'Sales Orders',
+    myCustomers: 'My Customers',
     nonPotential: 'Non-Potential',
     customer: 'Customer Services',
     customersList: 'Customers List',
@@ -50,6 +51,8 @@ const en: Translations = {
     salaries: 'Salaries',
     operations: 'Operations',
     workOrder: 'Work Orders',
+    inventory: 'Inventory',
+    inventoryFinance: 'Inventory Finance',
     priceList: 'Price List',
     purchaseOrder: 'Purchase Orders',
     reportOperation: 'Performance Reports',
@@ -156,6 +159,10 @@ const en: Translations = {
     cannotUndo: 'This action cannot be undone.',
     prev: '← Prev',
     next: 'Next →',
+    csPerson: 'CS Person',
+    createdAt: 'Created At',
+    preview: 'Preview',
+    locked: 'Locked',
   },
   dashboard: {
     activeClientsCustomers: 'Active Clients & Customers',
@@ -371,7 +378,7 @@ const en: Translations = {
       deleteMsg: 'This action cannot be undone.',
       notesPlaceholder: 'Customer comments…',
     },
-    inventoryItems: {
+    InventoryItems: {
       title: 'Inventory Items',
       subtitle: 'Spare parts & stock management',
       addBtn: '+ New Item',
@@ -493,3 +500,5 @@ const en: Translations = {
 };
 
 export default en;
+
+

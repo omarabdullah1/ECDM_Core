@@ -1,10 +1,17 @@
 import { Request, Response, NextFunction } from 'express';
 import * as svc from '../services/inventory-plus.service';
 import { sendSuccess } from '../../../utils/apiResponse';
+import { AppError } from '../../../utils/apiError';
+import { isOperationMember } from '../../../utils/makerChecker';
 
-// ── InventoryItem ─────────────────────────────────────────────────────────────
+// ── inventoryItem ─────────────────────────────────────────────────────────────
 export const createItem = async (req: Request, res: Response, next: NextFunction) => {
-    try { sendSuccess(res, { item: await svc.createItem(req.body) }, 'Inventory item created', 201); }
+    try { 
+        if (isOperationMember(req.user?.role)) {
+            throw new AppError('Operation members do not have permission to create records.', 403);
+        }
+        sendSuccess(res, { item: await svc.createItem(req.body) }, 'Inventory item created', 201); 
+    }
     catch (e) { next(e); }
 };
 export const getAllItems = async (req: Request, res: Response, next: NextFunction) => {
@@ -16,17 +23,32 @@ export const getItemById = async (req: Request, res: Response, next: NextFunctio
     catch (e) { next(e); }
 };
 export const updateItem = async (req: Request, res: Response, next: NextFunction) => {
-    try { sendSuccess(res, { item: await svc.updateItem(String(req.params.id), req.body) }, 'Inventory item updated'); }
+    try { 
+        if (isOperationMember(req.user?.role)) {
+            throw new AppError('Operation members do not have permission to modify records. Preview only.', 403);
+        }
+        sendSuccess(res, { item: await svc.updateItem(String(req.params.id), req.body) }, 'Inventory item updated'); 
+    }
     catch (e) { next(e); }
 };
 export const removeItem = async (req: Request, res: Response, next: NextFunction) => {
-    try { await svc.deleteItem(String(req.params.id)); sendSuccess(res, null, 'Inventory item deleted'); }
+    try { 
+        if (isOperationMember(req.user?.role)) {
+            throw new AppError('Operation members do not have permission to delete records.', 403);
+        }
+        await svc.deleteItem(String(req.params.id)); sendSuccess(res, null, 'Inventory item deleted'); 
+    }
     catch (e) { next(e); }
 };
 
 // ── Category ──────────────────────────────────────────────────────────────────
 export const createCategory = async (req: Request, res: Response, next: NextFunction) => {
-    try { sendSuccess(res, { item: await svc.createCategory(req.body) }, 'Category created', 201); }
+    try { 
+        if (isOperationMember(req.user?.role)) {
+            throw new AppError('Operation members do not have permission to create categories.', 403);
+        }
+        sendSuccess(res, { item: await svc.createCategory(req.body) }, 'Category created', 201); 
+    }
     catch (e) { next(e); }
 };
 export const getAllCategories = async (req: Request, res: Response, next: NextFunction) => {
@@ -38,17 +60,32 @@ export const getCategoryById = async (req: Request, res: Response, next: NextFun
     catch (e) { next(e); }
 };
 export const updateCategory = async (req: Request, res: Response, next: NextFunction) => {
-    try { sendSuccess(res, { item: await svc.updateCategory(String(req.params.id), req.body) }, 'Category updated'); }
+    try { 
+        if (isOperationMember(req.user?.role)) {
+            throw new AppError('Operation members do not have permission to modify categories.', 403);
+        }
+        sendSuccess(res, { item: await svc.updateCategory(String(req.params.id), req.body) }, 'Category updated'); 
+    }
     catch (e) { next(e); }
 };
 export const removeCategory = async (req: Request, res: Response, next: NextFunction) => {
-    try { await svc.deleteCategory(String(req.params.id)); sendSuccess(res, null, 'Category deleted'); }
+    try { 
+        if (isOperationMember(req.user?.role)) {
+            throw new AppError('Operation members do not have permission to delete categories.', 403);
+        }
+        await svc.deleteCategory(String(req.params.id)); sendSuccess(res, null, 'Category deleted'); 
+    }
     catch (e) { next(e); }
 };
 
 // ── Product ───────────────────────────────────────────────────────────────────
 export const createProduct = async (req: Request, res: Response, next: NextFunction) => {
-    try { sendSuccess(res, { item: await svc.createProduct(req.body) }, 'Product created', 201); }
+    try { 
+        if (isOperationMember(req.user?.role)) {
+            throw new AppError('Operation members do not have permission to create products.', 403);
+        }
+        sendSuccess(res, { item: await svc.createProduct(req.body) }, 'Product created', 201); 
+    }
     catch (e) { next(e); }
 };
 export const getAllProducts = async (req: Request, res: Response, next: NextFunction) => {
@@ -60,17 +97,32 @@ export const getProductById = async (req: Request, res: Response, next: NextFunc
     catch (e) { next(e); }
 };
 export const updateProduct = async (req: Request, res: Response, next: NextFunction) => {
-    try { sendSuccess(res, { item: await svc.updateProduct(String(req.params.id), req.body) }, 'Product updated'); }
+    try { 
+        if (isOperationMember(req.user?.role)) {
+            throw new AppError('Operation members do not have permission to modify products.', 403);
+        }
+        sendSuccess(res, { item: await svc.updateProduct(String(req.params.id), req.body) }, 'Product updated'); 
+    }
     catch (e) { next(e); }
 };
 export const removeProduct = async (req: Request, res: Response, next: NextFunction) => {
-    try { await svc.deleteProduct(String(req.params.id)); sendSuccess(res, null, 'Product deleted'); }
+    try { 
+        if (isOperationMember(req.user?.role)) {
+            throw new AppError('Operation members do not have permission to delete products.', 403);
+        }
+        await svc.deleteProduct(String(req.params.id)); sendSuccess(res, null, 'Product deleted'); 
+    }
     catch (e) { next(e); }
 };
 
 // ── StockMovement ─────────────────────────────────────────────────────────────
 export const createStockMovement = async (req: Request, res: Response, next: NextFunction) => {
-    try { sendSuccess(res, { item: await svc.createStockMovement(req.body) }, 'Stock movement recorded', 201); }
+    try { 
+        if (isOperationMember(req.user?.role)) {
+            throw new AppError('Operation members do not have permission to record stock movements.', 403);
+        }
+        sendSuccess(res, { item: await svc.createStockMovement(req.body) }, 'Stock movement recorded', 201); 
+    }
     catch (e) { next(e); }
 };
 export const getAllStockMovements = async (req: Request, res: Response, next: NextFunction) => {
@@ -85,6 +137,9 @@ export const getStockMovementById = async (req: Request, res: Response, next: Ne
 // ── Bulk Delete Operations (Admin-only) ───────────────────────────────────────
 export const bulkDeleteItems = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+        if (isOperationMember(req.user?.role)) {
+            throw new AppError('Operation members do not have permission to delete records.', 403);
+        }
         const { ids } = req.body;
         if (!ids || !Array.isArray(ids) || ids.length === 0) {
             sendSuccess(res, null, 'Missing or invalid ids array', 400);
@@ -118,3 +173,5 @@ export const bulkDeleteProducts = async (req: Request, res: Response, next: Next
         sendSuccess(res, { deletedCount: result.deletedCount }, `Successfully deleted ${result.deletedCount} products`);
     } catch (e) { next(e); }
 };
+
+

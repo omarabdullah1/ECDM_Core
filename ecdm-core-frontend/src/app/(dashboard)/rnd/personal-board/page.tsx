@@ -11,6 +11,7 @@ import { API_BASE_URL } from '@/lib/constants';
 export default function PersonalBoardPage() {
     const router = useRouter();
     const { user } = useAuthStore();
+    const isAdmin = user?.role === 'SuperAdmin' || user?.role === 'Admin';
     const [isOpen, setIsOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [tasks, setTasks] = useState<any[]>([]);
@@ -364,13 +365,15 @@ export default function PersonalBoardPage() {
                                             >
                                                 <Edit2 className="w-3.5 h-3.5" />
                                             </button>
-                                            <button 
-                                                onClick={() => handleDeleteTask(task._id)}
-                                                className="text-gray-400 hover:text-red-600 p-1"
-                                                title="Delete task"
-                                            >
-                                                <Trash2 className="w-3.5 h-3.5" />
-                                            </button>
+                                            {isAdmin && (
+                                                <button 
+                                                    onClick={() => handleDeleteTask(task._id)}
+                                                    className="text-gray-400 hover:text-red-600 p-1"
+                                                    title="Delete task"
+                                                >
+                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
                                 </Card>
@@ -585,3 +588,4 @@ export default function PersonalBoardPage() {
         </div>
     );
 }
+

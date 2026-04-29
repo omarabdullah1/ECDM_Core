@@ -2,9 +2,9 @@ import mongoose, { Document, Model, Schema } from 'mongoose';
 import { getNextSequence } from '../../shared/models/counter.model';
 
 /**
- * PriceList Model — Operations Module
+ * Inventory Model — Operations Module
  *
- * Manages the company price list for spare parts, general supplies,
+ * Manages the company Inventory for spare parts, general supplies,
  * and supply-and-installation services.
  * Uses auto-generated sequential IDs (PL-1001, PL-1002, …)
  */
@@ -13,7 +13,7 @@ import { getNextSequence } from '../../shared/models/counter.model';
 // TypeScript Interface
 // ─────────────────────────────────────────────────────────────────────────────
 
-export interface IPriceListDocument extends Document {
+export interface IInventoryDocument extends Document {
     sparePartsId: string;
     itemName: string;
     specification: string;
@@ -21,6 +21,11 @@ export interface IPriceListDocument extends Document {
     dataSheetFileName: string;
     category: 'Maintenance' | 'General supply' | 'Supply and installation';
     unitPrice: number;
+    pendingUnitPrice: number;
+    priceStatus: 'Pending' | 'Confirmed';
+    priceConfirmedBy?: mongoose.Types.ObjectId;
+    priceConfirmedAt?: Date;
+    cost: number;
     availableQuantity: number;
     minStockLevel: number;
     notes: string;
@@ -33,7 +38,7 @@ export interface IPriceListDocument extends Document {
 // Mongoose Schema
 // ─────────────────────────────────────────────────────────────────────────────
 
-const priceListSchema = new Schema<IPriceListDocument>(
+const InventorySchema = new Schema<IInventoryDocument>(
     {
         sparePartsId: {
             type: String,
@@ -81,6 +86,33 @@ const priceListSchema = new Schema<IPriceListDocument>(
             default: 0,
             min: [0, 'Unit price cannot be negative'],
         },
+
+        pendingUnitPrice: {
+            type: Number,
+            default: 0,
+            min: [0, 'Pending unit price cannot be negative'],
+        },
+
+        priceStatus: {
+            type: String,
+            enum: ['Pending', 'Confirmed'],
+            default: 'Confirmed',
+        },
+
+        priceConfirmedBy: {
+            type: Schema.Types.ObjectId,
+            ref: 'User',
+        },
+
+        priceConfirmedAt: {
+            type: Date,
+        },
+        
+        cost: {
+            type: Number,
+            default: 0,
+            min: [0, 'Cost cannot be negative'],
+        },
         
         availableQuantity: {
             type: Number,
@@ -116,9 +148,9 @@ const priceListSchema = new Schema<IPriceListDocument>(
 // Pre-save Hook: Auto-generate sparePartsId (PL-1001, PL-1002, …)
 // ─────────────────────────────────────────────────────────────────────────────
 
-priceListSchema.pre('save', async function (next) {
+InventorySchema.pre<IInventoryDocument>('save', async function (next) {
     if (!this.sparePartsId) {
-        const seq = await getNextSequence('price-list');
+        const seq = await getNextSequence('inventory');
         this.sparePartsId = `PL-${seq}`;
     }
     next();
@@ -128,14 +160,15 @@ priceListSchema.pre('save', async function (next) {
 // Text Index for Search
 // ─────────────────────────────────────────────────────────────────────────────
 
-priceListSchema.index({ itemName: 'text', specification: 'text', category: 'text' });
+InventorySchema.index({ itemName: 'text', specification: 'text', category: 'text' });
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Export Model
 // ─────────────────────────────────────────────────────────────────────────────
 
-const PriceList: Model<IPriceListDocument> = mongoose.model<IPriceListDocument>(
-    'PriceList',
-    priceListSchema
+const Inventory: Model<IInventoryDocument> = mongoose.model<IInventoryDocument>(
+    'Inventory',
+    InventorySchema
 );
-export default PriceList;
+export default Inventory;
+

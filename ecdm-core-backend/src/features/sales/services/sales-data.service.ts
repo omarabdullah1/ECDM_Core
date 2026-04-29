@@ -156,7 +156,7 @@ export const getAll = async (query: Record<string, unknown>) => {
     const [data, total] = await Promise.all([
         SalesData.find(filter)
             .populate('marketingData', 'name phone dataSource uploadBatch')
-            .populate('salesPerson', 'firstName lastName')
+            .populate('salesPerson', 'firstName lastName email')
             .populate('customer', 'customerId name phone address region sector')
             .sort({ createdAt: -1 }).skip(skip).limit(Number(limit)),
         SalesData.countDocuments(filter),
@@ -233,3 +233,4 @@ export const bulkRemove = async (ids: string[]): Promise<{ deletedCount: number 
     const result = await SalesData.deleteMany({ _id: { $in: ids } });
     return { deletedCount: result.deletedCount };
 };
+

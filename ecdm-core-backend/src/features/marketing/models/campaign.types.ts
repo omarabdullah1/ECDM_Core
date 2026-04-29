@@ -46,3 +46,4 @@ export interface ICampaign {
 export interface ICampaignDocument extends ICampaign, Document {
     _id: Types.ObjectId;
 }
+

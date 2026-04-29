@@ -38,3 +38,4 @@ export interface IEmployeeDocument {
     fileUrl: string;
     uploadedAt: Date;
 }
+

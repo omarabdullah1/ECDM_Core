@@ -34,6 +34,7 @@ export const populateOrderContext = async (
             context.customerPhone = customerDoc?.phone || '';
             context.customerId = customerDoc?.customerId || String(customerId) || '';
             context.engineerName = order.engineerName || '';
+            context.technicianName = order.technicianName || '';
             context.visitDate = order.actualVisitDate || order.scheduledVisitDate;
             context.scheduledVisitDate = order.scheduledVisitDate;
             context.actualVisitDate = order.actualVisitDate;
@@ -83,3 +84,4 @@ export const populateOrderContext = async (
 
     return context;
 };
+

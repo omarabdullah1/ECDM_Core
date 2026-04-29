@@ -4,6 +4,8 @@ import { sendSuccess } from '../../utils/apiResponse';
 import { parsePagination, buildPaginatedResult } from '../../utils/pagination';
 import { logAction } from '../../utils/auditLogger';
 import { AuditAction } from '../shared/types/audit-log.types';
+import { updateMeSchema } from './auth.validation';
+
 
 const cookieOptions = {
     httpOnly: true,
@@ -99,6 +101,21 @@ export const getMe = async (req: Request, res: Response, next: NextFunction): Pr
     }
 };
 
+// ── PATCH /api/auth/me (or /api/users/me) ───────────────────────────
+export const updateMe = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+        const parsed = updateMeSchema.safeParse(req.body);
+        if (!parsed.success) {
+            res.status(400).json({ success: false, message: parsed.error.errors[0].message });
+            return;
+        }
+        const user = await authService.updateMe(req.user!.userId, parsed.data);
+        sendSuccess(res, { user }, 'Profile updated successfully');
+    } catch (err) {
+        next(err);
+    }
+};
+
 // ── GET /api/auth/users ─────────────────────────────────────────────
 export const getUsers = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
@@ -161,3 +178,4 @@ export const deleteUser = async (req: Request, res: Response, next: NextFunction
         next(err);
     }
 };
+

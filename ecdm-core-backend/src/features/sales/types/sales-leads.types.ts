@@ -37,3 +37,4 @@ export interface ISalesLead {
 export interface ISalesLeadDocument extends ISalesLead, Document {
     _id: Types.ObjectId;
 }
+

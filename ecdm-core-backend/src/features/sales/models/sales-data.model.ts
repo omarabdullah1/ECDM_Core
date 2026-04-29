@@ -27,3 +27,4 @@ salesDataSchema.index({ followUpDate:  1 });
 
 const SalesData: Model<ISalesDataDocument> = mongoose.model<ISalesDataDocument>('SalesData', salesDataSchema);
 export default SalesData;
+

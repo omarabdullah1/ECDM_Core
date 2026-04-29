@@ -12,6 +12,7 @@ router.post('/', validate(createInvoiceSchema), ctrl.create);
 router.get('/', ctrl.getAll);
 router.get('/:id', ctrl.getById);
 router.put('/:id', validate(updateInvoiceSchema), ctrl.update);
-router.delete('/:id', authorise(UserRole.SuperAdmin, UserRole.Manager), ctrl.remove);
+router.delete('/:id', authorise(UserRole.SuperAdmin, UserRole.Admin), ctrl.remove);
 
 export default router;
+

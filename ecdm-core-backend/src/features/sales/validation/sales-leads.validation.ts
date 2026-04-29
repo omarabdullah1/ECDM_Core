@@ -48,3 +48,4 @@ export const updateSalesLeadSchema = z.object({
 
 export type CreateSalesLeadInput = z.infer<typeof createSalesLeadSchema>;
 export type UpdateSalesLeadInput = z.infer<typeof updateSalesLeadSchema>;
+

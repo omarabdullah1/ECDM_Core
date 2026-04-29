@@ -19,6 +19,7 @@ const customerOrderSchema = new Schema<ICustomerOrderDocument>(
         
         // Operational Fields (New)
         engineerName:       { type: String, default: '' }, // Or ObjectId referencing User/Employee
+        technicianName:     { type: String, default: '' },
         actualVisitDate:    { type: Date },
         devicePickupType:   { type: String, enum: Object.values(DevicePickupType), default: DevicePickupType.NotSet },
         deal:               { type: String, enum: Object.values(DealStatus), default: DealStatus.Pending },
@@ -46,6 +47,7 @@ const customerOrderSchema = new Schema<ICustomerOrderDocument>(
         
         // Tracking
         updatedBy: { type: Schema.Types.ObjectId, ref: 'User' }, // The user who last modified this record
+        csPerson:  { type: String, default: '' }, // Email of the CS person who first modified this record
     },
     { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } },
 );
@@ -58,3 +60,4 @@ customerOrderSchema.index({ createdAt: -1 });
 
 const CustomerOrder: Model<ICustomerOrderDocument> = mongoose.model<ICustomerOrderDocument>('CustomerOrder', customerOrderSchema);
 export default CustomerOrder;
+

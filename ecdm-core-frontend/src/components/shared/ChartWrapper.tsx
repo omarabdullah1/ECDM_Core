@@ -18,3 +18,4 @@ export function ChartWrapper({ children, height = 'h-64', className }: ChartWrap
 }
 
 export default ChartWrapper;
+

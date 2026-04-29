@@ -20,3 +20,4 @@ export const createInvoiceSchema = z.object({
 export const updateInvoiceSchema = createInvoiceSchema.partial();
 export type CreateInvoiceInput = z.infer<typeof createInvoiceSchema>;
 export type UpdateInvoiceInput = z.infer<typeof updateInvoiceSchema>;
+

@@ -36,3 +36,4 @@ contentTrackerSchema.pre('save', async function (next) {
 const ContentTracker: Model<IContentTrackerDocument> =
     mongoose.models.ContentTracker || mongoose.model<IContentTrackerDocument>('ContentTracker', contentTrackerSchema);
 export default ContentTracker;
+

@@ -20,8 +20,8 @@ import { useAuthStore } from '@/features/auth/useAuth';
 /**
  * Add Quotation Dialog - Dynamic Quotation Builder
  *
- * Item catalogue sourced exclusively from /operations/price-list.
- * Items are grouped by Price List category in the dropdown.
+ * Item catalogue sourced exclusively from /operations/inventory.
+ * Items are grouped by Inventory category in the dropdown.
  *
  * Features:
  * 1. Add/Remove quotation items dynamically
@@ -40,11 +40,11 @@ interface QuotationItem {
   quantity: number;
   unitPrice: number;
   total: number;
-  priceListId?: string;
+  inventoryId?: string;
   dataSheetUrl?: string;
 }
 
-interface PriceListEntry {
+interface InventoryEntry {
   id: string;
   label: string; // "{sparePartsId} — {itemName}"
   price: number;
@@ -74,26 +74,26 @@ const btnDanger = 'p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transi
 
 export default function AddQuotationDialog({ order, onClose, onSuccess }: AddQuotationDialogProps) {
   const { user } = useAuthStore();
-  const [items, setItems] = useState<QuotationItem[]>([
-    { description: '', quantity: 1, unitPrice: 0, total: 0 }
-  ]);
-  const [discount, setDiscount] = useState<number>(0);
-  const [notes, setNotes] = useState<string>('');
+  const [items, setItems] = useState<QuotationItem[]>(
+    order.quotation?.items || [{ description: '', quantity: 1, unitPrice: 0, total: 0 }]
+  );
+  const [discount, setDiscount] = useState<number>(order.quotation?.discount || 0);
+  const [notes, setNotes] = useState<string>(order.quotation?.notes || '');
   const [saving, setSaving] = useState<boolean>(false);
-  const [priceListEntries, setPriceListEntries] = useState<PriceListEntry[]>([]);
-  const [loadingPriceList, setLoadingPriceList] = useState<boolean>(false);
+  const [inventoryEntries, setinventoryEntries] = useState<InventoryEntry[]>([]);
+  const [loadingInventory, setLoadingInventory] = useState<boolean>(false);
 
-  // ── Fetch Price List ───────────────────────────────────────────────────────
+  // ── Fetch Inventory ───────────────────────────────────────────────────────
 
   useEffect(() => {
-    const fetchPriceList = async () => {
-      setLoadingPriceList(true);
+    const fetchInventory = async () => {
+      setLoadingInventory(true);
       try {
-        const { data } = await api.get('/operations/price-list', { params: { limit: 1000 } });
+        const { data } = await api.get('/operations/inventory', { params: { limit: 1000 } });
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const raw: any[] = data?.data?.data || data?.data || [];
 
-        const entries: PriceListEntry[] = raw.map((item) => {
+        const entries: InventoryEntry[] = raw.map((item) => {
           const id = item?._id || '';
           const itemId = item?.sparePartsId || (typeof id === 'string' ? id.slice(-6) : 'ID');
           
@@ -106,9 +106,9 @@ export default function AddQuotationDialog({ order, onClose, onSuccess }: AddQuo
           };
         });
 
-        setPriceListEntries(entries);
+        setinventoryEntries(entries);
       } catch (err: any) {
-        console.error('❌ Failed to fetch price list - Detailed Error:', {
+        console.error('❌ Failed to fetch Inventory - Detailed Error:', {
           message: err.message,
           response: err.response?.data,
           status: err.response?.status,
@@ -119,14 +119,14 @@ export default function AddQuotationDialog({ order, onClose, onSuccess }: AddQuo
           }
         });
         
-        const errorMsg = err.response?.data?.message || err.message || 'Failed to load price list';
-        toast.error(`Price List Error: ${errorMsg}`);
+        const errorMsg = err.response?.data?.message || err.message || 'Failed to load Inventory';
+        toast.error(`Inventory Error: ${errorMsg}`);
       } finally {
-        setLoadingPriceList(false);
+        setLoadingInventory(false);
       }
     };
 
-    fetchPriceList();
+    fetchInventory();
   }, []);
 
   // ── Computed ──────────────────────────────────────────────────────────────
@@ -140,8 +140,8 @@ export default function AddQuotationDialog({ order, onClose, onSuccess }: AddQuo
   const appliedDiscountPercentage = subTotal > 0 ? (discount / subTotal) * 100 : 0;
   const isDiscountExceeded = !isAdmin && appliedDiscountPercentage > maxDiscountPercentage;
 
-  // Group price list by category for <optgroup> rendering
-  const grouped = priceListEntries.reduce<Record<string, PriceListEntry[]>>((acc, entry) => {
+  // Group Inventory by category for <optgroup> rendering
+  const grouped = inventoryEntries.reduce<Record<string, InventoryEntry[]>>((acc, entry) => {
     (acc[entry.category] ??= []).push(entry);
     return acc;
   }, {});
@@ -166,17 +166,17 @@ export default function AddQuotationDialog({ order, onClose, onSuccess }: AddQuo
     if (field === 'description') {
       updated[index].description = value as string;
 
-      // Auto-fill unit price and datasheet when a price-list item is selected
+      // Auto-fill unit price and datasheet when a inventory item is selected
       if (value && value !== '' && value !== '__custom__') {
-        const match = priceListEntries.find((e) => e.label === value);
+        const match = inventoryEntries.find((e) => e.label === value);
         if (match) {
           updated[index].unitPrice = match.price;
           updated[index].total = updated[index].quantity * match.price;
-          updated[index].priceListId = match.id;
+          updated[index].inventoryId = match.id;
           updated[index].dataSheetUrl = match.dataSheetUrl;
         } else {
           // Reset if no match (custom entry)
-          updated[index].priceListId = undefined;
+          updated[index].inventoryId = undefined;
           updated[index].dataSheetUrl = undefined;
         }
       }
@@ -221,7 +221,7 @@ export default function AddQuotationDialog({ order, onClose, onSuccess }: AddQuo
             quantity: Number(i.quantity),
             unitPrice: Number(i.unitPrice),
             total: Number(i.quantity) * Number(i.unitPrice),
-            priceListId: i.priceListId,
+            inventoryId: i.inventoryId,
             dataSheetUrl: i.dataSheetUrl,
           })),
           subTotal: calculatedSubTotal,
@@ -295,8 +295,8 @@ export default function AddQuotationDialog({ order, onClose, onSuccess }: AddQuo
                       <tr>
                         <th className="px-3 py-2.5 text-left font-bold text-gray-500 uppercase tracking-tighter w-10">#</th>
                         <th className="px-3 py-2.5 text-left font-bold text-gray-500 uppercase tracking-tighter">Description</th>
-                        <th className="px-3 py-2.5 text-left font-bold text-gray-500 uppercase tracking-tighter w-16">Qty</th>
-                        <th className="px-3 py-2.5 text-left font-bold text-gray-500 uppercase tracking-tighter w-24">Unit Price</th>
+                        <th className="px-3 py-2.5 text-center font-bold text-gray-500 uppercase tracking-tighter w-24">Qty</th>
+                        <th className="px-3 py-2.5 text-center font-bold text-gray-500 uppercase tracking-tighter w-24">Unit Price</th>
                         <th className="px-3 py-2.5 text-right font-bold text-gray-500 uppercase tracking-tighter w-24">Total</th>
                         <th className="px-3 py-2.5 text-center font-bold text-gray-500 uppercase tracking-tighter w-12"></th>
                       </tr>
@@ -310,9 +310,9 @@ export default function AddQuotationDialog({ order, onClose, onSuccess }: AddQuo
                               value={item.description}
                               onChange={(e) => handleItemChange(index, 'description', e.target.value)}
                               className="h-8 py-0"
-                              disabled={loadingPriceList}
+                              disabled={loadingInventory}
                             >
-                              <option value="">{loadingPriceList ? 'Loading...' : 'Select item...'}</option>
+                              <option value="">{loadingInventory ? 'Loading...' : 'Select item...'}</option>
                               {Object.entries(grouped).map(([cat, entries]) => (
                                 <optgroup key={cat} label={cat}>
                                   {entries.map((e) => (
@@ -428,3 +428,5 @@ export default function AddQuotationDialog({ order, onClose, onSuccess }: AddQuo
     </Dialog>
   );
 }
+
+

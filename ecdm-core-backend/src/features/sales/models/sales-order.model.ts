@@ -52,7 +52,7 @@ const salesOrderSchema = new Schema<ISalesOrderDocument>(
                 quantity: { type: Number, required: true, default: 1 },
                 unitPrice: { type: Number, required: true, default: 0 },
                 total: { type: Number, required: true, default: 0 },
-                priceListId: { type: Schema.Types.ObjectId, ref: 'PriceList' },
+                inventoryId: { type: Schema.Types.ObjectId, ref: 'Inventory' },
                 dataSheetUrl: { type: String, trim: true }
             }],
             subTotal: { type: Number, default: 0 },
@@ -97,3 +97,5 @@ salesOrderSchema.pre('save', async function (next) {
 
 const SalesOrder: Model<ISalesOrderDocument> = mongoose.model<ISalesOrderDocument>('SalesOrder', salesOrderSchema);
 export default SalesOrder;
+
+

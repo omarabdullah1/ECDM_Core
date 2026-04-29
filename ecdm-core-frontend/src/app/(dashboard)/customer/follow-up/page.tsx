@@ -1,7 +1,8 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import api from '@/lib/axios';
-import { ClipboardList, TrendingUp, Phone, CheckCircle } from 'lucide-react';
+import { ClipboardList, TrendingUp, Phone, CheckCircle, Eye } from 'lucide-react';
+import { useAuthStore } from '@/features/auth/useAuth';
 import toast from 'react-hot-toast';
 import { DataTable } from '@/components/ui/DataTable';
 import { PageHeader } from '@/components/layout/PageHeader';
@@ -110,12 +111,25 @@ export default function FollowUpPage() {
 
   useEffect(() => { fetch_(); }, [fetch_]);
 
+  const { user } = useAuthStore();
+  const isAdminOrManager = user?.role === 'SuperAdmin' || user?.role === 'Admin' || user?.role === 'Manager';
+  const isCS = user?.role === 'Customer Service' || user?.role === 'CustomerService';
+
+  const canEdit = useCallback((row: FollowUp) => {
+    if (isAdminOrManager) return true;
+    if (isCS) {
+      if (!row.csPerson) return true; // Unlocked
+      if (row.csPerson === user?.email) return true; // Owner
+    }
+    return false;
+  }, [isAdminOrManager, isCS, user?.email]);
+
   const pendingCount = rows.filter(d => d.status === 'Pending').length;
   const contactedCount = rows.filter(d => d.status === 'Contacted').length;
   const completedCount = rows.filter(d => d.status === 'Completed').length;
 
   const openC = () => { setEditing(null); setForm(blank); setError(''); setModal(true); };
-  const openE = (r: FollowUp) => {
+  const openE = (r: FollowUp, allowed: boolean = true) => {
     setEditing(r);
     setForm({
       workOrder: r.workOrder?._id || '',
@@ -197,7 +211,8 @@ export default function FollowUpPage() {
     setFeedbackModal(true);
   };
 
-  const columns = createColumns(handleStatusUpdate, openE, setDelId);
+  const isAdmin = user?.role === 'SuperAdmin' || user?.role === 'Admin';
+  const columns = createColumns(handleStatusUpdate, (r, allowed = true) => openE(r, allowed), setDelId, canEdit, isAdmin);
 
   return (
     <div className="space-y-6 pb-8">
@@ -286,7 +301,7 @@ export default function FollowUpPage() {
         totalItems={total}
         itemsPerPage={lim}
         onPageChange={setPage}
-        onRowClick={openE}
+        onRowClick={(r) => openE(r as FollowUp, canEdit(r as FollowUp))}
         defaultVisibility={{
           issue: false,
           visitSite: false,
@@ -394,6 +409,7 @@ export default function FollowUpPage() {
       {modal && editing && (
         <EditFollowUpDialog
           followUp={editing}
+          readOnly={!canEdit(editing)}
           onClose={() => setModal(false)}
           onSuccess={fetch_}
           onOpenFeedback={handleOpenFeedback}
@@ -439,4 +455,5 @@ export default function FollowUpPage() {
     </div>
   );
 }
+
 

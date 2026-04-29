@@ -5,9 +5,11 @@ import User from './auth.model';
 import { IUserDocument, UserRole } from './auth.types';
 import { RegisterInput, LoginInput } from './auth.validation';
 
+
 export interface TokenPayload {
     userId: string;
     role: UserRole;
+    email: string;
 }
 
 export interface AuthTokens {
@@ -17,7 +19,7 @@ export interface AuthTokens {
 
 export const generateTokens = (user: IUserDocument): AuthTokens => {
     const accessToken = jwt.sign(
-        { userId: user._id.toString(), role: user.role },
+        { userId: user._id.toString(), role: user.role, email: user.email },
         env.JWT_SECRET,
         { expiresIn: env.JWT_EXPIRES_IN as unknown as number },
     );
@@ -92,11 +94,14 @@ export const loginUser = async (data: LoginInput): Promise<{ user: IUserDocument
         throw new AppError('Invalid email or password', 401);
     }
 
-    user.lastLogin = new Date();
-
     const tokens = generateTokens(user);
-    (user as unknown as Record<string, unknown>).refreshToken = tokens.refreshToken;
-    await user.save({ validateBeforeSave: false });
+
+    await User.findByIdAndUpdate(user._id, {
+        $set: {
+            lastLogin: new Date(),
+            refreshToken: tokens.refreshToken
+        }
+    });
 
     const userResponse = {
         _id: user._id,
@@ -275,12 +280,39 @@ export const updateUser = async (
     if (data.salary !== undefined) user.salary = data.salary;
     if (data.department !== undefined) user.department = data.department;
     if (data.commissionPercentage !== undefined) user.commissionPercentage = data.commissionPercentage;
+    if ((data as Record<string, unknown>).address !== undefined) user.address = (data as Record<string, string>).address;
 
     await user.save();
 
     // Remove password from response
     user.password = undefined as unknown as string;
 
+    return user;
+};
+
+// ── Update own profile (any authenticated user) ────────────────────
+export const updateMe = async (
+    userId: string,
+    data: {
+        firstName?: string;
+        lastName?: string;
+        phone?: string;
+        address?: string;
+    },
+): Promise<IUserDocument> => {
+    const user = await User.findById(userId);
+    if (!user) {
+        throw new AppError('User not found', 404);
+    }
+
+    if (data.firstName !== undefined) user.firstName = data.firstName;
+    if (data.lastName !== undefined) user.lastName = data.lastName;
+    if (data.phone !== undefined) user.phone = data.phone;
+    if (data.address !== undefined) user.address = data.address;
+
+    await user.save();
+
+    user.password = undefined as unknown as string;
     return user;
 };
 
@@ -292,3 +324,4 @@ export const deleteUser = async (userId: string): Promise<void> => {
     }
     await User.deleteOne({ _id: userId });
 };
+

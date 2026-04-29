@@ -1,6 +1,6 @@
 'use client';
 
-import { Phone, CheckCircle, Edit2, Trash2 } from 'lucide-react';
+import { Phone, CheckCircle, Edit2, Trash2, Eye } from 'lucide-react';
 
 /**
  * Follow-Up QC Pipeline - Column Definitions
@@ -21,9 +21,24 @@ const formatDate = (dateValue: string | Date | null | undefined): string => {
     const day = String(date.getDate()).padStart(2, '0');
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const year = date.getFullYear();
-    return `${day}/${month}/${year}`;
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${day}/${month}/${year} ${hours}:${minutes}`;
   } catch {
     return '-';
+  }
+};
+
+const isNew = (dateValue: string | Date | null | undefined): boolean => {
+  if (!dateValue) return false;
+  try {
+    const createdDate = new Date(dateValue);
+    const now = new Date();
+    const diffTime = Math.abs(now.getTime() - createdDate.getTime());
+    const diffDays = diffTime / (1000 * 60 * 60 * 24);
+    return diffDays <= 1;
+  } catch {
+    return false;
   }
 };
 
@@ -123,14 +138,14 @@ export interface FollowUp {
   reasonForNotSolving?: string;
   
   // Follow-up fields
-  followUp?: boolean | null;
   followUpDate?: string;
   notes?: string;
   
   // Audit
   updatedBy?: User;
-  createdAt?: string;
-  updatedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+  csPerson?: string;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -171,8 +186,10 @@ interface Column<T> {
 
 export const createColumns = (
   onStatusUpdate: (id: string, status: string) => Promise<void>,
-  onEdit: (row: FollowUp) => void,
-  onDelete: (id: string) => void
+  onEdit: (row: FollowUp, allowed?: boolean) => void,
+  onDelete: (id: string) => void,
+  canEdit?: (row: FollowUp) => boolean,
+  isAdmin: boolean = false
 ): Column<FollowUp>[] => [
   
   // 1. Customer ID
@@ -193,9 +210,14 @@ export const createColumns = (
     header: 'Name',
       className: 'md:w-auto md:max-w-[150px] md:truncate',
     render: (row) => (
-      <span className="font-medium whitespace-nowrap">
-        {row.orderContext?.customerName || row.customer?.name || '-'}
-      </span>
+      <div className="flex items-center gap-2">
+        <span className="font-medium whitespace-nowrap">
+          {row.orderContext?.customerName || row.customer?.name || '-'}
+        </span>
+        {isNew(row.createdAt) && (
+          <span className="bg-blue-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md animate-pulse flex-shrink-0">NEW</span>
+        )}
+      </div>
     ),
   },
   
@@ -360,17 +382,6 @@ export const createColumns = (
     ),
   },
   
-  // 16. Follow Up (Needs another?)
-  {
-    key: 'followUp',
-    header: 'Follow Up',
-      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
-    render: (row) => {
-      if (row.followUp === true) return <span className="text-green-600 font-medium">Yes</span>;
-      if (row.followUp === false) return <span className="text-red-600 font-medium">No</span>;
-      return '-';
-    },
-  },
   
   // 17. Follow-Up Date
   {
@@ -383,18 +394,31 @@ export const createColumns = (
       </span>
     ),
   },
-  
-  // 18. User Email
+
+  // CS Person
   {
-    key: 'userEmail',
-    header: 'User Email',
-      className: 'md:w-auto md:max-w-[150px] md:truncate',
+    key: 'csPerson',
+    header: 'CS Person',
+    className: 'hidden xl:table-cell md:w-1/6 md:max-w-[120px] md:truncate',
     render: (row) => (
-      <span className="text-sm text-[hsl(var(--muted-foreground))] whitespace-nowrap">
-        {row.updatedBy?.email || '-'}
+      <span className="text-xs text-[hsl(var(--muted-foreground))] italic truncate max-w-[150px] block" title={row.csPerson}>
+        {row.csPerson || '—'}
       </span>
     ),
   },
+
+  // Created At
+  {
+    key: 'createdAt',
+    header: 'Created At',
+    className: 'md:w-1/6 md:max-w-[120px] md:truncate',
+    render: (row) => (
+      <span className="text-xs text-[hsl(var(--muted-foreground))]">
+        {formatDate(row.createdAt)}
+      </span>
+    ),
+  },
+  
   
   // 19. Notes
   {
@@ -416,10 +440,11 @@ export const createColumns = (
     render: (row) => {
       const status = row.status;
       const id = row._id;
+      const editAllowed = canEdit ? canEdit(row) : true;
 
       return (
         <div className="flex flex-wrap items-center gap-2">
-          {status === 'Pending' && (
+          {status === 'Pending' && editAllowed && (
             <button
               onClick={() => onStatusUpdate(id, 'Contacted')}
               className="p-1 hover:bg-blue-50 rounded text-blue-600 transition-colors"
@@ -429,7 +454,7 @@ export const createColumns = (
             </button>
           )}
 
-          {(status === 'Pending' || status === 'Contacted' || status === 'Scheduled') && (
+          {(status === 'Pending' || status === 'Contacted' || status === 'Scheduled') && editAllowed && (
             <button
               onClick={() => onStatusUpdate(id, 'Completed')}
               className="p-1 hover:bg-green-50 rounded text-green-600 transition-colors"
@@ -440,20 +465,22 @@ export const createColumns = (
           )}
 
           <button
-            onClick={() => onEdit(row)}
+            onClick={() => onEdit(row, editAllowed)}
             className="p-1 hover:bg-[hsl(var(--muted))] rounded text-[hsl(var(--foreground))] transition-colors"
-            title="Edit"
+            title={editAllowed ? "Edit" : "Preview (Locked)"}
           >
-            <Edit2 className="h-4 w-4" />
+            {editAllowed ? <Edit2 className="h-4 w-4" /> : <Eye className="h-4 w-4 text-orange-500" />}
           </button>
 
-          <button
-            onClick={() => onDelete(id)}
-            className="p-1 hover:bg-red-50 rounded text-red-600 transition-colors"
-            title="Delete"
-          >
-            <Trash2 className="h-4 w-4" />
-          </button>
+          {isAdmin && (
+            <button
+              onClick={() => onDelete(id)}
+              className="p-1 hover:bg-red-50 rounded text-red-600 transition-colors"
+              title="Delete"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          )}
         </div>
       );
     },

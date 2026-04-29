@@ -44,3 +44,4 @@ export interface IEmployeeDocument extends IEmployee, Document {
     _id:      Types.ObjectId;
     fullName: string;
 }
+

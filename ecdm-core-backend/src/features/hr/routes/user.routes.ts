@@ -86,9 +86,10 @@ router.post('/:id/avatar', authorise(UserRole.SuperAdmin, UserRole.Manager, User
 // Document management
 router.post('/:id/documents', authorise(UserRole.SuperAdmin, UserRole.Manager, UserRole.HR), ctrl.addDocument);
 router.post('/:id/documents/upload', authorise(UserRole.SuperAdmin, UserRole.Manager, UserRole.HR), documentUpload.single('document'), ctrl.uploadDocument);
-router.delete('/:id/documents/:documentId', authorise(UserRole.SuperAdmin, UserRole.Manager, UserRole.HR), ctrl.removeDocument);
+router.delete('/:id/documents/:documentId', authorise(UserRole.SuperAdmin, UserRole.Admin), ctrl.removeDocument);
 
 // Link attendance records
 router.post('/:id/link-attendance', authorise(UserRole.SuperAdmin, UserRole.Manager, UserRole.HR), ctrl.linkAttendanceRecords);
 
 export default router;
+

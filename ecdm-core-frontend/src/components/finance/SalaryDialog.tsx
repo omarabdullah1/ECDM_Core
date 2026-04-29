@@ -479,3 +479,4 @@ export default function SalaryDialog({ isOpen, onClose, onSuccess, selectedSalar
     </Dialog>
   );
 }
+

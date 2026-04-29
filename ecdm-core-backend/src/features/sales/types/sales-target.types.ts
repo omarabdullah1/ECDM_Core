@@ -15,3 +15,4 @@ export interface ISalesTarget {
 export interface ISalesTargetDocument extends ISalesTarget, Document {
     _id: Types.ObjectId;
 }
+

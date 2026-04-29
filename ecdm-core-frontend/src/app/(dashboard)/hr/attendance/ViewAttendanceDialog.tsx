@@ -21,6 +21,19 @@ import {
 import { Button } from '@/components/ui/button';
 import api from '@/lib/axios';
 import toast from 'react-hot-toast';
+import { useAuthStore } from '@/features/auth/useAuth';
+import { Trash2 } from 'lucide-react';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import type { AttendanceRecord } from './columns';
 
 interface ViewAttendanceDialogProps {
@@ -28,6 +41,7 @@ interface ViewAttendanceDialogProps {
     onOpenChange: (open: boolean) => void;
     record: AttendanceRecord;
     onSuccess: () => void;
+    initialEditMode?: boolean;
 }
 
 const inputClass = 'w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-4 py-3 text-sm placeholder:text-[hsl(var(--muted-foreground))] focus:border-[hsl(var(--primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/20 transition-all font-medium';
@@ -37,8 +51,11 @@ export default function ViewAttendanceDialog({
     onOpenChange,
     record,
     onSuccess,
+    initialEditMode = false,
 }: ViewAttendanceDialogProps) {
-    const [internalPreviewMode, setInternalPreviewMode] = useState(true);
+    const { user } = useAuthStore();
+    const isAdmin = user?.role === 'SuperAdmin' || user?.role === 'Admin';
+    const [internalPreviewMode, setInternalPreviewMode] = useState(!initialEditMode);
     const [isSaving, setIsSaving] = useState(false);
     const [form, setForm] = useState({
         checkIn: '',
@@ -55,9 +72,9 @@ export default function ViewAttendanceDialog({
                 status: record.status || '',
                 notes: record.notes || '',
             });
-            setInternalPreviewMode(true);
+            setInternalPreviewMode(!initialEditMode);
         }
-    }, [open, record]);
+    }, [open, record, initialEditMode]);
 
     const handleSave = async () => {
         setIsSaving(true);
@@ -65,9 +82,23 @@ export default function ViewAttendanceDialog({
             await api.put(`/hr/attendance/${record._id}`, form);
             toast.success('Attendance record updated');
             onSuccess();
-            setInternalPreviewMode(true);
+            onOpenChange(false);
         } catch (err: any) {
             toast.error(err.response?.data?.message || 'Failed to update record');
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const handleDelete = async () => {
+        setIsSaving(true);
+        try {
+            await api.delete(`/hr/attendance/${record._id}`);
+            toast.success('Attendance record deleted');
+            onSuccess();
+            onOpenChange(false);
+        } catch (err: any) {
+            toast.error(err.response?.data?.message || 'Failed to delete record');
         } finally {
             setIsSaving(false);
         }
@@ -196,17 +227,51 @@ export default function ViewAttendanceDialog({
                     </div>
                 </DialogBody>
 
-                <DialogFooter>
-                    <Button variant="ghost" onClick={() => onOpenChange(false)}>
-                        {internalPreviewMode ? 'Close' : 'Cancel'}
-                    </Button>
-                    {!internalPreviewMode && (
-                        <Button onClick={handleSave} disabled={isSaving}>
-                            {isSaving ? 'Saving...' : 'Save Changes'}
+                <DialogFooter className="flex items-center justify-between gap-2 sm:justify-between w-full">
+                    <div>
+                        {internalPreviewMode && isAdmin && (
+                            <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <Button variant="ghost" className="text-destructive hover:text-destructive hover:bg-destructive/10 gap-2">
+                                        <Trash2 className="h-4 w-4" />
+                                        Delete
+                                    </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            This action cannot be undone. This will permanently delete this attendance record
+                                            for {record.name}.
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction 
+                                            onClick={handleDelete}
+                                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                         >
+                                            Delete Permanently
+                                        </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                        )}
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                        <Button variant="ghost" onClick={() => onOpenChange(false)}>
+                            {internalPreviewMode ? 'Close' : 'Cancel'}
                         </Button>
-                    )}
+                        {!internalPreviewMode && (
+                            <Button onClick={handleSave} disabled={isSaving}>
+                                {isSaving ? 'Saving...' : 'Save Changes'}
+                            </Button>
+                        )}
+                    </div>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
     );
 }
+

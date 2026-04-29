@@ -315,13 +315,15 @@ export default function EditCustomerDialog({ customer, onClose, onSuccess, readO
               {effectivelyReadOnly ? 'Close' : 'Cancel'}
             </Button>
             {effectivelyReadOnly ? (
-              <Button
-                type="button"
-                key="btn-edit" onClick={(e) => { e.preventDefault(); setInternalPreviewMode(false); }}
-                className="flex-1 px-8 rounded-xl bg-[hsl(var(--primary))] hover:opacity-90 transition-all shadow-md active:scale-95"
-              >
-                Edit Customer
-              </Button>
+              !readOnly && (
+                <Button
+                  type="button"
+                  key="btn-edit" onClick={(e) => { e.preventDefault(); setInternalPreviewMode(false); }}
+                  className="flex-1 px-8 rounded-xl bg-[hsl(var(--primary))] hover:opacity-90 transition-all shadow-md active:scale-95"
+                >
+                  Edit Customer
+                </Button>
+              )
             ) : (
               <Button
                 type="submit"
@@ -339,3 +341,4 @@ export default function EditCustomerDialog({ customer, onClose, onSuccess, readO
     </Dialog>
   );
 }
+

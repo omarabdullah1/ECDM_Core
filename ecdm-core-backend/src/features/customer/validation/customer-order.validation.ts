@@ -12,6 +12,7 @@ export const createCustomerOrderSchema = z.object({
     
     // Operational fields
     engineerName:         z.string().optional(),
+    technicianName:       z.string().optional(),
     actualVisitDate:      z.string().or(z.date()).optional(),
     devicePickupType:     z.nativeEnum(DevicePickupType).optional(),
     deal:                 z.nativeEnum(DealStatus).optional(),
@@ -43,3 +44,4 @@ export const createCustomerOrderSchema = z.object({
 export const updateCustomerOrderSchema = createCustomerOrderSchema.partial();
 export type CreateCustomerOrderInput = z.infer<typeof createCustomerOrderSchema>;
 export type UpdateCustomerOrderInput = z.infer<typeof updateCustomerOrderSchema>;
+

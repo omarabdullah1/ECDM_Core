@@ -31,3 +31,4 @@ export const createSalesDataSchema = z.object({
 export const updateSalesDataSchema = createSalesDataSchema.partial();
 export type CreateSalesDataInput = z.infer<typeof createSalesDataSchema>;
 export type UpdateSalesDataInput = z.infer<typeof updateSalesDataSchema>;
+

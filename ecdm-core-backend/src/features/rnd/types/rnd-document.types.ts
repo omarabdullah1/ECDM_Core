@@ -19,3 +19,4 @@ export interface IRndDocument {
 export interface IRndDocumentDocument extends IRndDocument, Document {
     _id: Types.ObjectId;
 }
+

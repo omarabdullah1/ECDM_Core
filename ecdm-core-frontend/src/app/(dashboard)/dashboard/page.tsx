@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import api from '@/lib/axios';
 import { useAuthStore } from '@/features/auth/useAuth';
+import { useRouter } from 'next/navigation';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 interface DashboardStats {
@@ -124,11 +125,37 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 
 // ── Main Dashboard ─────────────────────────────────────────────────────────
 export default function MainDashboard() {
-  const { user } = useAuthStore();
+  const { user, isLoading } = useAuthStore();
+  const router = useRouter();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [lastRefreshed, setLastRefreshed] = useState<Date>(new Date());
+
+  const adminRoles = ['Admin', 'SuperAdmin', 'Manager'];
+  const isAuthorized = user && adminRoles.includes(user.role);
+
+  useEffect(() => {
+    if (!isLoading && user && !isAuthorized) {
+      const role = user.role;
+      if (role === 'Sales') router.replace('/sales/leads');
+      else if (role === 'Marketing') router.replace('/marketing/leads');
+      else if (role === 'Operations' || role === 'Maintenance' || role === 'MaintenanceEngineer') router.replace('/operations/work-order');
+      else if (role === 'HR') router.replace('/hr/users');
+      else if (role === 'Finance') router.replace('/finance/invoices');
+      else if (role === 'Customer Service' || role === 'CustomerService') router.replace('/customer/list');
+      else router.replace('/profile');
+    }
+  }, [user, isLoading, isAuthorized, router]);
+
+  // If still loading auth or if not authorized (waiting for redirect), don't show content
+  if (isLoading || (user && !isAuthorized)) {
+    return (
+      <div className="flex h-[60vh] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-[hsl(var(--primary))]" />
+      </div>
+    );
+  }
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
@@ -685,3 +712,4 @@ export default function MainDashboard() {
     </div>
   );
 }
+

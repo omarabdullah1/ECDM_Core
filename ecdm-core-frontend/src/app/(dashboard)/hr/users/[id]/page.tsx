@@ -9,7 +9,7 @@ import {
     Mail, Phone, MapPin, Shield, Clock,
     CheckCircle, XCircle, AlertCircle, Upload, Trash2,
     Download, ExternalLink, TrendingUp, Award, Target, Loader2,
-    Banknote, Zap
+    Banknote, Zap, ClipboardList
 } from 'lucide-react';
 import { useAuthStore } from '@/features/auth/useAuth';
 import { Progress } from '@/components/ui/progress';
@@ -148,7 +148,9 @@ const ROLE_LABELS: Record<string, string> = {
     MaintenanceEngineer: 'Maintenance Engineer',
     Technician: 'Technician',
     CustomerService: 'Customer Service',
-    Finance: 'Finance'
+    Finance: 'Finance',
+    Marketing: 'Marketing',
+    'R&D': 'R&D',
 };
 
 const inputClass = 'w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-4 py-3 text-sm placeholder:text-[hsl(var(--muted-foreground))] focus:border-[hsl(var(--primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/20 transition-all';
@@ -975,6 +977,84 @@ export default function EmployeeProfilePage() {
                onSuccess={() => fetchSalaries()}
                prefillEmployeeId={employeeId}
             />
+
+            {/* ── Bottom: Employee Evaluation Details (Performance Roles) ──────────────── */}
+            {['Operations', 'Maintenance', 'MaintenanceEngineer', 'Technician', 'Sales', 'Manager', 'SuperAdmin', 'Admin'].includes(employee?.role || '') && profile && (
+                <div className="rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6 mt-6 overflow-hidden">
+                    <div className="mb-4">
+                        <h2 className="text-sm font-semibold flex items-center gap-2 text-indigo-600 dark:text-indigo-400">
+                            <ClipboardList className="h-4 w-4" />
+                            Employee Evaluation Report Row
+                        </h2>
+                        <p className="text-[11px] text-[hsl(var(--muted-foreground))] mt-0.5">
+                            Standardized performance metrics as displayed in the evaluation report.
+                        </p>
+                    </div>
+                    <div className="w-full overflow-x-auto custom-table-scrollbar border border-[hsl(var(--border))] rounded-xl">
+                        <table className="w-full caption-bottom text-xs whitespace-nowrap">
+                            <thead className="bg-[hsl(var(--muted))]/50 border-b border-[hsl(var(--border))]">
+                                <tr>
+                                    <th className="px-3 py-3 text-left font-bold uppercase tracking-wider text-[10px] text-[hsl(var(--muted-foreground))]">EmployeeName</th>
+                                    <th className="px-3 py-3 text-left font-bold uppercase tracking-wider text-[10px] text-[hsl(var(--muted-foreground))]">Role</th>
+                                    <th className="px-3 py-3 text-left font-bold uppercase tracking-wider text-[10px] text-[hsl(var(--muted-foreground))]">Sector</th>
+                                    <th className="px-3 py-3 text-left font-bold uppercase tracking-wider text-[10px] text-[hsl(var(--muted-foreground))]">Type Of Order</th>
+                                    <th className="px-3 py-3 text-left font-bold uppercase tracking-wider text-[10px] text-[hsl(var(--muted-foreground))]">Punctuality</th>
+                                    <th className="px-3 py-3 text-left font-bold uppercase tracking-wider text-[10px] text-[hsl(var(--muted-foreground))]">Task Completed</th>
+                                    <th className="px-3 py-3 text-left font-bold uppercase tracking-wider text-[10px] text-[hsl(var(--muted-foreground))]">Task Returned</th>
+                                    <th className="px-3 py-3 text-left font-bold uppercase tracking-wider text-[10px] text-[hsl(var(--muted-foreground))]">Completion Rate</th>
+                                    <th className="px-3 py-3 text-left font-bold uppercase tracking-wider text-[10px] text-[hsl(var(--muted-foreground))]">Return Rate</th>
+                                    <th className="px-3 py-3 text-left font-bold uppercase tracking-wider text-[10px] text-[hsl(var(--muted-foreground))]">Performance Score</th>
+                                    <th className="px-3 py-3 text-left font-bold uppercase tracking-wider text-[10px] text-[hsl(var(--muted-foreground))]">HR Approved</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-[hsl(var(--border))]">
+                                {(() => {
+                                    // Use data from the aggregated profile object
+                                    const perf = (profile as any)?.performanceStats;
+                                    const totalTasks = perf?.totalTasks || 0;
+                                    const completed = perf?.completed || 0;
+                                    const returned = Math.max(0, totalTasks - completed);
+                                    const completionRate = totalTasks > 0 ? ((completed / totalTasks) * 100).toFixed(1) + '%' : '0%';
+                                    const returnRate = totalTasks > 0 ? ((returned / totalTasks) * 100).toFixed(1) + '%' : '0%';
+                                    
+                                    // Extract type of order from work orders or default
+                                    const typeOfOrder = profile.workOrders?.records?.[0]?.customerOrderId?.typeOfOrder || 
+                                                       (employee.role === 'Sales' ? 'Sales' : 'Maintenance');
+
+                                    return (
+                                        <tr className="hover:bg-[hsl(var(--muted))]/30 transition-colors">
+                                            <td className="px-3 py-4 font-bold border-l-4 border-indigo-600/30">{employee?.fullName || `${employee?.firstName} ${employee?.lastName}`}</td>
+                                            <td className="px-3 py-4">{employee?.role}</td>
+                                            <td className="px-3 py-4">{employee?.department || 'Operations'}</td>
+                                            <td className="px-3 py-4">
+                                                <span className="px-2 py-0.5 rounded bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300 font-bold uppercase tracking-tighter">
+                                                    {typeOfOrder}
+                                                </span>
+                                            </td>
+                                            <td className="px-3 py-4 font-medium">{perf?.punctualityRate || 0}%</td>
+                                            <td className="px-3 py-4 font-black text-green-600">{completed}</td>
+                                            <td className="px-3 py-4 font-black text-red-600">{returned}</td>
+                                            <td className="px-3 py-4 font-black text-slate-700 dark:text-slate-200">{completionRate}</td>
+                                            <td className="px-3 py-4 text-red-600/70">{returnRate}</td>
+                                            <td className="px-3 py-4 font-black text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20">{completionRate}</td>
+                                            <td className="px-3 py-4">
+                                                <span className={`inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest ${
+                                                    employee?.hrApproved 
+                                                        ? 'bg-green-500 text-white shadow-sm' 
+                                                        : 'bg-amber-100 text-amber-700 border border-amber-200'
+                                                }`}>
+                                                    {employee?.hrApproved ? <CheckCircle className="h-3 w-3" /> : null}
+                                                    {employee?.hrApproved ? 'Approved' : 'Pending'}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    );
+                                })()}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

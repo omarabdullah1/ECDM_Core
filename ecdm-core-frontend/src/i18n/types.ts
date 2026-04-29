@@ -15,13 +15,14 @@ export interface Translations {
     customer: string; customersList: string; customerOrders: string; customerFollowUp: string; customerFeedback: string;
     finance: string; invoices: string; orderFinance: string; generalExpenses: string; salaries: string;
 
-    operations: string; workOrder: string; priceList: string; purchaseOrder: string; reportOperation: string;
+    operations: string; workOrder: string; inventory: string; inventoryFinance: string; priceList: string; purchaseOrder: string; reportOperation: string;
     hr: string; hrEmployees: string; hrAttendance: string;
     rnd: string; personalBoard: string; rndProjects: string; myPerformance: string;
     administration: string; userManagement: string; modificationRequests: string; auditLogs: string; netProfitReport: string;
     salesInsights: string; marketingInsights: string;
     erpPlatform: string;
     nonPotential: string;
+    myCustomers: string;
   };
   common: {
     save: string; cancel: string; delete: string; edit: string; add: string;
@@ -138,7 +139,7 @@ export interface Translations {
       emptyState: string; deleteTitle: string; deleteMsg: string;
       notesPlaceholder: string;
     };
-    inventoryItems: {
+    InventoryItems: {
       title: string; subtitle: string; addBtn: string; itemName: string;
       stockNumber: string; stockCount: string; supplierDetails: string;
       supplierName: string; supplierPhone: string; supplierAddress: string;
@@ -192,3 +193,5 @@ export interface Translations {
   lang: { en: string; ar: string; };
   theme: { light: string; dark: string; };
 }
+
+

@@ -68,7 +68,7 @@ This audit covers **43 frontend pages**, **211 API endpoints**, and **32 databas
 - `/marketing/leads` - Marketing lead pipeline
 
 #### OPERATIONS MODULE
-- `/operations/price-list` - Spare parts & services pricing
+- `/operations/inventory` - Spare parts & services pricing
 - `/operations/report` - Operations reports
 - `/operations/work-order` - Work order management
 
@@ -138,7 +138,7 @@ This audit covers **43 frontend pages**, **211 API endpoints**, and **32 databas
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                           OPERATIONS FLOW                               │
 │  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐              │
-│  │ PriceList    │    │InventoryItem │    │ WorkOrder    │              │
+│  │ Inventory    │    │InventoryItem │    │ WorkOrder    │              │
 │  └──────────────┘    └──────────────┘    └──────────────┘              │
 │         │                  │                    │                      │
 │         ▼                  ▼                    ▼                      │
@@ -274,20 +274,20 @@ partsUsed: [{
 
 ---
 
-#### GAP #4: Price List ↔ Work Order Costing (DISCONNECTED)
+#### GAP #4: Inventory ↔ Work Order Costing (DISCONNECTED)
 
 **Current State:**
-- `PriceList` stores unit prices for spare parts/services
-- `WorkOrder` has no reference to `PriceList`
+- `Inventory` stores unit prices for spare parts/services
+- `WorkOrder` has no reference to `Inventory`
 - `CustomerOrder` has `cost` field but **no automatic calculation**
 
 **Impact:**
-- Pricing is not automatically pulled from PriceList
+- Pricing is not automatically pulled from Inventory
 - Cost calculations are manual
 - No audit trail for pricing decisions
 
 **Recommendation:**
-Link PriceList items to WorkOrder quotation → Auto-calculate `CustomerOrder.cost`
+Link Inventory items to WorkOrder quotation → Auto-calculate `CustomerOrder.cost`
 
 ---
 
@@ -368,7 +368,7 @@ Campaign.actualROI = Sum(SalesOrder.grandTotal) / Campaign.adSpend
 | HR Employee | Finance Salary | ❌ Disconnected | **HIGH** | Medium |
 | Attendance | Salary | ❌ Manual | **HIGH** | High |
 | WorkOrder | Inventory | ❌ Manual | **HIGH** | High |
-| PriceList | WorkOrder | ❌ None | **HIGH** | Medium |
+| Inventory | WorkOrder | ❌ None | **HIGH** | Medium |
 | SalesOrder | Finance | ❌ None | **MEDIUM** | High |
 | WorkOrder | ReportOperation | ❌ Manual | **MEDIUM** | Medium |
 | Campaign | SalesOrder | ❌ Manual | **MEDIUM** | Medium |
@@ -777,7 +777,7 @@ Two separate route files handle employees:
 
 ### Short-term (Week 3-4) - ✅ COMPLETED
 4. ✅ **FIXED:** Implemented Work Order → Inventory stock deduction (`ecdm-core-backend/src/features/operations/services/work-order-inventory.integration.ts`)
-5. ✅ **FIXED:** Added PriceList and parts tracking to WorkOrder model (`ecdm-core-backend/src/features/operations/models/work-order.model.ts`)
+5. ✅ **FIXED:** Added Inventory and parts tracking to WorkOrder model (`ecdm-core-backend/src/features/operations/models/work-order.model.ts`)
 6. ✅ **FIXED:** Auto-populate Employee Evaluation from Attendance/WorkOrder (`ecdm-core-backend/src/features/operations/services/employee-evaluation.integration.ts`)
 
 ### Medium-term (Month 2) - PENDING

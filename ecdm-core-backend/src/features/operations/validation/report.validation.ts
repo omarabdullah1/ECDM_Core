@@ -21,3 +21,4 @@ export const createReportSchema = z.object({
 export const updateReportSchema = createReportSchema.partial();
 export type CreateReportInput = z.infer<typeof createReportSchema>;
 export type UpdateReportInput = z.infer<typeof updateReportSchema>;
+

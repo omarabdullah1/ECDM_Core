@@ -9,7 +9,7 @@ export enum PurchaseOrderStatus {
 }
 
 export interface IPurchaseOrderItem {
-    priceListId: mongoose.Types.ObjectId;
+    inventoryId: mongoose.Types.ObjectId;
     itemName: string;
     quantity: number;
     unitPrice: number;
@@ -33,11 +33,11 @@ export interface IPurchaseOrderDocument extends Document {
 }
 
 const purchaseOrderItemSchema = new Schema<IPurchaseOrderItem>({
-    priceListId: { type: Schema.Types.ObjectId, ref: 'PriceList', required: true },
+    inventoryId: { type: Schema.Types.ObjectId, ref: 'Inventory', required: true },
     itemName: { type: String, required: true },
     quantity: { type: Number, required: true, min: 1 },
-    unitPrice: { type: Number, required: true, min: 0 },
-    total: { type: Number, required: true, min: 0 }
+    unitPrice: { type: Number, default: 0, min: 0 },
+    total: { type: Number, default: 0, min: 0 }
 }, { _id: false });
 
 const purchaseOrderSchema = new Schema<IPurchaseOrderDocument>(
@@ -49,8 +49,8 @@ const purchaseOrderSchema = new Schema<IPurchaseOrderDocument>(
         },
         supplierName: {
             type: String,
-            required: [true, 'Supplier name is required'],
             trim: true,
+            default: '',
         },
         items: [purchaseOrderItemSchema],
         totalAmount: {
@@ -115,3 +115,5 @@ const PurchaseOrder: Model<IPurchaseOrderDocument> = mongoose.model<IPurchaseOrd
 );
 
 export default PurchaseOrder;
+
+

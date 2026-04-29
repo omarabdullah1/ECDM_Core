@@ -73,7 +73,7 @@ export interface DataTableProps<T extends { _id: string }> {
 }
 
 // Admin roles that can perform bulk delete
-const ADMIN_ROLES = ['SuperAdmin', 'Manager'];
+const ADMIN_ROLES = ['SuperAdmin', 'Admin'];
 
 export function DataTable<T extends { _id: string }>({
   data,
@@ -537,3 +537,4 @@ export function DataTable<T extends { _id: string }>({
 }
 
 export default DataTable;
+

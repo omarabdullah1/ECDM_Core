@@ -1,6 +1,6 @@
 'use client';
 
-import { Edit, Trash2 } from 'lucide-react';
+import { Edit, Trash2, Eye } from 'lucide-react';
 import { Column } from '@/components/ui/DataTable';
 
 /**
@@ -45,6 +45,19 @@ const formatDate = (dateValue: string | Date | null | undefined): string => {
   }
 };
 
+const isNew = (dateValue: string | Date | null | undefined): boolean => {
+  if (!dateValue) return false;
+  try {
+    const createdDate = new Date(dateValue);
+    const now = new Date();
+    const diffTime = Math.abs(now.getTime() - createdDate.getTime());
+    const diffDays = diffTime / (1000 * 60 * 60 * 24);
+    return diffDays <= 1;
+  } catch {
+    return false;
+  }
+};
+
 // ─────────────────────────────────────────────────────────────────────────────
 // TypeScript Interfaces
 // ─────────────────────────────────────────────────────────────────────────────
@@ -61,14 +74,58 @@ interface Customer {
   company?: string;
 }
 
+interface SalesOrderSalesPerson {
+  _id: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+}
+
+interface SalesOrderLead {
+  _id: string;
+  issue?: string;
+  reason?: string;
+  status?: string;
+  notes?: string;
+  date?: string;
+  salesPerson?: SalesOrderSalesPerson;
+}
+
+interface SalesOrderData {
+  _id: string;
+  issue?: string;
+  callOutcome?: string;
+  callDate?: string;
+  salesPerson?: SalesOrderSalesPerson;
+  notes?: string;
+}
+
 interface SalesOrder {
   _id: string;
   salesOrderId?: string;
   issueDescription?: string;
+  issue?: string;
+  typeOfOrder?: string;
+  salesPlatform?: string;
   quotationStatus?: string;
   finalStatus?: string;
+  orderStatus?: string;
+  siteInspectionDate?: string;
+  followUpFirst?: string;
+  quotationStatusFirstFollowUp?: string;
+  reasonOfQuotation?: string;
+  followUpSecond?: string;
+  statusSecondFollowUp?: string;
+  followUpThird?: string;
+  finalStatusThirdFollowUp?: string;
+  notes?: string;
+  createdAt?: string;
+  salesPerson?: SalesOrderSalesPerson;
+  salesLead?: SalesOrderLead;
+  salesData?: SalesOrderData;
   quotation?: {
     grandTotal?: number;
+    items?: Array<{ description: string; quantity: number; unitPrice: number; total: number }>;
   };
 }
 
@@ -94,6 +151,8 @@ export interface CustomerOrder {
   // Operational fields
   engineerId?: string;
   engineerName?: string;
+  technicianId?: string;
+  technicianName?: string;
   actualVisitDate?: string;
   devicePickupType?: string;
   deal?: string;
@@ -104,8 +163,9 @@ export interface CustomerOrder {
   notes?: string;
 
   // Timestamps
-  createdAt?: string;
-  updatedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+  csPerson?: string;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -166,9 +226,12 @@ export const columns: Column<CustomerOrder>[] = [
       render: (row: CustomerOrder) => {
         const name = row.customerId?.name;
         return (
-          <span className="font-medium">
-            {name || '-'}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="font-medium">{name || '-'}</span>
+            {isNew(row.createdAt) && (
+              <span className="bg-blue-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md animate-pulse flex-shrink-0">NEW</span>
+            )}
+          </div>
         );
       },
     },
@@ -295,16 +358,16 @@ export const columns: Column<CustomerOrder>[] = [
     // ═════════════════════════════════════════════════════════════════════════
 
     // ─────────────────────────────────────────────────────────────────────────
-    // 10. Engineer Name
+    // 10. Technician Name
     // ─────────────────────────────────────────────────────────────────────────
     {
-      key: 'engineerName',
-      header: 'Engineer Name',
+      key: 'technicianName',
+      header: 'Technician Name',
       className: 'md:w-auto md:max-w-[150px] md:truncate',
       render: (row: CustomerOrder) => {
         return (
           <span className="text-sm">
-            {row.engineerName || '-'}
+            {row.technicianName || row.engineerName || '-'}
           </span>
         );
       },
@@ -377,7 +440,7 @@ export const columns: Column<CustomerOrder>[] = [
       header: 'Start Date',
       className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: CustomerOrder) => {
-        return <span className="text-sm font-mono">{formatDate(row.startDate)}</span>;
+        return <span className="text-sm font-mono">{formatDateTime(row.startDate)}</span>;
       },
     },
 
@@ -389,7 +452,7 @@ export const columns: Column<CustomerOrder>[] = [
       header: 'End Date',
       className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: CustomerOrder) => {
-        return <span className="text-sm font-mono">{formatDate(row.endDate)}</span>;
+        return <span className="text-sm font-mono">{formatDateTime(row.endDate)}</span>;
       },
     },
 
@@ -401,7 +464,7 @@ export const columns: Column<CustomerOrder>[] = [
       header: 'Device Returned Date',
       className: 'md:w-1/6 md:max-w-[120px] md:truncate',
       render: (row: CustomerOrder) => {
-        return <span className="text-sm font-mono">{formatDate(row.deviceReturnedDate)}</span>;
+        return <span className="text-sm font-mono">{formatDateTime(row.deviceReturnedDate)}</span>;
       },
     },
 
@@ -427,7 +490,35 @@ export const columns: Column<CustomerOrder>[] = [
     },
 
     // ─────────────────────────────────────────────────────────────────────────
-    // 19. Notes
+    // 19. CS Person
+    // ─────────────────────────────────────────────────────────────────────────
+    {
+      key: 'csPerson',
+      header: 'CS Person',
+      className: 'hidden xl:table-cell md:w-1/6 md:max-w-[120px] md:truncate',
+      render: (row: CustomerOrder) => (
+        <span className="text-xs text-[hsl(var(--muted-foreground))] italic">
+          {row.csPerson || '—'}
+        </span>
+      ),
+    },
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // 20. Created At
+    // ─────────────────────────────────────────────────────────────────────────
+    {
+      key: 'createdAt',
+      header: 'Created At',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
+      render: (row: CustomerOrder) => (
+        <span className="text-xs text-[hsl(var(--muted-foreground))]">
+          {formatDateTime(row.createdAt)}
+        </span>
+      ),
+    },
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // 21. Notes
     // ─────────────────────────────────────────────────────────────────────────
     {
       key: 'notes',
@@ -455,25 +546,34 @@ export const columns: Column<CustomerOrder>[] = [
       header: 'Actions',
       className: 'md:w-[1%] md:whitespace-nowrap',
       render: (row: CustomerOrder, meta?: any) => {
+        const editAllowed = meta?.canEdit ? meta.canEdit(row) : true;
+        
         return (
           <div className="flex items-center gap-1">
             <button
-              onClick={() => meta?.onEdit?.(row)}
+              onClick={() => meta?.onEdit?.(row, editAllowed)}
               className="p-1 hover:bg-blue-500/10 rounded transition-colors"
-              title="Edit Order"
+              title={editAllowed ? "Edit Order" : "View Order (Locked)"}
             >
-              <Edit className="h-3.5 w-3.5 text-blue-500" />
+              {editAllowed ? (
+                <Edit className="h-3.5 w-3.5 text-blue-500" />
+              ) : (
+                <Eye className="h-3.5 w-3.5 text-orange-500" />
+              )}
             </button>
-            <button
-              onClick={() => meta?.onDelete?.(row._id)}
-              className="p-1 hover:bg-red-500/10 rounded transition-colors"
-              title="Delete Order"
-            >
-              <Trash2 className="h-3.5 w-3.5 text-red-500" />
-            </button>
+            {meta?.onDelete && (
+              <button
+                onClick={() => meta?.onDelete?.(row._id)}
+                className="p-1 hover:bg-red-500/10 rounded transition-colors"
+                title="Delete Order"
+              >
+                <Trash2 className="h-3.5 w-3.5 text-red-500" />
+              </button>
+            )}
           </div>
         );
       },
     },
 
   ];
+

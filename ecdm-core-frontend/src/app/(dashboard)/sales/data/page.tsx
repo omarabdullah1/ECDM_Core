@@ -9,6 +9,7 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import { createSalesDataColumns, SalesData } from './columns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter } from '@/components/ui/dialog';
 import toast from 'react-hot-toast';
+import { useAuthStore } from '@/features/auth/useAuth';
 
 const iCls = 'flex h-9 w-full rounded-md border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] px-3 py-1 text-sm shadow-sm transition-all placeholder:text-[hsl(var(--muted-foreground))] focus-visible:outline-none focus-visible:border-[hsl(var(--primary))]/50 focus-visible:ring-[3px] focus-visible:ring-[hsl(var(--primary))]/10';
 const OUTCOMES = ['Pending', 'No Answer', 'Interested', 'Converted', 'Rejected'];
@@ -53,6 +54,7 @@ export default function SalesDataPage() {
   const [delId, setDelId] = useState<string | null>(null);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [isReadOnly, setIsReadOnly] = useState(false);
+  const { user: currentUser } = useAuthStore();
   const lim = 10;
   const tp = Math.ceil(total / lim);
 
@@ -83,8 +85,14 @@ export default function SalesDataPage() {
   };
 
   const openEdit = (row: SalesData, readOnly = false) => {
+    // Permission check: Only owner, admin, or if record is unassigned
+    const isOwner = row.salesPerson?._id === currentUser?._id;
+    const isAdmin = currentUser?.role === 'SuperAdmin' || currentUser?.role === 'Manager';
+    const isUnassigned = !row.salesPerson;
+    const canEdit = isUnassigned || isOwner || isAdmin;
+
     setEditing(row);
-    setIsReadOnly(readOnly);
+    setIsReadOnly(!canEdit || readOnly);
     setForm({
       ...blank,
       marketingData: row.marketingData?._id || '',
@@ -118,13 +126,25 @@ export default function SalesDataPage() {
     setError('');
 
     const pl: Record<string, unknown> = {};
-    // Exclude immutable reference IDs when editing
-    const immutableFields = editing ? ['marketingData', 'salesPerson', 'customer'] : [];
+    
+    // Exclude immutable reference IDs
+    // A record's owner (salesPerson) is immutable once set.
+    const immutableFields = (editing && editing.salesPerson) ? ['marketingData', 'salesPerson', 'customer'] : ['marketingData', 'customer'];
 
     for (const [k, v] of Object.entries(form)) {
       if (v !== '' && !immutableFields.includes(k)) {
         pl[k] = v;
       }
+    }
+
+    // Auto-assign logic:
+    // 1. If editing an unassigned record, current user becomes the owner.
+    if (editing && !editing.salesPerson && currentUser?._id) {
+      pl.salesPerson = currentUser._id;
+    }
+    // 2. If creating a new record and no salesperson is specified, use current user.
+    if (!editing && !pl.salesPerson && currentUser?._id) {
+      pl.salesPerson = currentUser._id;
     }
 
     try {
@@ -166,6 +186,7 @@ export default function SalesDataPage() {
     onEdit: (row) => openEdit(row, false),
     onDelete: handleDelete,
     onHistory: handleHistory,
+    currentUser,
   });
 
   return (
@@ -236,7 +257,7 @@ export default function SalesDataPage() {
             followUpDate: false,
             salesPlatform: false,
             notes: false,
-            "customer.customerId": false,
+            "customer.customerId": true,
           }}
         />
       </div >
@@ -445,18 +466,12 @@ export default function SalesDataPage() {
                     value={form.order}
                     onChange={u('order')}
                     className={iCls}
-                    disabled={isReadOnly || editing?.isOrderLocked}
+                    disabled={isReadOnly}
                   >
                     <option value="">Select...</option>
                     <option value="Yes">Yes</option>
                     <option value="No">No</option>
                   </select>
-                  {!isReadOnly && editing?.isOrderLocked && (
-                    <div className="text-xs text-red-500 mt-1 flex items-center gap-1">
-                      <Lock className="w-3 h-3" />
-                      <span>Locked: Order is in progress and cannot be changed to No</span>
-                    </div>
-                  )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -466,18 +481,12 @@ export default function SalesDataPage() {
                       value={form.followUp}
                       onChange={u('followUp')}
                       className={iCls}
-                      disabled={isReadOnly || editing?.isFollowUpLocked}
+                      disabled={isReadOnly}
                     >
                       <option value="">Select...</option>
                       <option value="Yes">Yes</option>
                       <option value="No">No</option>
                     </select>
-                    {!isReadOnly && editing?.isFollowUpLocked && (
-                      <div className="text-xs text-red-500 mt-1 flex items-center gap-1">
-                        <Lock className="w-3 h-3" />
-                        <span>Locked: Team has started working on this follow-up</span>
-                      </div>
-                    )}
                   </div>
                   <div>
                     <label className="text-sm font-medium mb-1 block">Follow Up Date</label>
@@ -517,13 +526,16 @@ export default function SalesDataPage() {
                   {isReadOnly ? 'Close' : 'Cancel'}
                 </button>
                 {isReadOnly ? (
-                  <button
-                    type="button"
-                    key="btn-edit" onClick={(e) => { e.preventDefault(); setIsReadOnly(false); }}
-                    className="flex-1 rounded-md bg-[hsl(var(--primary))] py-2 text-sm font-medium text-[hsl(var(--primary-foreground))] shadow-sm hover:opacity-90 transition-all focus-visible:outline-none"
-                  >
-                    Edit
-                  </button>
+                  // Only show Edit button if they have permission to edit
+                  ((!editing?.salesPerson) || (editing?.salesPerson?._id === currentUser?._id) || (currentUser?.role === 'SuperAdmin' || currentUser?.role === 'Manager')) && (
+                    <button
+                      type="button"
+                      key="btn-edit" onClick={(e) => { e.preventDefault(); setIsReadOnly(false); }}
+                      className="flex-1 rounded-md bg-[hsl(var(--primary))] py-2 text-sm font-medium text-[hsl(var(--primary-foreground))] shadow-sm hover:opacity-90 transition-all focus-visible:outline-none"
+                    >
+                      Edit
+                    </button>
+                  )
                 ) : (
                   <button
                     type="submit"
@@ -577,3 +589,4 @@ export default function SalesDataPage() {
     </div >
   );
 }
+

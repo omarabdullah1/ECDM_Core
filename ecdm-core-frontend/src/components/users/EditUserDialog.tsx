@@ -1,7 +1,8 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Edit2, X, AlertCircle, Loader2, TrendingUp, Briefcase } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter } from '@/components/ui/dialog';
+import PerformanceScoreCard from '@/components/profile/PerformanceScoreCard';
 import api from '@/lib/axios';
 import toast from 'react-hot-toast';
 
@@ -21,6 +22,10 @@ interface User {
     commissionPercentage?: number;
     salary?: number;
     department?: string;
+    workStartTime?: string;
+    workEndTime?: string;
+    gracePeriod?: number;
+    halfDayThreshold?: number;
 }
 
 interface EditUserDialogProps {
@@ -28,6 +33,7 @@ interface EditUserDialogProps {
     isOpen: boolean;
     onClose: () => void;
     onSuccess: () => void;
+    initialEditMode?: boolean;
 }
 
 const ROLES = [
@@ -57,8 +63,14 @@ const DEPARTMENTS = [
 
 const inputClass = 'w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-4 py-3 text-sm placeholder:text-[hsl(var(--muted-foreground))] focus:border-[hsl(var(--primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/20 transition-all disabled:opacity-60 disabled:cursor-not-allowed';
 
-export default function EditUserDialog({ user, isOpen, onClose, onSuccess }: EditUserDialogProps) {
-    const [internalPreviewMode, setInternalPreviewMode] = useState(true);
+export default function EditUserDialog({ user, isOpen, onClose, onSuccess, initialEditMode = false }: EditUserDialogProps) {
+    const [internalPreviewMode, setInternalPreviewMode] = useState(!initialEditMode);
+
+    useEffect(() => {
+        if (isOpen) {
+            setInternalPreviewMode(!initialEditMode);
+        }
+    }, [isOpen, initialEditMode]);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
     const [form, setForm] = useState({
@@ -73,7 +85,33 @@ export default function EditUserDialog({ user, isOpen, onClose, onSuccess }: Edi
         commissionPercentage: user.commissionPercentage || 0,
         salary: user.salary || 0,
         department: user.department || '',
+        workStartTime: user.workStartTime || '09:00',
+        workEndTime: user.workEndTime || '17:00',
+        gracePeriod: user.gracePeriod !== undefined ? user.gracePeriod : 15,
+        halfDayThreshold: user.halfDayThreshold !== undefined ? user.halfDayThreshold : 4.5,
+        targetSales: user.targetSales || 0,
+        targetBudget: user.targetBudget || 0,
     });
+
+    const [performanceStats, setPerformanceStats] = useState(null);
+    const [loadingStats, setLoadingStats] = useState(false);
+
+    useEffect(() => {
+        if (isOpen && user._id) {
+            const fetchStats = async () => {
+                setLoadingStats(true);
+                try {
+                    const { data } = await api.get(`/hr/users/${user._id}/profile`);
+                    setPerformanceStats(data.data?.performanceStats || data.performanceStats || null);
+                } catch (err) {
+                    console.error('Failed to fetch performance stats:', err);
+                } finally {
+                    setLoadingStats(false);
+                }
+            };
+            fetchStats();
+        }
+    }, [isOpen, user._id]);
 
     const effectivelyReadOnly = internalPreviewMode;
 
@@ -94,6 +132,12 @@ export default function EditUserDialog({ user, isOpen, onClose, onSuccess }: Edi
                 commissionPercentage: form.commissionPercentage,
                 salary: Number(form.salary),
                 department: form.department,
+                workStartTime: form.workStartTime,
+                workEndTime: form.workEndTime,
+                gracePeriod: Number(form.gracePeriod),
+                halfDayThreshold: Number(form.halfDayThreshold),
+                targetSales: Number(form.targetSales),
+                targetBudget: Number(form.targetBudget),
             };
             if (form.password) {
                 payload.password = form.password;
@@ -126,7 +170,10 @@ export default function EditUserDialog({ user, isOpen, onClose, onSuccess }: Edi
                 </DialogHeader>
 
                 <DialogBody>
-                    <form id="edit-user-form" onSubmit={handleUpdate} className="space-y-4 max-h-[60vh] overflow-y-auto px-1 custom-scrollbar">
+                    <div className="mb-6">
+                        <PerformanceScoreCard stats={performanceStats} loading={loadingStats} />
+                    </div>
+                    <form id="edit-user-form" onSubmit={handleUpdate} className="space-y-4 max-h-[50vh] overflow-y-auto px-1 custom-scrollbar">
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-1.5">
                                 <label className="text-xs font-bold uppercase text-[hsl(var(--muted-foreground))]">First Name</label>
@@ -226,6 +273,53 @@ export default function EditUserDialog({ user, isOpen, onClose, onSuccess }: Edi
 
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-1.5">
+                                <label className="text-xs font-bold uppercase text-[hsl(var(--muted-foreground))]">Shift Start Time</label>
+                                <input
+                                    type="time"
+                                    value={form.workStartTime}
+                                    onChange={(e) => setForm(prev => ({ ...prev, workStartTime: e.target.value }))}
+                                    className={inputClass}
+                                    disabled={effectivelyReadOnly}
+                                />
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-bold uppercase text-[hsl(var(--muted-foreground))]">Shift End Time</label>
+                                <input
+                                    type="time"
+                                    value={form.workEndTime}
+                                    onChange={(e) => setForm(prev => ({ ...prev, workEndTime: e.target.value }))}
+                                    className={inputClass}
+                                    disabled={effectivelyReadOnly}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-bold uppercase text-[hsl(var(--muted-foreground))]">Grace Period (Min)</label>
+                                <input
+                                    type="number"
+                                    value={form.gracePeriod}
+                                    onChange={(e) => setForm(prev => ({ ...prev, gracePeriod: Number(e.target.value) }))}
+                                    className={inputClass}
+                                    disabled={effectivelyReadOnly}
+                                />
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-bold uppercase text-[hsl(var(--muted-foreground))]">Half-day (Hrs)</label>
+                                <input
+                                    type="number"
+                                    step="0.5"
+                                    value={form.halfDayThreshold}
+                                    onChange={(e) => setForm(prev => ({ ...prev, halfDayThreshold: Number(e.target.value) }))}
+                                    className={inputClass}
+                                    disabled={effectivelyReadOnly}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1.5">
                                 <label className="text-xs font-bold uppercase text-[hsl(var(--muted-foreground))] flex items-center gap-1">
                                     <TrendingUp className="h-3 w-3" />
                                     Commission %
@@ -253,6 +347,40 @@ export default function EditUserDialog({ user, isOpen, onClose, onSuccess }: Edi
                                 />
                             </div>
                         </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-bold uppercase text-[hsl(var(--muted-foreground))] flex items-center gap-1">
+                                    <TrendingUp className="h-3 w-3 text-emerald-500" />
+                                    Target Sales (EGP)
+                                </label>
+                                <input
+                                    type="number"
+                                    value={form.targetSales}
+                                    onChange={(e) => setForm(prev => ({ ...prev, targetSales: Number(e.target.value) }))}
+                                    min="0"
+                                    className={inputClass}
+                                    disabled={effectivelyReadOnly}
+                                    placeholder="Enter sales target"
+                                />
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-bold uppercase text-[hsl(var(--muted-foreground))] flex items-center gap-1">
+                                    <TrendingUp className="h-3 w-3 text-blue-500" />
+                                    Target Budget (EGP)
+                                </label>
+                                <input
+                                    type="number"
+                                    value={form.targetBudget}
+                                    onChange={(e) => setForm(prev => ({ ...prev, targetBudget: Number(e.target.value) }))}
+                                    min="0"
+                                    className={inputClass}
+                                    disabled={effectivelyReadOnly}
+                                    placeholder="Enter budget target"
+                                />
+                            </div>
+                        </div>
+
 
                         {!effectivelyReadOnly && (
                             <div className="space-y-1.5">
@@ -327,3 +455,4 @@ export default function EditUserDialog({ user, isOpen, onClose, onSuccess }: Edi
         </Dialog>
     );
 }
+

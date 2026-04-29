@@ -48,3 +48,4 @@ const RndProject: Model<IRndProjectDocument> =
     mongoose.models.RndProject || mongoose.model<IRndProjectDocument>('RndProject', rndProjectSchema);
 
 export default RndProject;
+

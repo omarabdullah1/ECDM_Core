@@ -9,3 +9,4 @@ export function useT() {
     const lang = useLangStore((s) => s.lang);
     return translations[lang];
 }
+

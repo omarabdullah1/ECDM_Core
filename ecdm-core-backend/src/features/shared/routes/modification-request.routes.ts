@@ -11,7 +11,7 @@ const router = Router();
 router.use(authenticate);
 
 // All routes are restricted to SuperAdmin and Manager (Admin roles)
-router.use(authorise(UserRole.SuperAdmin, UserRole.Manager));
+router.use(authorise(UserRole.SuperAdmin, UserRole.Admin));
 
 /**
  * @route   GET /api/admin/modification-requests
@@ -51,3 +51,4 @@ router.post('/:id/review', validate(reviewRequestSchema), ctrl.review);
 router.delete('/:id', ctrl.cancel);
 
 export default router;
+

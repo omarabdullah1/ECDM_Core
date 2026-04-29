@@ -20,11 +20,12 @@ import ReviewRequestDialog from './ReviewRequestDialog';
 
 // ─── Types ──────────────────────────────────────────────────────────────────────
 
-interface ModificationRequest {
+export interface ModificationRequest {
     _id: string;
     moduleName: string;
     documentId: string;
-    changes: any;
+    originalData: any;
+    proposedData: any;
     requestedBy: {
         firstName: string;
         lastName: string;
@@ -38,6 +39,7 @@ interface ModificationRequest {
     };
     reviewedAt?: string;
     createdAt: string;
+    updatedAt: string;
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────────
@@ -321,3 +323,4 @@ export default function ModificationRequestsPage() {
         </div>
     );
 }
+

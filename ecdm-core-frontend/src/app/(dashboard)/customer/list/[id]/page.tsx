@@ -44,6 +44,7 @@ interface SalesOrder {
   quotationStatus?: string;
   finalStatus?: string;
   siteInspectionDate?: string;
+  pipelineStage: string;
   createdAt: string;
 }
 
@@ -57,6 +58,9 @@ interface CustomerOrder {
   engineerName: string;
   deal: string;
   cost: number;
+  paidAmount: number;
+  remainingBalance: number;
+  pipelineStage: string;
   devicePickupType: string;
   notes?: string;
   createdAt: string;
@@ -471,34 +475,56 @@ export default function CustomerReportPage() {
                 <thead>
                   <tr className="border-b border-[hsl(var(--border))]">
                     <th className="text-left py-3 px-2 font-semibold">Order Date</th>
-                    <th className="text-left py-3 px-2 font-semibold">Order Type</th>
                     <th className="text-left py-3 px-2 font-semibold">Service/Issue</th>
+                    <th className="text-left py-3 px-2 font-semibold">Progress Stage</th>
                     <th className="text-left py-3 px-2 font-semibold">Cost</th>
+                    <th className="text-left py-3 px-2 font-semibold">Paid</th>
+                    <th className="text-left py-3 px-2 font-semibold">Balance</th>
+                    <th className="text-left py-3 px-2 font-semibold">Payment</th>
                     <th className="text-left py-3 px-2 font-semibold">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredFinancials.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="text-center py-8 text-[hsl(var(--muted-foreground))]">
+                      <td colSpan={8} className="text-center py-8 text-[hsl(var(--muted-foreground))]">
                         No financial records found.
                       </td>
                     </tr>
                   ) : (
                     filteredFinancials.map((item) => (
                       <tr key={item._id} className="border-b border-[hsl(var(--border))]/50 hover:bg-[hsl(var(--muted))]/30">
-                        <td className="py-3 px-2">{formatDate(item.createdAt)}</td>
-                        <td className="py-3 px-2">{item.typeOfOrder || '—'}</td>
+                        <td className="py-3 px-2">
+                           <div className="flex flex-col">
+                             <span className="font-medium">{formatDate(item.createdAt)}</span>
+                             <span className="text-[10px] text-[hsl(var(--muted-foreground))]">{item.typeOfOrder || '—'}</span>
+                           </div>
+                        </td>
                         <td className="py-3 px-2 max-w-[200px] truncate" title={item.issue}>
                           {item.issue || '—'}
                         </td>
-                        <td className="py-3 px-2 font-semibold text-green-600">{formatCurrency(item.cost)}</td>
+                        <td className="py-3 px-2">
+                           <StatusBadge status={item.pipelineStage} />
+                        </td>
+                        <td className="py-3 px-2 font-medium">{formatCurrency(item.cost)}</td>
+                        <td className="py-3 px-2 text-green-600">{formatCurrency(item.paidAmount || 0)}</td>
+                        <td className="py-3 px-2 text-red-500 font-semibold">{formatCurrency(item.remainingBalance || 0)}</td>
+                        <td className="py-3 px-2">
+                           {item.remainingBalance <= 0 ? (
+                             <span className="text-[10px] bg-green-500 text-white px-1.5 py-0.5 rounded font-bold">PAID</span>
+                           ) : item.paidAmount > 0 ? (
+                             <span className="text-[10px] bg-orange-500 text-white px-1.5 py-0.5 rounded font-bold">PARTIAL</span>
+                           ) : (
+                             <span className="text-[10px] bg-red-500 text-white px-1.5 py-0.5 rounded font-bold">UNPAID</span>
+                           )}
+                        </td>
                         <td className="py-3 px-2">
                           <button
                             onClick={() => printInvoice(item)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))] hover:bg-[hsl(var(--primary))]/20"
+                            className="p-1.5 rounded-lg text-xs font-medium bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))] hover:bg-[hsl(var(--primary))]/20"
+                            title="Print Invoice"
                           >
-                            <Printer className="h-3.5 w-3.5" /> Print Invoice
+                            <Printer className="h-3.5 w-3.5" />
                           </button>
                         </td>
                       </tr>
@@ -508,12 +534,18 @@ export default function CustomerReportPage() {
               </table>
             </div>
             {filteredFinancials.length > 0 && (
-              <div className="flex justify-end border-t border-[hsl(var(--border))] pt-4">
-                <div className="text-right">
-                  <p className="text-sm text-[hsl(var(--muted-foreground))]">Total Revenue</p>
-                  <p className="text-2xl font-bold text-green-600">
-                    {formatCurrency(filteredFinancials.reduce((sum, o) => sum + o.cost, 0))}
-                  </p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border-t border-[hsl(var(--border))] pt-6 mt-4">
+                <div className="p-4 rounded-xl bg-[hsl(var(--muted))]/30 border border-[hsl(var(--border))]">
+                  <p className="text-xs text-[hsl(var(--muted-foreground))] mb-1 uppercase tracking-wider font-bold">Total Sales</p>
+                  <p className="text-xl font-bold">{formatCurrency(filteredFinancials.reduce((sum, o) => sum + o.cost, 0))}</p>
+                </div>
+                <div className="p-4 rounded-xl bg-green-500/5 border border-green-500/20">
+                  <p className="text-xs text-green-600 mb-1 uppercase tracking-wider font-bold">Total Collected</p>
+                  <p className="text-xl font-bold text-green-600">{formatCurrency(filteredFinancials.reduce((sum, o) => sum + (o.paidAmount || 0), 0))}</p>
+                </div>
+                <div className="p-4 rounded-xl bg-red-500/5 border border-red-500/20">
+                  <p className="text-xs text-red-600 mb-1 uppercase tracking-wider font-bold">Total Receivables</p>
+                  <p className="text-xl font-bold text-red-600">{formatCurrency(filteredFinancials.reduce((sum, o) => sum + (o.remainingBalance || 0), 0))}</p>
                 </div>
               </div>
             )}
@@ -529,7 +561,7 @@ export default function CustomerReportPage() {
                   <th className="text-left py-3 px-2 font-semibold">Order ID</th>
                   <th className="text-left py-3 px-2 font-semibold">Type</th>
                   <th className="text-left py-3 px-2 font-semibold">Issue Description</th>
-                  <th className="text-left py-3 px-2 font-semibold">Status</th>
+                  <th className="text-left py-3 px-2 font-semibold">Pipeline Progress</th>
                   <th className="text-left py-3 px-2 font-semibold">Date</th>
                 </tr>
               </thead>
@@ -551,7 +583,7 @@ export default function CustomerReportPage() {
                         {order.issueDescription}
                       </td>
                       <td className="py-3 px-2">
-                        <StatusBadge status={order.orderStatus} />
+                        <StatusBadge status={order.pipelineStage} />
                       </td>
                       <td className="py-3 px-2">{formatDate(order.createdAt)}</td>
                     </tr>
@@ -706,11 +738,15 @@ function KPICard({
 function StatusBadge({ status }: { status: string }) {
   const getStatusColor = (s: string) => {
     const normalized = s?.toLowerCase() || '';
-    if (['completed', 'done', 'approved', 'yes', 'accepted'].some((k) => normalized.includes(k)))
+    if (['completed', 'done', 'approved', 'yes', 'accepted', 'settled'].some((k) => normalized.includes(k)))
       return 'bg-green-500/10 text-green-600';
-    if (['pending', 'in progress', 'inprogress'].some((k) => normalized.includes(k)))
+    if (['pending', 'in progress', 'inprogress', 'waiting', 'negotiation', 'quotation'].some((k) => normalized.includes(k)))
       return 'bg-yellow-500/10 text-yellow-600';
-    if (['rejected', 'cancelled', 'failed', 'no'].some((k) => normalized.includes(k)))
+    if (['maintenance', 'task', 'operations', 'operational'].some((k) => normalized.includes(k)))
+      return 'bg-blue-500/10 text-blue-600';
+    if (['follow-up', 'feedback', 'service'].some((k) => normalized.includes(k)))
+      return 'bg-purple-500/10 text-purple-600';
+    if (['rejected', 'cancelled', 'failed', 'no', 'closed'].some((k) => normalized.includes(k)))
       return 'bg-red-500/10 text-red-600';
     return 'bg-gray-500/10 text-gray-600';
   };

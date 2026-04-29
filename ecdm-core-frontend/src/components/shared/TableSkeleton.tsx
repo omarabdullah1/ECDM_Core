@@ -96,3 +96,4 @@ export function DetailSkeleton({ rows = 5 }: { rows?: number }) {
 }
 
 export default TableSkeleton;
+

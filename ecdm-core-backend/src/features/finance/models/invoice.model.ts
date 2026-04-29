@@ -7,7 +7,7 @@ const invoiceItemSchema = new Schema(
         quantity:    { type: Number, required: true, min: 1 },
         unitPrice:   { type: Number, required: true, min: 0 },
         inventoryItemId: { type: Schema.Types.ObjectId, ref: 'InventoryFinance' },
-        priceListId:     { type: Schema.Types.ObjectId, ref: 'PriceList' },
+        inventoryId:     { type: Schema.Types.ObjectId, ref: 'Inventory' },
     },
     { _id: false },
 );
@@ -65,3 +65,5 @@ invoiceSchema.index({ createdAt:     -1 });
 
 const Invoice: Model<IInvoiceDocument> = mongoose.model<IInvoiceDocument>('FinanceInvoice', invoiceSchema);
 export default Invoice;
+
+

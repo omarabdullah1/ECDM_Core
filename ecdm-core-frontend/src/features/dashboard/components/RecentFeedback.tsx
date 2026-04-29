@@ -69,3 +69,4 @@ export default function RecentFeedback({ data }: Props) {
         </div>
     );
 }
+

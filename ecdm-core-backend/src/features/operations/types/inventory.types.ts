@@ -1,10 +1,10 @@
 import mongoose from 'mongoose';
 
 /**
- * PriceList TypeScript Types
+ * Inventory TypeScript Types
  */
 
-export interface IPriceList {
+export interface IInventory {
     _id: string;
     sparePartsId: string;
     itemName: string;
@@ -13,6 +13,7 @@ export interface IPriceList {
     dataSheetFileName: string;
     category: 'Maintenance' | 'General supply' | 'Supply and installation';
     unitPrice: number;
+    cost: number;
     availableQuantity: number;
     minStockLevel: number;
     notes: string;
@@ -21,7 +22,7 @@ export interface IPriceList {
     updatedAt: Date;
 }
 
-export interface PriceListCreatePayload {
+export interface InventoryCreatePayload {
     itemName: string;
     specification?: string;
     dataSheetUrl?: string;
@@ -33,7 +34,7 @@ export interface PriceListCreatePayload {
     notes?: string;
 }
 
-export interface PriceListUpdatePayload {
+export interface InventoryUpdatePayload {
     itemName?: string;
     specification?: string;
     dataSheetUrl?: string;
@@ -46,9 +47,10 @@ export interface PriceListUpdatePayload {
     updatedBy?: mongoose.Types.ObjectId | string;
 }
 
-export interface PriceListQueryParams {
+export interface InventoryQueryParams {
     page?: number;
     limit?: number;
     search?: string;
     category?: string;
 }
+

@@ -20,7 +20,7 @@ import {
 
 const workOrderPartSchema = new Schema(
     {
-        priceListId: { type: Schema.Types.ObjectId, ref: 'PriceList', required: true },
+        inventoryId: { type: Schema.Types.ObjectId, ref: 'Inventory' },
         quantity: { type: Number, required: true, min: 1 },
         unitCost: { type: Number, required: true, min: 0 },
     },
@@ -95,13 +95,30 @@ const workOrderSchema = new Schema<IWorkOrderDocument>(
     },
 );
 
-// ── Pre-save hook to calculate costs ───────────────────────────────────────
+// ── Pre-validate hook to sanitize and calculate costs ──────────────────────
 
-workOrderSchema.pre<IWorkOrderDocument>('save', function (next) {
+workOrderSchema.pre<IWorkOrderDocument>('validate', function (next) {
+    // ─── Sanitize partsUsed ───
+    if (this.partsUsed && this.partsUsed.length > 0) {
+        // Filter out items that don't have a valid inventoryId (fixes legacy/empty rows)
+        this.partsUsed = (this.partsUsed as any[]).filter(p => {
+            const id = p.inventoryId || (p as any).inventoryItemId || (p as any).InventoryItemId;
+            if (id && mongoose.Types.ObjectId.isValid(String(id))) {
+                // Ensure field name is standardized to inventoryId
+                if (!p.inventoryId) p.inventoryId = id;
+                return true;
+            }
+            return false;
+        });
+    }
+
     // Calculate parts total based on quantity * unitCost
     if (this.partsUsed && this.partsUsed.length > 0) {
         this.cost.partsTotal = this.partsUsed.reduce((sum, part) => sum + (part.quantity * part.unitCost), 0);
+    } else {
+        this.cost.partsTotal = 0;
     }
+    
     // Calculate grand total
     this.cost.grandTotal = this.cost.partsTotal + this.cost.laborCost + this.cost.otherCosts;
     next();
@@ -120,3 +137,5 @@ const WorkOrder: Model<IWorkOrderDocument> =
     mongoose.model<IWorkOrderDocument>('WorkOrder', workOrderSchema);
 
 export default WorkOrder;
+
+

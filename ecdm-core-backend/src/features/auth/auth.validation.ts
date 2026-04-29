@@ -46,9 +46,19 @@ export const updateUserSchema = z.object({
     commissionPercentage: z.number().min(0).max(100).optional(),
     department: z.string().optional(),
     salary: z.number().optional(),
+    address: z.string().max(500).optional(),
+});
+
+// Schema for a user updating their own profile
+export const updateMeSchema = z.object({
+    firstName: z.string().min(1, 'First name is required').max(50).optional(),
+    lastName: z.string().min(1, 'Last name is required').max(50).optional(),
+    phone: z.string().optional(),
+    address: z.string().max(500).optional(),
 });
 
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type CreateUserInput = z.infer<typeof createUserSchema>;
 export type UpdateUserInput = z.infer<typeof updateUserSchema>;
+

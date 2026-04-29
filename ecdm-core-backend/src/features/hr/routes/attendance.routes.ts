@@ -60,10 +60,10 @@ router.get('/folders', ctrl.getAttendanceFolders); // Folders aggregation endpoi
 router.get('/template', authorise(UserRole.SuperAdmin, UserRole.Manager, UserRole.HR), ctrl.downloadTemplate); // Template download
 router.get('/:id', ctrl.getById);
 router.put('/:id', validate(updateAttendanceSchema), ctrl.update);
-router.delete('/:id', authorise(UserRole.SuperAdmin, UserRole.Manager, UserRole.HR), ctrl.remove);
+router.delete('/:id', authorise(UserRole.SuperAdmin, UserRole.Admin), ctrl.remove);
 
 // Bulk operations (Admin/HR only)
-router.post('/bulk-delete', authorise(UserRole.SuperAdmin, UserRole.Manager, UserRole.HR), ctrl.bulkDelete);
+router.post('/bulk-delete', authorise(UserRole.SuperAdmin, UserRole.Admin), ctrl.bulkDelete);
 
 // Excel/CSV Upload (Admin/HR only)
 router.post('/upload', authorise(UserRole.SuperAdmin, UserRole.Manager, UserRole.HR), upload.single('file'), ctrl.uploadExcel);
@@ -74,3 +74,4 @@ router.get('/user/:userId', ctrl.getByUserId);
 router.get('/stats/:userId', ctrl.getEmployeeStats);
 
 export default router;
+

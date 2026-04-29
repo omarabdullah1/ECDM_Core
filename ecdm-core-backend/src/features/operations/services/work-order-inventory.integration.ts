@@ -7,7 +7,7 @@ import { MovementType } from '../types/inventory-plus.types';
 import { TaskCompleted } from '../types/work-order.types';
 
 interface PartInput {
-    priceListId: string;
+    inventoryId: string;
     quantity: number;
 }
 
@@ -37,9 +37,9 @@ export const addPartsToWorkOrder = async (
         const processedParts: any[] = [];
 
         for (const part of parts) {
-            const inventoryItem = await InventoryFinance.findById(part.priceListId).session(session);
+            const inventoryItem = await InventoryFinance.findById(part.inventoryId).session(session);
             if (!inventoryItem) {
-                throw new AppError(`Inventory item not found: ${part.priceListId}`, 404);
+                throw new AppError(`Inventory item not found: ${part.inventoryId}`, 404);
             }
 
             if (inventoryItem.stockNumber < part.quantity) {
@@ -47,7 +47,7 @@ export const addPartsToWorkOrder = async (
                 continue;
             }
 
-            await InventoryFinance.findByIdAndUpdate(part.priceListId, {
+            await InventoryFinance.findByIdAndUpdate(part.inventoryId, {
                 $inc: { stockNumber: -part.quantity }
             }, { session });
 
@@ -61,7 +61,7 @@ export const addPartsToWorkOrder = async (
             }], { session });
 
             processedParts.push({
-                priceListId: inventoryItem._id,
+                inventoryId: inventoryItem._id,
                 quantity: part.quantity,
                 unitCost: inventoryItem.price,
             });
@@ -71,10 +71,10 @@ export const addPartsToWorkOrder = async (
 
         if (processedParts.length > 0) {
             const existingParts = workOrder.partsUsed || [];
-            const newPartsMap = new Map(existingParts.map(p => [(p as any).priceListId.toString(), p]));
+            const newPartsMap = new Map(existingParts.map(p => [(p as any).inventoryId.toString(), p]));
             
             processedParts.forEach(p => {
-                const key = p.priceListId.toString();
+                const key = p.inventoryId.toString();
                 if (newPartsMap.has(key)) {
                     const existing = newPartsMap.get(key)!;
                     existing.quantity += p.quantity;
@@ -126,9 +126,9 @@ export const deductInventoryOnCompletion = async (
 
         if (workOrder.partsUsed && workOrder.partsUsed.length > 0) {
             for (const part of workOrder.partsUsed) {
-                const inventoryItem = await InventoryFinance.findById((part as any).priceListId).session(session);
+                const inventoryItem = await InventoryFinance.findById((part as any).inventoryId).session(session);
                 if (!inventoryItem) {
-                    throw new AppError(`Inventory item not found: ${(part as any).priceListId}`, 404);
+                    throw new AppError(`Inventory item not found: ${(part as any).inventoryId}`, 404);
                 }
                 if (inventoryItem.stockNumber < part.quantity) {
                     throw new AppError(
@@ -147,12 +147,12 @@ export const deductInventoryOnCompletion = async (
 
         if (workOrder.partsUsed && workOrder.partsUsed.length > 0) {
             for (const part of workOrder.partsUsed) {
-                await InventoryFinance.findByIdAndUpdate((part as any).priceListId, {
+                await InventoryFinance.findByIdAndUpdate((part as any).inventoryId, {
                     $inc: { stockNumber: -part.quantity }
                 }, { session });
 
                 const movement = await StockMovement.create([{
-                    product: (part as any).priceListId,
+                    product: (part as any).inventoryId,
                     type: MovementType.Out,
                     quantity: part.quantity,
                     reason: `Used in completed work order - ${workOrderId}`,
@@ -194,7 +194,7 @@ export const getWorkOrderInventoryCost = async (workOrderId: string) => {
     }
 
     const partsDetails = workOrder.partsUsed.map(part => ({
-        priceListId: (part as any).priceListId,
+        inventoryId: (part as any).inventoryId,
         quantity: part.quantity,
         unitCost: part.unitCost,
         totalCost: part.quantity * part.unitCost,
@@ -267,11 +267,11 @@ export const rollbackInventoryDeduction = async (
 
         const returnedItems = [];
         for (const part of workOrder.partsUsed) {
-            await InventoryFinance.findByIdAndUpdate((part as any).priceListId, {
+            await InventoryFinance.findByIdAndUpdate((part as any).inventoryId, {
                 $inc: { stockNumber: part.quantity }
             }, { session });
             returnedItems.push({
-                priceListId: (part as any).priceListId,
+                inventoryId: (part as any).inventoryId,
                 quantity: part.quantity,
             });
         }
@@ -300,3 +300,5 @@ export const rollbackInventoryDeduction = async (
         session.endSession();
     }
 };
+
+

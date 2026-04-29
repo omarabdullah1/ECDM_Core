@@ -42,6 +42,7 @@ export interface ICustomerOrder {
     
     // Operational Fields (New)
     engineerName?:       string;  // Or ObjectId referencing User/Employee
+    technicianName?:     string;
     actualVisitDate?:    Date;
     devicePickupType?:   DevicePickupType;
     deal?:               DealStatus;
@@ -68,6 +69,7 @@ export interface ICustomerOrder {
     
     // Tracking
     updatedBy?:   Types.ObjectId;  // The user who last modified this record
+    csPerson?:    string;          // Email of the CS person who first modified this record
     createdAt:    Date;
     updatedAt:    Date;
 }
@@ -75,3 +77,4 @@ export interface ICustomerOrder {
 export interface ICustomerOrderDocument extends ICustomerOrder, Document {
     _id: Types.ObjectId;
 }
+

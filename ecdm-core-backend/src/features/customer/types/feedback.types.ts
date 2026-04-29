@@ -6,6 +6,7 @@ export interface IOrderContext {
     customerPhone?: string;
     customerId?: string;
     engineerName?: string;
+    technicianName?: string;
     visitDate?: Date;
     scheduledVisitDate?: Date;
     actualVisitDate?: Date;
@@ -25,12 +26,15 @@ export interface IFeedback {
     // Feedback specific fields
     solvedIssue?:          'Yes' | 'No' | '';
     ratingOperation?:      string;           // e.g., '1 to 5', 'Excellent', etc.
+    ratingTechnician?:     string;
+    ratingEngineer?:       string;
     followUp?:             'Yes' | 'No' | ''; // Does this need another follow-up?
     ratingCustomerService?: string;
     notes?:                string;
     
     // Audit
     updatedBy?:   Types.ObjectId;  // → User (who last modified this record)
+    csPerson?:    string;          // Email of the CS person who first modified this record
     createdAt:    Date;
     updatedAt:    Date;
 }
@@ -38,3 +42,4 @@ export interface IFeedback {
 export interface IFeedbackDocument extends IFeedback, Document {
     _id: Types.ObjectId;
 }
+

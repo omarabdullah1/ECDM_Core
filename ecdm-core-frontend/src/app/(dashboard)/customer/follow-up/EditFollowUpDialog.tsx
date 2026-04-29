@@ -16,7 +16,6 @@ const formSchema = z.object({
   punctuality: z.enum(['Same Visit Time', 'Late', '']).optional(),
   reasonForDelay: z.string().optional(),
   reasonForNotSolving: z.string().optional(),
-  followUp: z.string().optional(),
   status: z.enum(['Pending', 'Contacted', 'Scheduled', 'Completed', 'Canceled']).optional(),
 });
 
@@ -107,9 +106,6 @@ export default function EditFollowUpDialog({ followUp, onClose, onSuccess, onOpe
       punctuality: followUp.punctuality as 'Same Visit Time' | 'Late' | '' || '',
       reasonForDelay: followUp.reasonForDelay || '',
       reasonForNotSolving: followUp.reasonForNotSolving || '',
-      followUp: typeof followUp.followUp === 'boolean'
-        ? (followUp.followUp ? 'Yes' : 'No')
-        : (followUp.followUp || ''),
       status: followUp.status as 'Pending' | 'Contacted' | 'Scheduled' | 'Completed' | 'Canceled' || 'Pending',
     },
   });
@@ -125,9 +121,6 @@ export default function EditFollowUpDialog({ followUp, onClose, onSuccess, onOpe
       if (values.punctuality !== undefined) payload.punctuality = values.punctuality;
       if (values.reasonForDelay !== undefined) payload.reasonForDelay = values.reasonForDelay;
       if (values.reasonForNotSolving !== undefined) payload.reasonForNotSolving = values.reasonForNotSolving;
-      if (values.followUp !== undefined) {
-        payload.followUp = values.followUp === 'Yes' ? true : (values.followUp === 'No' ? false : undefined);
-      }
       if (values.status !== undefined) payload.status = values.status;
 
       const previousStatus = followUp.status;
@@ -276,14 +269,6 @@ export default function EditFollowUpDialog({ followUp, onClose, onSuccess, onOpe
                   />
                 </div>
 
-                <div>
-                  <label className={labelCls}>Follow Up</label>
-                  <select {...form.register('followUp')} className={iCls} disabled={effectivelyReadOnly}>
-                    <option value="">Not Set</option>
-                    <option value="Yes">Yes</option>
-                    <option value="No">No</option>
-                  </select>
-                </div>
 
                 <div>
                   <label className={labelCls}>Solved Issue?</label>
@@ -356,13 +341,15 @@ export default function EditFollowUpDialog({ followUp, onClose, onSuccess, onOpe
                 {effectivelyReadOnly ? 'Close' : 'Cancel'}
               </button>
               {effectivelyReadOnly ? (
-                <button
-                  type="button"
-                  key="btn-edit" onClick={(e) => { e.preventDefault(); setInternalPreviewMode(false); }}
-                  className="flex-1 rounded-xl bg-[hsl(var(--primary))] py-3 text-sm font-semibold text-[hsl(var(--primary-foreground))] hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
-                >
-                  Edit Follow Up
-                </button>
+                !readOnly && (
+                  <button
+                    type="button"
+                    key="btn-edit" onClick={(e) => { e.preventDefault(); setInternalPreviewMode(false); }}
+                    className="flex-1 rounded-xl bg-[hsl(var(--primary))] py-3 text-sm font-semibold text-[hsl(var(--primary-foreground))] hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+                  >
+                    Edit Follow Up
+                  </button>
+                )
               ) : (
                 <button
                   type="submit"
@@ -409,3 +396,4 @@ export default function EditFollowUpDialog({ followUp, onClose, onSuccess, onOpe
     </>
   );
 }
+

@@ -52,3 +52,4 @@ export const generateInvoice = async (req: Request, res: Response, next: NextFun
     next(e);
   }
 };
+

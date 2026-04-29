@@ -63,3 +63,4 @@ export const downloadSalesDataTemplate = () => {
     const fileName = `sales-data-template-${new Date().toISOString().split('T')[0]}.xlsx`;
     XLSX.writeFile(workbook, fileName);
 };
+

@@ -12,11 +12,12 @@ router.use(authenticate);
 router.get('/performance', ctrl.getPerformance);
 
 // Target management - restricted to managers and admins
-router.post('/',      authorise(UserRole.Manager, UserRole.SuperAdmin), validate(createSalesTargetSchema), ctrl.create);
-router.get('/',       authorise(UserRole.Manager, UserRole.SuperAdmin, UserRole.Sales), ctrl.getAll);
-router.get('/:id',    authorise(UserRole.Manager, UserRole.SuperAdmin, UserRole.Sales), ctrl.getById);
-router.put('/:id',    authorise(UserRole.Manager, UserRole.SuperAdmin), validate(updateSalesTargetSchema), ctrl.update);
-router.patch('/:id',  authorise(UserRole.Manager, UserRole.SuperAdmin), validate(updateSalesTargetSchema), ctrl.update);
-router.delete('/:id', authorise(UserRole.Manager, UserRole.SuperAdmin), ctrl.remove);
+router.post('/',      authorise(UserRole.SuperAdmin, UserRole.Admin), validate(createSalesTargetSchema), ctrl.create);
+router.get('/',       authorise(UserRole.SuperAdmin, UserRole.Admin, UserRole.Sales), ctrl.getAll);
+router.get('/:id',    authorise(UserRole.SuperAdmin, UserRole.Admin, UserRole.Sales), ctrl.getById);
+router.put('/:id',    authorise(UserRole.SuperAdmin, UserRole.Admin), validate(updateSalesTargetSchema), ctrl.update);
+router.patch('/:id',  authorise(UserRole.SuperAdmin, UserRole.Admin), validate(updateSalesTargetSchema), ctrl.update);
+router.delete('/:id', authorise(UserRole.SuperAdmin, UserRole.Admin), ctrl.remove);
 
 export default router;
+

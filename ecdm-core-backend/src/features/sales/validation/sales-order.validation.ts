@@ -78,3 +78,4 @@ export const updateSalesOrderSchema = z.object({
 
 export type CreateSalesOrderInput = z.infer<typeof createSalesOrderSchema>;
 export type UpdateSalesOrderInput = z.infer<typeof updateSalesOrderSchema>;
+

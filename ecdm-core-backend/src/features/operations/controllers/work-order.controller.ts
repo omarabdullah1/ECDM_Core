@@ -5,12 +5,20 @@ import { interceptUpdate } from '../../../utils/makerChecker';
 import { ModuleName } from '../../shared/types/modification-request.types';
 import WorkOrder from '../models/work-order.model';
 
+import { AppError } from '../../../utils/apiError';
+import { isOperationMember } from '../../../utils/makerChecker';
+
 export const create = async (req: Request, res: Response, next: NextFunction) => {
-    try { sendSuccess(res, { item: await svc.create(req.body) }, 'Work order created', 201); }
+    try { 
+        if (isOperationMember(req.user?.role)) {
+            throw new AppError('Operation members do not have permission to create records.', 403);
+        }
+        sendSuccess(res, { item: await svc.create(req.body) }, 'Work order created', 201); 
+    }
     catch (e) { next(e); }
 };
 export const getAll = async (req: Request, res: Response, next: NextFunction) => {
-    try { sendSuccess(res, await svc.getAll(req.query as Record<string, unknown>)); }
+    try { sendSuccess(res, await svc.getAll(req.query as Record<string, unknown>, req.user)); }
     catch (e) { next(e); }
 };
 export const getById = async (req: Request, res: Response, next: NextFunction) => {
@@ -26,6 +34,9 @@ export const getById = async (req: Request, res: Response, next: NextFunction) =
  */
 export const update = async (req: Request, res: Response, next: NextFunction) => {
     try {
+        if (isOperationMember(req.user?.role)) {
+            throw new AppError('Operation members do not have permission to modify records. Preview only.', 403);
+        }
         const targetRecord = await WorkOrder.findById(req.params.id);
         
         if (!targetRecord) {
@@ -48,7 +59,12 @@ export const update = async (req: Request, res: Response, next: NextFunction) =>
 };
 
 export const remove = async (req: Request, res: Response, next: NextFunction) => {
-    try { await svc.deleteWorkOrder(String(req.params.id)); sendSuccess(res, null, 'Work order deleted'); }
+    try { 
+        if (isOperationMember(req.user?.role)) {
+            throw new AppError('Operation members do not have permission to delete records.', 403);
+        }
+        await svc.deleteWorkOrder(String(req.params.id)); sendSuccess(res, null, 'Work order deleted'); 
+    }
     catch (e) { next(e); }
 };
 
@@ -58,6 +74,9 @@ export const remove = async (req: Request, res: Response, next: NextFunction) =>
  */
 export const bulkDelete = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+        if (isOperationMember(req.user?.role)) {
+            throw new AppError('Operation members do not have permission to delete records.', 403);
+        }
         const { ids } = req.body;
         
         if (!ids || !Array.isArray(ids) || ids.length === 0) {
@@ -71,3 +90,4 @@ export const bulkDelete = async (req: Request, res: Response, next: NextFunction
         next(e);
     }
 };
+

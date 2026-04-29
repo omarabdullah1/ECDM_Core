@@ -15,3 +15,4 @@ export const updateSalesTargetSchema = z.object({
 
 export type CreateSalesTargetInput = z.infer<typeof createSalesTargetSchema>;
 export type UpdateSalesTargetInput = z.infer<typeof updateSalesTargetSchema>;
+

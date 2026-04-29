@@ -47,3 +47,4 @@ salesFollowUpSchema.index({ salesPerson: 1, status: 1 });
 
 const SalesFollowUp: Model<ISalesFollowUpDocument> = mongoose.model<ISalesFollowUpDocument>('SalesFollowUp', salesFollowUpSchema);
 export default SalesFollowUp;
+

@@ -35,3 +35,4 @@ export const createFeedbackSchema = z.object({
 export const updateFeedbackSchema = createFeedbackSchema.partial();
 export type CreateFeedbackInput = z.infer<typeof createFeedbackSchema>;
 export type UpdateFeedbackInput = z.infer<typeof updateFeedbackSchema>;
+

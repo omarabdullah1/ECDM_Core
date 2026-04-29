@@ -17,9 +17,9 @@ router.route('/:id')
     .patch(ctrl.update)
     .delete(ctrl.remove);
 
-// Finance Approval - Restricted to Finance and Admins
+// Admin Approval - Restricted to Admins only
 router.patch('/:id/finance-approve', 
-    authorise(UserRole.Finance, UserRole.Admin, UserRole.SuperAdmin), 
+    authorise(UserRole.Admin, UserRole.SuperAdmin), 
     ctrl.approveByFinance
 );
 
@@ -30,8 +30,9 @@ router.patch('/:id/confirm-receipt',
 );
 
 router.patch('/:id/reject', 
-    authorise(UserRole.Finance, UserRole.Operations, UserRole.Admin, UserRole.SuperAdmin), 
+    authorise(UserRole.Operations, UserRole.Admin, UserRole.SuperAdmin), 
     ctrl.reject
 );
 
 export default router;
+

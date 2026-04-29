@@ -39,6 +39,7 @@ const ROLES = [
     { value: 'CustomerService', label: 'Customer Service' },
     { value: 'Marketing', label: 'Marketing' },
     { value: 'R&D', label: 'R&D' },
+    { value: 'Finance', label: 'Finance' },
 ] as const;
 
 const ROLE_STYLES: Record<string, string> = {
@@ -48,6 +49,7 @@ const ROLE_STYLES: Record<string, string> = {
     Operations: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 border border-orange-200 dark:border-orange-800',
     HR: 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-400 border border-pink-200 dark:border-pink-800',
     'R&D': 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800',
+    Finance: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800',
 };
 
 const RoleBadge = ({ role }: { role: string }) => {
@@ -304,3 +306,4 @@ export default function EmployeesPage() {
         </div>
     );
 }
+

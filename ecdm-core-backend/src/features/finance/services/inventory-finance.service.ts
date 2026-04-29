@@ -110,3 +110,4 @@ export const remove = async (id: string) => {
   const item = await WorkOrder.findByIdAndDelete(id);
   if (!item) throw new AppError('Work order record not found', 404);
 };
+

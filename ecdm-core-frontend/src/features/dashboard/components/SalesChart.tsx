@@ -62,3 +62,4 @@ export default function SalesChart({ data, quotations }: Props) {
         </div>
     );
 }
+

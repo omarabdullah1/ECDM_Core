@@ -31,3 +31,4 @@ export interface IRndTask {
 export interface IRndTaskDocument extends IRndTask, Document {
     _id: Types.ObjectId;
 }
+

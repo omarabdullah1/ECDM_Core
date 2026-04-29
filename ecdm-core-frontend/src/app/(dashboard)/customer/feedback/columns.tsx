@@ -1,6 +1,6 @@
 'use client';
 
-import { Edit, Trash2 } from 'lucide-react';
+import { Edit, Trash2, Eye } from 'lucide-react';
 import { Column } from '@/components/ui/DataTable';
 
 /**
@@ -22,9 +22,24 @@ const formatDate = (dateValue: string | Date | null | undefined): string => {
     const day = String(date.getDate()).padStart(2, '0');
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const year = date.getFullYear();
-    return `${day}/${month}/${year}`;
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${day}/${month}/${year} ${hours}:${minutes}`;
   } catch {
     return '-';
+  }
+};
+
+const isNew = (dateValue: string | Date | null | undefined): boolean => {
+  if (!dateValue) return false;
+  try {
+    const createdDate = new Date(dateValue);
+    const now = new Date();
+    const diffTime = Math.abs(now.getTime() - createdDate.getTime());
+    const diffDays = diffTime / (1000 * 60 * 60 * 24);
+    return diffDays <= 1;
+  } catch {
+    return false;
   }
 };
 
@@ -90,8 +105,9 @@ export interface Feedback {
   notes?: string;
   
   // Timestamps
-  createdAt?: string;
-  updatedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+  csPerson?: string;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -149,9 +165,12 @@ export const columns: Column<Feedback>[] = [
       render: (row: Feedback) => {
         const name = row.orderContext?.customerName || row.customerId?.name;
         return (
-          <span className="font-medium">
-            {name || '-'}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="font-medium">{name || '-'}</span>
+            {isNew(row.createdAt) && (
+              <span className="bg-blue-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md animate-pulse flex-shrink-0">NEW</span>
+            )}
+          </div>
         );
       },
     },
@@ -320,21 +339,33 @@ export const columns: Column<Feedback>[] = [
     // ═════════════════════════════════════════════════════════════════════════
     
     // ─────────────────────────────────────────────────────────────────────────
-    // 12. User Email
+    // 12. CS Person
     // ─────────────────────────────────────────────────────────────────────────
     {
-      key: 'userEmail',
-      header: 'User Email',
-      className: 'md:w-auto md:max-w-[150px] md:truncate',
-      render: (row: Feedback) => {
-        const email = row.updatedBy?.email;
-        return (
-          <span className="text-sm text-[hsl(var(--muted-foreground))]">
-            {email || '-'}
-          </span>
-        );
-      },
+      key: 'csPerson',
+      header: 'CS Person',
+      className: 'hidden xl:table-cell md:w-1/6 md:max-w-[120px] md:truncate',
+      render: (row: Feedback) => (
+        <span className="text-xs text-[hsl(var(--muted-foreground))] italic truncate max-w-[150px] block" title={row.csPerson}>
+          {row.csPerson || '—'}
+        </span>
+      ),
     },
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // 13. Created At
+    // ─────────────────────────────────────────────────────────────────────────
+    {
+      key: 'createdAt',
+      header: 'Created At',
+      className: 'md:w-1/6 md:max-w-[120px] md:truncate',
+      render: (row: Feedback) => (
+        <span className="text-xs text-[hsl(var(--muted-foreground))]">
+          {formatDate(row.createdAt)}
+        </span>
+      ),
+    },
+
 
     // ─────────────────────────────────────────────────────────────────────────
     // 13. Notes
@@ -368,16 +399,22 @@ export const columns: Column<Feedback>[] = [
       header: 'Actions',
       className: 'md:w-[1%] md:whitespace-nowrap',
       render: (row: Feedback, meta?: any) => {
+        const editAllowed = meta?.canEdit ? meta.canEdit(row) : true;
+        
         return (
           <div className="flex flex-wrap items-center gap-2">
             {/* Edit Button */}
             {meta?.onEdit && (
               <button
-                onClick={() => meta.onEdit(row)}
+                onClick={() => meta.onEdit(row, editAllowed)}
                 className="p-1.5 rounded-lg hover:bg-[hsl(var(--muted))] transition-colors text-[hsl(var(--foreground))]"
-                title="Edit Feedback"
+                title={editAllowed ? "Edit Feedback" : "View Feedback (Locked)"}
               >
-                <Edit className="h-4 w-4" />
+                {editAllowed ? (
+                  <Edit className="h-4 w-4" />
+                ) : (
+                  <Eye className="h-4 w-4 text-orange-500" />
+                )}
               </button>
             )}
             
@@ -396,3 +433,4 @@ export const columns: Column<Feedback>[] = [
       },
     },
 ];
+

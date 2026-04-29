@@ -90,8 +90,8 @@ export function SalesPerformanceWidget() {
       <CardContent>
         <div className="space-y-3">
           <div className="flex justify-between text-sm font-semibold text-gray-700 dark:text-gray-300">
-            <span>Achieved: ${performance.achievedAmount.toLocaleString()}</span>
-            <span>Target: ${performance.targetAmount.toLocaleString()}</span>
+            <span>Achieved: EGP {performance.achievedAmount.toLocaleString()}</span>
+            <span>Target: EGP {performance.targetAmount.toLocaleString()}</span>
           </div>
           
           <Progress 
@@ -110,3 +110,4 @@ export function SalesPerformanceWidget() {
     </Card>
   );
 }
+

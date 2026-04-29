@@ -19,7 +19,7 @@ export enum ModuleName {
     CustomerFollowUp = 'CustomerFollowUp',
     Feedback = 'Feedback',
     InventoryPlus = 'InventoryPlus',
-    PriceList = 'PriceList',
+    Inventory = 'Inventory',
     Customer = 'Customer',
     Employee = 'Employee',
 }
@@ -48,3 +48,4 @@ export interface ReviewRequestInput {
     status: 'Approved' | 'Rejected';
     reviewNotes?: string;
 }
+

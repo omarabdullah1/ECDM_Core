@@ -1,5 +1,5 @@
 import mongoose, { Schema, Model } from 'mongoose';
-import { IInventoryItemDocument, InventoryItemStatus } from '../types/inventory-plus.types';
+import { IinventoryItemDocument, inventoryItemStatus } from '../types/inventory-plus.types';
 
 // ── Sub-document: supplier contact details ────────────────────────────────────
 const supplierDetailsSchema = new Schema(
@@ -12,7 +12,7 @@ const supplierDetailsSchema = new Schema(
     { _id: false },
 );
 
-const inventoryItemSchema = new Schema<IInventoryItemDocument>(
+const inventoryItemSchema = new Schema<IinventoryItemDocument>(
     {
         itemName: {
             type:      String,
@@ -34,8 +34,8 @@ const inventoryItemSchema = new Schema<IInventoryItemDocument>(
         },
         status: {
             type:    String,
-            enum:    Object.values(InventoryItemStatus),
-            default: InventoryItemStatus.InStock,
+            enum:    Object.values(inventoryItemStatus),
+            default: inventoryItemStatus.InStock,
         },
         price: {
             type:     Number,
@@ -60,18 +60,20 @@ inventoryItemSchema.index({ status:      1 });
 inventoryItemSchema.index({ category:    1 });
 inventoryItemSchema.index({ itemName:    'text' });
 
-inventoryItemSchema.pre<IInventoryItemDocument>('save', function (next) {
+inventoryItemSchema.pre<IinventoryItemDocument>('save', function (next) {
     if (this.isModified('stockCount')) {
         if (this.stockCount <= 0) {
-            this.status = InventoryItemStatus.SoldOut;
-        } else if (this.status === InventoryItemStatus.SoldOut) {
-            this.status = InventoryItemStatus.InStock;
+            this.status = inventoryItemStatus.SoldOut;
+        } else if (this.status === inventoryItemStatus.SoldOut) {
+            this.status = inventoryItemStatus.InStock;
         }
     }
     next();
 });
 
-const InventoryItem: Model<IInventoryItemDocument> =
-    mongoose.model<IInventoryItemDocument>('InventoryItem', inventoryItemSchema);
+const inventoryItem: Model<IinventoryItemDocument> =
+    mongoose.model<IinventoryItemDocument>('inventoryItem', inventoryItemSchema);
 
-export default InventoryItem;
+export default inventoryItem;
+
+

@@ -19,3 +19,4 @@ export default function LangProvider({ children }: { children: React.ReactNode }
 
     return <>{children}</>;
 }
+

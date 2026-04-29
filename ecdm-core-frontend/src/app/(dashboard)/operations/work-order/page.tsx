@@ -1,7 +1,8 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import api from '@/lib/axios';
-import { Wrench, X, Trash2, Plus, Star, Edit2, Eye } from 'lucide-react';
+import { useAuthStore } from '@/features/auth/useAuth';
+import { Wrench, X, Trash2, Plus, Star, Edit2, Eye, ShoppingCart } from 'lucide-react';
 import DataTable from '@/components/ui/DataTable';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { columns, WorkOrder } from './columns';
@@ -24,7 +25,7 @@ import { Select } from '@/components/ui/select';
 
 interface PartEntry {
   id: string;
-  inventoryItemId: string;
+  InventoryItemId: string;
   itemName: string;
   quantity: number;
   unitCost: number;
@@ -43,6 +44,7 @@ type FormData = {
   rating: string;
   sparePartsAvailability: string;
   notes: string;
+  engineerId: string;
 };
 
 const blank: FormData = {
@@ -58,9 +60,11 @@ const blank: FormData = {
   rating: '',
   sparePartsAvailability: '',
   notes: '',
+  engineerId: '',
 };
 
 export default function WorkOrderPage() {
+  const { user } = useAuthStore();
   const [rows, setRows] = useState<WorkOrder[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -80,7 +84,7 @@ export default function WorkOrderPage() {
   const isAdding = modal && !editing;
 
   // Dropdown data for Smart Dialog
-  const [priceList, setPriceList] = useState<any[]>([]);
+  const [Inventory, setInventory] = useState<any[]>([]);
   const [customerOrders, setCustomerOrders] = useState<any[]>([]);
   const [engineers, setEngineers] = useState<any[]>([]);
   const [loadingLookups, setLoadingLookups] = useState(false);
@@ -93,7 +97,7 @@ export default function WorkOrderPage() {
     if (modal) {
       setLoadingLookups(true);
       Promise.all([
-        api.get('/operations/price-list?limit=1000').catch(() => ({ data: { data: [] } })),
+        api.get('/operations/inventory?limit=1000').catch(() => ({ data: { data: [] } })),
         api.get('/customer/orders?limit=1000').catch(() => ({ data: { data: [] } })),
         api.get('/hr/users?limit=1000').catch(() => ({ data: { data: [] } }))
       ])
@@ -103,7 +107,7 @@ export default function WorkOrderPage() {
           const ordersData = ordersRes.data?.data?.data || ordersRes.data?.data || ordersRes.data || [];
           const usersData = usersRes.data?.data?.data || usersRes.data?.data || usersRes.data || [];
 
-          setPriceList(Array.isArray(priceData) ? priceData : []);
+          setInventory(Array.isArray(priceData) ? priceData : []);
           setCustomerOrders(Array.isArray(ordersData) ? ordersData : []);
 
           const engineerList = Array.isArray(usersData)
@@ -112,7 +116,7 @@ export default function WorkOrderPage() {
           setEngineers(engineerList);
         })
         .catch(() => {
-          setPriceList([]);
+          setInventory([]);
           setCustomerOrders([]);
         })
         .finally(() => setLoadingLookups(false));
@@ -125,7 +129,7 @@ export default function WorkOrderPage() {
   const addPart = () => {
     setPartsUsed([
       ...partsUsed,
-      { id: generatePartId(), inventoryItemId: '', itemName: '', quantity: 1, unitCost: 0 }
+      { id: generatePartId(), InventoryItemId: '', itemName: '', quantity: 1, unitCost: 0 }
     ]);
   };
 
@@ -139,17 +143,23 @@ export default function WorkOrderPage() {
 
       const updated = { ...p, [field]: value };
 
-      // Auto-fill details when inventory item changes
-      if (field === 'inventoryItemId') {
-        const item = priceList.find(i =>
-          (i._id && String(i._id) === String(value)) ||
-          (i.sparePartsId && String(i.sparePartsId) === String(value))
-        );
-        if (item) {
-          updated.unitCost = item.unitPrice || 0;
-          updated.itemName = item.itemName || '';
-          // Always standardize to the primary _id string
-          updated.inventoryItemId = String(item._id);
+      if (field === 'InventoryItemId') {
+        if (value === '') {
+          // Reset if unselected
+          updated.unitCost = 0;
+          updated.itemName = '';
+          updated.InventoryItemId = '';
+        } else {
+          const item = Inventory.find(i =>
+            (i._id && String(i._id) === String(value)) ||
+            (i.sparePartsId && String(i.sparePartsId) === String(value))
+          );
+          if (item) {
+            updated.unitCost = item.unitPrice || 0;
+            updated.itemName = item.itemName || '';
+            // Always standardize to the primary _id string
+            updated.InventoryItemId = String(item._id);
+          }
         }
       }
 
@@ -162,7 +172,7 @@ export default function WorkOrderPage() {
 
   const PUNCTUALITIES = ['Same time', 'Late'];
   const TASK_COMPLETED = ['Yes', 'No'];
-  const SPARE_PARTS_AVAILABILITY = ['Available', 'Not Available', 'Requested'];
+  const SPARE_PARTS_AVAILABILITY = ['Available', 'Not Available', 'Requested', 'Not Needed'];
   const iCls = 'flex h-9 w-full rounded-md border border-[hsl(var(--border))]/50 bg-[hsl(var(--background))] px-3 py-1 text-sm shadow-sm transition-all placeholder:text-[hsl(var(--muted-foreground))] focus-visible:outline-none focus-visible:border-[hsl(var(--primary))]/50 focus-visible:ring-[3px] focus-visible:ring-[hsl(var(--primary))]/10';
 
   const fetch_ = useCallback(async () => {
@@ -188,7 +198,8 @@ export default function WorkOrderPage() {
   // ─── Edit Handler ────────────────────────────────────────────────────────
   const openE = (r: WorkOrder, mode: 'preview' | 'edit' = 'preview') => {
     setEditing(r);
-    setInternalPreviewMode(mode === 'preview');
+    const isTechnicianOrEngineer = user?.role === 'MaintenanceEngineer' || user?.role === 'Technician';
+    setInternalPreviewMode(mode === 'preview' || isTechnicianOrEngineer);
     // customerOrderId can be either an Object (populated) or string (ID only)
     const orderId = typeof r.customerOrderId === 'object' && r.customerOrderId !== null
       ? r.customerOrderId._id
@@ -198,31 +209,31 @@ export default function WorkOrderPage() {
     const existingParts: PartEntry[] = [];
     if (r.partsUsed && r.partsUsed.length > 0) {
       r.partsUsed.forEach((part: any) => {
-        // The backend schema uses priceListId, but legacy might use inventoryItemId
-        const rawId = part.priceListId || part.inventoryItemId;
+        // The backend schema uses inventoryId, but legacy might use InventoryItemId
+        const rawId = part.inventoryId || part.InventoryItemId;
         const partId = typeof rawId === 'object' ? rawId?._id : rawId;
 
-        // Find in priceList (matching either _id or legacy sparePartsId)
-        const itemInList = priceList.find(i =>
+        // Find in Inventory (matching either _id or legacy sparePartsId)
+        const itemInList = Inventory.find(i =>
           (i._id && String(i._id) === String(partId)) ||
           (i.sparePartsId && String(i.sparePartsId) === String(partId))
         );
 
         existingParts.push({
           id: generatePartId(),
-          inventoryItemId: itemInList ? String(itemInList._id) : (partId ? String(partId) : ''),
-          itemName: part.itemName || part.inventoryItemId?.itemName || itemInList?.itemName || '',
+          InventoryItemId: itemInList ? String(itemInList._id) : (partId ? String(partId) : ''),
+          itemName: part.itemName || part.InventoryItemId?.itemName || itemInList?.itemName || '',
           quantity: part.quantity || 1,
           unitCost: part.unitCost || itemInList?.unitPrice || 0,
         });
       });
     } else if (r.sparePartsId) {
       // Legacy: Convert old sparePartsId to partsUsed
-      const item = priceList.find(i => i._id === r.sparePartsId || i.sparePartsId === r.sparePartsId);
+      const item = Inventory.find(i => i._id === r.sparePartsId || i.sparePartsId === r.sparePartsId);
       if (item) {
         existingParts.push({
           id: generatePartId(),
-          inventoryItemId: item._id,
+          InventoryItemId: item._id,
           itemName: item.itemName,
           quantity: 1,
           unitCost: item.price || 0,
@@ -244,6 +255,7 @@ export default function WorkOrderPage() {
       rating: r.rating || '',
       sparePartsAvailability: r.sparePartsAvailability || (existingParts.length > 0 ? 'Available' : 'Not Needed'),
       notes: r.notes || '',
+      engineerId: typeof r.engineerId === 'object' ? r.engineerId?._id : (r.engineerId || ''),
     });
     setError('');
     setModal(true);
@@ -283,20 +295,20 @@ export default function WorkOrderPage() {
     }
   }, [partsUsed.length, modal]);
 
-  // Sync partsUsed with priceList data once priceList is fetched
+  // Sync partsUsed with Inventory data once Inventory is fetched
   useEffect(() => {
-    if (priceList.length > 0 && partsUsed.length > 0) {
+    if (Inventory.length > 0 && partsUsed.length > 0) {
       setPartsUsed(prev => {
         let changed = false;
         const next = prev.map(p => {
           // Robust lookup
-          const itemInList = priceList.find(i =>
-            (i._id && String(i._id) === String(p.inventoryItemId)) ||
-            (i.sparePartsId && String(i.sparePartsId) === String(p.inventoryItemId))
+          const itemInList = Inventory.find(i =>
+            (i._id && String(i._id) === String(p.InventoryItemId)) ||
+            (i.sparePartsId && String(i.sparePartsId) === String(p.InventoryItemId))
           );
 
           if (itemInList) {
-            const currentId = String(p.inventoryItemId);
+            const currentId = String(p.InventoryItemId);
             const targetId = String(itemInList._id);
             const currentName = p.itemName || '';
             const targetName = itemInList.itemName || '';
@@ -306,7 +318,7 @@ export default function WorkOrderPage() {
               changed = true;
               return {
                 ...p,
-                inventoryItemId: targetId,
+                InventoryItemId: targetId,
                 itemName: targetName,
                 unitCost: p.unitCost || itemInList.unitPrice || 0
               };
@@ -317,24 +329,25 @@ export default function WorkOrderPage() {
         return changed ? next : prev;
       });
     }
-  }, [priceList, modal]);
+  }, [Inventory, modal]);
 
   const save = async (ev: React.FormEvent) => {
     ev.preventDefault();
     setSaving(true);
     setError('');
 
+    // Prepare payload
     const pl: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(form)) {
       if (v !== '') pl[k] = v;
     }
 
-    // Format partsUsed array for backend
+    // Filter out parts that don't have a selection (fixes "inventoryId required" error)
     pl.partsUsed = partsUsed
-      .filter(p => p.inventoryItemId !== '')
+      .filter(p => p.InventoryItemId && p.InventoryItemId.trim() !== '')
       .map(p => ({
-        priceListId: p.inventoryItemId, // Backend uses priceListId
-        inventoryItemId: p.inventoryItemId, // Keep for legacy/frontend compat
+        inventoryId: p.InventoryItemId, // Backend uses inventoryId
+        InventoryItemId: p.InventoryItemId, // Keep for legacy/frontend compat
         quantity: p.quantity,
         unitCost: p.unitCost,
       }));
@@ -431,8 +444,9 @@ export default function WorkOrderPage() {
           onBulkDeleteSuccess={fetch_}
           onRowClick={(r: WorkOrder) => openE(r, 'preview')}
           meta={{
-            onEdit: (r: WorkOrder) => openE(r, 'edit'),
-            onDelete: (id: string) => setDelId(id),
+            onEdit: (user?.role === 'MaintenanceEngineer' || user?.role === 'Technician') ? undefined : (r: WorkOrder) => openE(r, 'edit'),
+            onPreview: (r: WorkOrder) => openE(r, 'preview'),
+            onDelete: (user?.role === 'SuperAdmin' || user?.role === 'Admin') ? (id: string) => setDelId(id) : undefined,
           }}
           defaultVisibility={{
             address: true,
@@ -478,169 +492,189 @@ export default function WorkOrderPage() {
 
           <DialogBody>
             <form id="work-order-form" onSubmit={save} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Customer Order - Smart Dropdown (Always Read-Only) */}
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    Customer Order
-                    <span className="text-xs text-green-600 ml-2">(Auto-linked)</span>
-                  </label>
-                  <div className={`${iCls} bg-gray-50 flex items-center text-gray-600 font-medium border-dashed cursor-not-allowed overflow-hidden truncate`} title={(() => {
-                    const selected = customerOrders.find(o => o._id === form.customerOrderId);
-                    const base = selected || (editing?.customerOrderId && typeof editing.customerOrderId === 'object' ? editing.customerOrderId : null);
-                    if (base) {
-                      return `[ID: ${base.orderId || base._id?.substring(0, 8)}] ${base.customerId?.name || 'Unknown'} - ${base.issue || 'No Issue Title'}`;
-                    }
-                    return form.customerOrderId || 'No Order Linked';
-                  })()}>
+              {/* SECTION: Order Foundation */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-gray-50/50 p-4 rounded-xl border border-gray-100">
+                {/* Customer Order Info */}
+                <div className="md:col-span-2">
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-tight mb-2">Linked Customer Order</label>
+                  <div className="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-lg shadow-sm">
+                    <div className="h-10 w-10 bg-primary/10 text-primary flex items-center justify-center rounded-full shrink-0">
+                      <ShoppingCart size={20} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-bold truncate">
+                        {(() => {
+                          const base = customerOrders.find(o => o._id === form.customerOrderId) || (editing?.customerOrderId && typeof editing.customerOrderId === 'object' ? editing.customerOrderId : null);
+                          return base ? `[#${base.orderId || base._id?.substring(0, 6)}] ${base.customerId?.name || 'Unknown'}` : 'No Order Linked';
+                        })()}
+                      </p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {(() => {
+                          const base = customerOrders.find(o => o._id === form.customerOrderId) || (editing?.customerOrderId && typeof editing.customerOrderId === 'object' ? editing.customerOrderId : null);
+                          return base?.issue || 'No issue description';
+                        })()}
+                      </p>
+                    </div>
+                    <div className="text-[10px] bg-green-50 text-green-700 px-2 py-1 rounded font-bold uppercase">Auto-linked</div>
+                  </div>
+                </div>
+
+                {/* Issue Field - Dedicated */}
+                <div className="md:col-span-2">
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-tight mb-1">Detailed Issue</label>
+                  <div className="text-sm font-medium p-3 bg-white border border-gray-200 rounded-lg min-h-[40px]">
                     {(() => {
-                      const selected = customerOrders.find(o => o._id === form.customerOrderId);
-                      const base = selected || (editing?.customerOrderId && typeof editing.customerOrderId === 'object' ? editing.customerOrderId : null);
-                      if (base) {
-                        const idStr = base.orderId || (typeof base._id === 'string' ? base._id.substring(0, 6) : 'N/A');
-                        const nameStr = (typeof base.customerId === 'object' ? base.customerId?.name : base.customerId) || 'Unknown';
-                        const issueStr = base.issue || '-';
-                        return `[#${idStr}] ${nameStr} — ${issueStr.substring(0, 30)}${issueStr.length > 30 ? '...' : ''}`;
-                      }
-                      return form.customerOrderId || 'No Order Linked';
+                      const base = customerOrders.find(o => o._id === form.customerOrderId) || (editing?.customerOrderId && typeof editing.customerOrderId === 'object' ? editing.customerOrderId : null);
+                      return base?.issue || '-';
                     })()}
                   </div>
                 </div>
 
-                {/* Maintenance Engineer */}
-                <div className="space-y-1">
-                  <label className="block text-sm font-medium mb-1">Maintenance Engineer</label>
-                  <Select
-                    value={form.maintenanceEngineer}
-                    onChange={u('maintenanceEngineer')}
-                    disabled={effectivelyReadOnly}
-                  >
-                    <option value="">Select Engineer</option>
-                    {engineers.map(eng => (
-                      <option key={eng._id} value={eng.fullName || eng.name}>
-                        {eng.fullName || eng.name} ({eng.role})
-                      </option>
-                    ))}
-                  </Select>
+                {/* Technician (From CS) vs Maintenance Engineer */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-tight mb-1">Technician (From Customer Order)</label>
+                  <div className="text-sm font-semibold p-2.5 bg-amber-50/50 border border-amber-100 rounded-lg text-amber-900">
+                    {(() => {
+                      const base = customerOrders.find(o => o._id === form.customerOrderId) || (editing?.customerOrderId && typeof editing.customerOrderId === 'object' ? editing.customerOrderId : null);
+                      const tech = base?.technicianId;
+                      return tech ? (typeof tech === 'object' ? (tech.fullName || tech.name) : tech) : 'Not assigned by CS';
+                    })()}
+                  </div>
                 </div>
 
+                <div className="space-y-1">
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-tight mb-1">Maintenance Engineer</label>
+                  {effectivelyReadOnly ? (
+                    <div className="text-sm font-semibold p-2.5 bg-blue-50 border border-blue-100 rounded-lg text-blue-900">
+                      {form.maintenanceEngineer || 'Not Assigned'}
+                    </div>
+                  ) : (
+                    <Select
+                      value={form.maintenanceEngineer}
+                      onChange={u('maintenanceEngineer')}
+                    >
+                      <option value="">Select Engineer</option>
+                      {engineers.map(eng => (
+                        <option key={eng._id} value={eng.fullName || eng.name}>
+                          {eng.fullName || eng.name} ({eng.role})
+                        </option>
+                      ))}
+                    </Select>
+                  )}
+                </div>
+              </div>
+
+              {/* SECTION: Timeline & Status */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {/* Task Date */}
                 <div className="space-y-1">
-                  <label className="block text-sm font-medium mb-1">Task Date</label>
-                  <Input
-                    type="date"
-                    value={form.taskDate}
-                    onChange={u('taskDate')}
-                    disabled={effectivelyReadOnly}
-                  />
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-tight mb-1">Task Date</label>
+                  {effectivelyReadOnly ? (
+                    <div className="text-sm font-medium p-2 bg-gray-50 border border-gray-200 rounded-lg">{form.taskDate || '-'}</div>
+                  ) : (
+                    <Input type="date" value={form.taskDate} onChange={u('taskDate')} />
+                  )}
                 </div>
 
-                {/* Start Maintenance Date */}
+                {/* Start Maint Date */}
                 <div className="space-y-1">
-                  <label className="block text-sm font-medium mb-1">Start Maintenance Date</label>
-                  <Input
-                    type="date"
-                    value={form.startMaintenanceDate}
-                    onChange={u('startMaintenanceDate')}
-                    disabled={effectivelyReadOnly}
-                  />
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-tight mb-1">Start Maint.</label>
+                  {effectivelyReadOnly ? (
+                    <div className="text-sm font-medium p-2 bg-gray-50 border border-gray-200 rounded-lg">{form.startMaintenanceDate || '-'}</div>
+                  ) : (
+                    <Input type="date" value={form.startMaintenanceDate} onChange={u('startMaintenanceDate')} />
+                  )}
                 </div>
 
-                {/* End Maintenance Date */}
+                {/* End Maint Date */}
                 <div className="space-y-1">
-                  <label className="block text-sm font-medium mb-1">End Maintenance Date</label>
-                  <Input
-                    type="date"
-                    value={form.endMaintenanceDate}
-                    onChange={u('endMaintenanceDate')}
-                    disabled={effectivelyReadOnly}
-                  />
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-tight mb-1">End Maint.</label>
+                  {effectivelyReadOnly ? (
+                    <div className="text-sm font-medium p-2 bg-gray-50 border border-gray-200 rounded-lg">{form.endMaintenanceDate || '-'}</div>
+                  ) : (
+                    <Input type="date" value={form.endMaintenanceDate} onChange={u('endMaintenanceDate')} />
+                  )}
                 </div>
 
                 {/* Punctuality */}
                 <div className="space-y-1">
-                  <label className="block text-sm font-medium mb-1">Punctuality</label>
-                  <Select value={form.punctuality} onChange={u('punctuality')} disabled={effectivelyReadOnly}>
-                    <option value="">Select Punctuality</option>
-                    {PUNCTUALITIES.map((s) => (
-                      <option key={s} value={s}>
-                        {s}
-                      </option>
-                    ))}
-                  </Select>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-tight mb-1">Punctuality</label>
+                  {effectivelyReadOnly ? (
+                    <div className={`text-sm font-bold p-2 rounded-lg border ${form.punctuality === 'Same time' ? 'bg-green-50 border-green-100 text-green-700' : 'bg-amber-50 border-amber-100 text-amber-700'}`}>
+                      {form.punctuality || '-'}
+                    </div>
+                  ) : (
+                    <Select value={form.punctuality} onChange={u('punctuality')}>
+                      <option value="">Select Punctuality</option>
+                      {PUNCTUALITIES.map((s) => (<option key={s} value={s}>{s}</option>))}
+                    </Select>
+                  )}
                 </div>
-
-                {/* Reason for Delay - Conditional */}
-                {form.punctuality === 'Late' && (
-                  <div className="animate-in fade-in slide-in-from-top-2 duration-300 space-y-1">
-                    <label className="block text-sm font-medium mb-1 text-amber-600">Reason for Delay</label>
-                    <Input
-                      placeholder="Reason for delay (if late)"
-                      value={form.reasonForDelay}
-                      onChange={u('reasonForDelay')}
-                      disabled={effectivelyReadOnly}
-                    />
-                  </div>
-                )}
 
                 {/* Task Completed */}
                 <div className="space-y-1">
-                  <label className="block text-sm font-medium mb-1">Task Completed</label>
-                  <Select value={form.taskCompleted} onChange={u('taskCompleted')} disabled={effectivelyReadOnly}>
-                    <option value="">Select Status</option>
-                    {TASK_COMPLETED.map((s) => (
-                      <option key={s} value={s}>
-                        {s}
-                      </option>
-                    ))}
-                  </Select>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-tight mb-1">Task Completed</label>
+                  {effectivelyReadOnly ? (
+                    <div className={`text-sm font-bold p-2 rounded-lg border ${form.taskCompleted === 'Yes' ? 'bg-blue-50 border-blue-100 text-blue-700' : 'bg-red-50 border-red-100 text-red-700'}`}>
+                      {form.taskCompleted || '-'}
+                    </div>
+                  ) : (
+                    <Select value={form.taskCompleted} onChange={u('taskCompleted')}>
+                      <option value="">Select Status</option>
+                      {TASK_COMPLETED.map((s) => (<option key={s} value={s}>{s}</option>))}
+                    </Select>
+                  )}
                 </div>
 
-                {/* Reason for Incompletion - Conditional */}
-                {form.taskCompleted === 'No' && (
-                  <div className="animate-in fade-in slide-in-from-top-2 duration-300 space-y-1">
-                    <label className="block text-sm font-medium mb-1 text-destructive">Reason (If No)</label>
-                    <Input
-                      placeholder="Reason for incompletion"
-                      value={form.reasonForIncompletion}
-                      onChange={u('reasonForIncompletion')}
-                      disabled={effectivelyReadOnly}
-                    />
-                  </div>
-                )}
-
-                {/* Rating - Stars */}
+                {/* Spare Parts Availability */}
                 <div className="space-y-1">
-                  <label className="block text-sm font-medium mb-1">Rating</label>
-                  <div className="flex items-center gap-1 h-9">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <div
-                        key={star}
-                        className="p-1 transition-transform"
-                      >
-                        <Star
-                          className={`h-6 w-6 ${star <= parseInt(form.rating || '0')
-                              ? 'fill-amber-400 text-amber-400'
-                              : 'text-gray-300'
-                            }`}
-                        />
-                      </div>
-                    ))}
-                    <span className="ml-2 text-sm font-medium text-gray-500">
-                      {form.rating || '0'} / 5 {feedbackFound && <span className="text-[10px] text-green-600 font-bold ml-1">(Auto-linked)</span>}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Spare Parts Availability - Automatic */}
-                <div className="space-y-1">
-                  <label className="block text-sm font-medium mb-1">
-                    Spare Parts Availability
-                    <span className="text-xs text-blue-600 ml-2">(Auto)</span>
-                  </label>
-                  <div className={`${iCls} bg-blue-50/30 flex items-center font-bold px-3 py-1 ${form.sparePartsAvailability === 'Available' ? 'text-emerald-600' : 'text-amber-600'
-                    }`}>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-tight mb-1">Spare Parts</label>
+                  <div className={`text-sm font-bold p-2 rounded-lg border ${form.sparePartsAvailability === 'Available' ? 'bg-emerald-50 border-emerald-100 text-emerald-700' : 'bg-gray-50 border-gray-200 text-gray-600'}`}>
                     {form.sparePartsAvailability || 'Not Needed'}
+                    <span className="ml-1 text-[10px] opacity-70">(Auto)</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Conditional Reasons */}
+              {(form.punctuality === 'Late' || form.taskCompleted === 'No') && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2">
+                  {form.punctuality === 'Late' && (
+                    <div className="space-y-1">
+                      <label className="block text-xs font-bold text-amber-600 uppercase tracking-tight mb-1">Reason for Delay</label>
+                      {effectivelyReadOnly ? (
+                        <div className="text-sm p-2 bg-amber-50 border border-amber-100 rounded-lg">{form.reasonForDelay || '-'}</div>
+                      ) : (
+                        <Input placeholder="Reason for delay" value={form.reasonForDelay} onChange={u('reasonForDelay')} />
+                      )}
+                    </div>
+                  )}
+                  {form.taskCompleted === 'No' && (
+                    <div className="space-y-1">
+                      <label className="block text-xs font-bold text-red-600 uppercase tracking-tight mb-1">Reason for Incompletion</label>
+                      {effectivelyReadOnly ? (
+                        <div className="text-sm p-2 bg-red-50 border border-red-100 rounded-lg">{form.reasonForIncompletion || '-'}</div>
+                      ) : (
+                        <Input placeholder="Reason for incompletion" value={form.reasonForIncompletion} onChange={u('reasonForIncompletion')} />
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Rating */}
+              <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-tight mb-3 text-center">Customer Satisfaction Rating</label>
+                <div className="flex items-center justify-center gap-2">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <Star
+                      key={star}
+                      className={`h-8 w-8 ${star <= parseInt(form.rating || '0') ? 'fill-amber-400 text-amber-400' : 'text-gray-300'}`}
+                    />
+                  ))}
+                  <div className="ml-4 px-3 py-1 bg-white border border-gray-200 rounded-full text-sm font-bold shadow-sm">
+                    {form.rating || '0'} / 5
+                    {feedbackFound && <span className="ml-1 text-[10px] text-green-600 font-black tracking-tighter">AUTO</span>}
                   </div>
                 </div>
               </div>
@@ -686,12 +720,12 @@ export default function WorkOrderPage() {
 
                         <div className="col-span-5">
                           <Select
-                            value={part.inventoryItemId}
-                            onChange={(e) => updatePart(part.id, 'inventoryItemId', e.target.value)}
+                            value={part.InventoryItemId}
+                            onChange={(e) => updatePart(part.id, 'InventoryItemId', e.target.value)}
                             disabled={effectivelyReadOnly}
                           >
                             <option value="">Select Part</option>
-                            {priceList.map(item => (
+                            {Inventory.map(item => (
                               <option key={item._id} value={item._id}>
                                 {item.itemName} ({item.sparePartsId})
                               </option>
@@ -828,3 +862,6 @@ export default function WorkOrderPage() {
     </div>
   );
 }
+
+
+

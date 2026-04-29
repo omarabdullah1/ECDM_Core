@@ -5,12 +5,12 @@ import CustomerOrder from '../../customer/models/customer-order.model';
 import Feedback from '../../customer/models/feedback.model';
 import FollowUp from '../../customer/models/follow-up.model';
 import { FollowUpStatus } from '../../customer/types/follow-up.types';
-import WorkOrder from '../../operations/models/work-order.model';
+
 import SalesOrder from '../models/sales-order.model';
 import { ISalesOrderDocument } from '../types/sales-order.types';
 import { CreateSalesOrderInput, UpdateSalesOrderInput } from '../validation/sales-order.validation';
 import { updateCampaignRevenueFromSalesOrder } from '../../marketing/services/campaign-roi.service';
-import { adjustStock, checkAvailability } from '../../operations/services/price-list.service';
+import { adjustStock, checkAvailability } from '../../operations/services/inventory.service';
 import * as invoiceService from '../../finance/services/invoice.service';
 
 export const create = async (data: CreateSalesOrderInput): Promise<ISalesOrderDocument> =>
@@ -37,10 +37,19 @@ export const getAll = async (query: Record<string, unknown>, userId?: string, us
     const skip = (Number(page) - 1) * Number(limit);
     const [data, total] = await Promise.all([
         SalesOrder.find(filter)
-            .populate('customer', 'customerId name phone region sector')
-            .populate('salesLead', 'issue typeOfOrder salesPlatform platform salesPerson')
-            .populate('salesData', 'issue typeOfOrder salesPlatform callOutcome callDate salesPerson')
+            .populate('customer', 'customerId name phone region sector type address')
+            .populate({
+                path: 'salesLead',
+                select: 'issue reason typeOfOrder salesPlatform platform order date status notes salesPerson',
+                populate: { path: 'salesPerson', select: 'firstName lastName email' }
+            })
+            .populate({
+                path: 'salesData',
+                select: 'issue typeOfOrder salesPlatform callOutcome callDate salesPerson notes order',
+                populate: { path: 'salesPerson', select: 'firstName lastName email' }
+            })
             .populate('salesPerson', '_id firstName lastName email')
+            .populate('quotation.items.inventoryId')
             .sort({ createdAt: -1 }).skip(skip).limit(Number(limit)),
         SalesOrder.countDocuments(filter),
     ]);
@@ -51,10 +60,19 @@ export const getAll = async (query: Record<string, unknown>, userId?: string, us
 
 export const getById = async (id: string): Promise<ISalesOrderDocument> => {
     const doc = await SalesOrder.findById(id)
-        .populate('customer', 'customerId name phone region sector email company address')
-        .populate('salesLead', 'issue typeOfOrder salesPlatform platform order date salesPerson')
-        .populate('salesData', 'issue typeOfOrder salesPlatform callOutcome callDate salesPerson')
-        .populate('salesPerson', '_id firstName lastName email');
+        .populate('customer', 'customerId name phone region sector email company address type')
+        .populate({
+            path: 'salesLead',
+            select: 'issue reason typeOfOrder salesPlatform platform order date status notes salesPerson',
+            populate: { path: 'salesPerson', select: 'firstName lastName email' }
+        })
+        .populate({
+            path: 'salesData',
+            select: 'issue typeOfOrder salesPlatform callOutcome callDate salesPerson notes order',
+            populate: { path: 'salesPerson', select: 'firstName lastName email' }
+        })
+        .populate('salesPerson', '_id firstName lastName email')
+        .populate('quotation.items.inventoryId');
     if (!doc) throw new AppError('Sales order not found', 404);
     return doc;
 };
@@ -165,9 +183,9 @@ export const update = async (id: string, data: UpdateSalesOrderInput): Promise<I
     // ─── Inventory Check: Prevent adding items with 0 stock or exceeding available quantity ───
     if (processedData.quotation?.items && processedData.quotation.items.length > 0) {
         const itemsToCheck = processedData.quotation.items
-            .filter((item: any) => item.priceListId)
+            .filter((item: any) => item.inventoryId)
             .map((item: any) => ({
-                priceListId: item.priceListId.toString(),
+                inventoryId: item.inventoryId.toString(),
                 quantity: item.quantity,
                 itemName: item.description
             }));
@@ -282,14 +300,7 @@ export const update = async (id: string, data: UpdateSalesOrderInput): Promise<I
                     console.error('   ⚠️ Failed to auto-create Feedback:', error);
                 }
 
-                try {
-                    await WorkOrder.create({
-                        customerOrderId: newCustomerOrder._id,
-                    });
-                    console.log('   ✅ Work Order auto-created');
-                } catch (error) {
-                    console.error('   ⚠️ Failed to auto-create Work Order:', error);
-                }
+
             }
 
             console.log('   📊 Target Progress: Automatically calculated from accepted orders');
@@ -419,31 +430,7 @@ export const update = async (id: string, data: UpdateSalesOrderInput): Promise<I
             }
         }
 
-        // STEP 4: CASCADE TO WORK ORDER (using the securely captured ID)
-        if (targetCustomerOrderId) {
-            console.log('🔄 Cascading to Work Order with Customer Order ID:', targetCustomerOrderId);
 
-            const existingWorkOrder = await WorkOrder.findOne({ customerOrderId: targetCustomerOrderId });
-
-            if (!existingWorkOrder) {
-                try {
-                    const newWorkOrder = await WorkOrder.create({
-                        customerOrderId: targetCustomerOrderId,
-                        // All other fields remain empty for the maintenance team to fill
-                    });
-                    console.log('✅ SUCCESS: Work Order created:', newWorkOrder._id);
-                    console.log('   - Linked to Customer Order:', targetCustomerOrderId);
-                } catch (workOrderError) {
-                    console.error('❌ CRITICAL: Failed to create Work Order:', workOrderError);
-                    console.error('   - Target Customer Order ID:', targetCustomerOrderId);
-                    console.error('   - Error details:', (workOrderError as Error).message);
-                }
-            } else {
-                console.log('ℹ️ Work Order already exists:', existingWorkOrder._id);
-            }
-        } else {
-            console.error('❌ CRITICAL: No targetCustomerOrderId captured!');
-        }
     } else {
         console.log('ℹ️ No siteInspectionDate set, skipping cascade');
     }
@@ -469,9 +456,9 @@ export const update = async (id: string, data: UpdateSalesOrderInput): Promise<I
         if (doc.quotation?.items && doc.quotation.items.length > 0) {
             console.log('📉 Inventory: Order WON - Deducting stock for', doc.quotation.items.length, 'items');
             for (const item of doc.quotation.items) {
-                if (item.priceListId) {
+                if (item.inventoryId) {
                     try {
-                        await adjustStock(item.priceListId.toString(), -item.quantity);
+                        await adjustStock(item.inventoryId.toString(), -item.quantity);
                     } catch (stockError) {
                         console.error(`⚠️ Failed to deduct stock for ${item.description}:`, (stockError as Error).message);
                     }
@@ -605,14 +592,7 @@ export const triggerAutomationIfAccepted = async (salesOrderId: string): Promise
                 console.error('   ⚠️ Failed to auto-create Feedback:', error);
             }
 
-            try {
-                await WorkOrder.create({
-                    customerOrderId: newCustomerOrder._id,
-                });
-                console.log('   ✅ Work Order auto-created');
-            } catch (error) {
-                console.error('   ⚠️ Failed to auto-create Work Order:', error);
-            }
+
         }
 
         console.log('   📊 Target Progress: Automatically calculated from accepted orders');
@@ -629,3 +609,5 @@ export const bulkDelete = async (ids: string[]): Promise<{ deletedCount: number 
     const result = await SalesOrder.deleteMany({ _id: { $in: ids } });
     return { deletedCount: result.deletedCount };
 };
+
+

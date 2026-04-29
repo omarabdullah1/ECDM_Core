@@ -39,3 +39,4 @@ export const deleteDocument = async (id: string, userId: string): Promise<void> 
     
     await RndDocument.findByIdAndDelete(id);
 };
+

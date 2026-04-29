@@ -13,6 +13,7 @@ const feedbackSchema = new Schema<IFeedbackDocument>(
             customerPhone: { type: String, default: '' },
             customerId: { type: String, default: '' },
             engineerName: { type: String, default: '' },
+            technicianName: { type: String, default: '' },
             visitDate: { type: Date },
             scheduledVisitDate: { type: Date },
             actualVisitDate: { type: Date },
@@ -25,12 +26,15 @@ const feedbackSchema = new Schema<IFeedbackDocument>(
         // Feedback specific fields
         solvedIssue:           { type: String, enum: ['Yes', 'No', ''], default: '' },
         ratingOperation:       { type: String, default: '' }, // e.g., '1 to 5', 'Excellent', etc.
+        ratingTechnician:      { type: String, default: '' },
+        ratingEngineer:        { type: String, default: '' },
         followUp:              { type: String, enum: ['Yes', 'No', ''], default: '' }, // Does this need another follow-up?
         ratingCustomerService: { type: String, default: '' },
         notes:                 { type: String, default: '' },
         
         // Audit
         updatedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+        csPerson:  { type: String, default: '' }, // Email of the CS person who first modified this record
     },
     { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } },
 );
@@ -66,3 +70,4 @@ feedbackSchema.index({ createdAt: -1 });
 
 const Feedback: Model<IFeedbackDocument> = mongoose.model<IFeedbackDocument>('Feedback', feedbackSchema);
 export default Feedback;
+

@@ -1,7 +1,7 @@
 import { Document, Types } from 'mongoose';
 
 // Stock availability status
-export enum InventoryItemStatus {
+export enum inventoryItemStatus {
     InStock                = 'In stock',
     TemporarilyUnavailable = 'Temporarily unavailable',
     RepurchaseNeeded       = 'Repurchase needed',
@@ -15,11 +15,11 @@ export interface ISupplierDetails {
     address?:     string;
 }
 
-export interface IInventoryItem {
+export interface IinventoryItem {
     itemName:         string;
     stockNumber:      string;
     stockCount:       number;
-    status:           InventoryItemStatus;
+    status:           inventoryItemStatus;
     price:            number;
     purchaseOrders:   string[];
     startDate?:       Date;
@@ -31,7 +31,7 @@ export interface IInventoryItem {
     updatedAt:        Date;
 }
 
-export interface IInventoryItemDocument extends IInventoryItem, Document {
+export interface IinventoryItemDocument extends IinventoryItem, Document {
     _id: Types.ObjectId;
 }
 
@@ -94,3 +94,5 @@ export interface IStockMovement {
 export interface IStockMovementDocument extends IStockMovement, Document {
     _id: Types.ObjectId;
 }
+
+

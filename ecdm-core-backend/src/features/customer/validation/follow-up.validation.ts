@@ -44,3 +44,4 @@ export const createFollowUpSchema = z.object({
 export const updateFollowUpSchema = createFollowUpSchema.partial();
 export type CreateFollowUpInput = z.infer<typeof createFollowUpSchema>;
 export type UpdateFollowUpInput = z.infer<typeof updateFollowUpSchema>;
+

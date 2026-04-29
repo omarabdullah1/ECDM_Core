@@ -23,6 +23,10 @@ interface User {
     targetBudget?: number;
     targetSales?: number;
     maxDiscountPercentage?: number;
+    workStartTime?: string;
+    workEndTime?: string;
+    gracePeriod?: number;
+    halfDayThreshold?: number;
 }
 
 const ROLES = [
@@ -37,6 +41,7 @@ const ROLES = [
     { value: 'CustomerService', label: 'Customer Service' },
     { value: 'Marketing', label: 'Marketing' },
     { value: 'R&D', label: 'R&D' },
+    { value: 'Finance', label: 'Finance' },
 ] as const;
 
 const inputClass = 'w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-4 py-3 text-sm placeholder:text-[hsl(var(--muted-foreground))] focus:border-[hsl(var(--primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/20 transition-all';
@@ -54,6 +59,7 @@ const RoleBadge = ({ role }: { role: string }) => {
         Technician: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400 border border-cyan-200 dark:border-cyan-800',
         CustomerService: 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400 border border-teal-200 dark:border-teal-800',
         'R&D': 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800',
+        Finance: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800',
     };
     const label = ROLES.find(r => r.value === role)?.label || role;
     return (
@@ -97,6 +103,7 @@ export default function UsersPage() {
     // Edit Dialog
     const [editModal, setEditModal] = useState(false);
     const [editing, setEditing] = useState<User | null>(null);
+    const [initialEditMode, setInitialEditMode] = useState(false);
     // Delete Dialog
     const [delId, setDelId] = useState<string | null>(null);
 
@@ -124,8 +131,9 @@ export default function UsersPage() {
         fetchUsers();
     }, [fetchUsers]);
 
-    const openEdit = (user: User) => {
+    const openEdit = (user: User, editMode = false) => {
         setEditing(user);
+        setInitialEditMode(editMode);
         setEditModal(true);
     };
 
@@ -260,12 +268,12 @@ export default function UsersPage() {
                 itemsPerPage={limit}
                 onPageChange={setPage}
                 selectionDisabled={!isSuperAdmin}
-                onRowClick={isSuperAdmin ? openEdit : undefined}
+                onRowClick={isSuperAdmin ? (r) => openEdit(r, false) : undefined}
                 renderActions={(row: User) => (
                     isSuperAdmin && row._id !== currentUser?._id ? (
                         <div className="flex flex-wrap items-center gap-2">
                             <button
-                                onClick={() => openEdit(row)}
+                                onClick={() => openEdit(row, true)}
                                 className="p-1.5 rounded-lg hover:bg-[hsl(var(--muted))] transition-colors"
                                 title="Edit user"
                             >
@@ -303,6 +311,7 @@ export default function UsersPage() {
                         setEditing(null);
                     }}
                     onSuccess={fetchUsers}
+                    initialEditMode={initialEditMode}
                 />
             )}
 
@@ -341,3 +350,4 @@ export default function UsersPage() {
         </div >
     );
 }
+

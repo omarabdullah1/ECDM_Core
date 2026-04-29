@@ -10,16 +10,18 @@ const router = Router();
 router.use(authenticate);
 
 // CRUD operations
-router.post('/',      validate(createReportSchema), ctrl.create);
-router.get('/',       ctrl.getAll);
-router.get('/:id',    ctrl.getById);
+router.post('/',       validate(createReportSchema), ctrl.create);
+router.get('/',        ctrl.getAll);
+router.get('/auto',    ctrl.getAutomated);
+router.get('/:id',     ctrl.getById);
 router.put('/:id',    validate(updateReportSchema), ctrl.update);
-router.delete('/:id', authorise(UserRole.SuperAdmin, UserRole.Manager), ctrl.remove);
+router.delete('/:id', authorise(UserRole.SuperAdmin, UserRole.Admin), ctrl.remove);
 
 // Employee Evaluation Integration endpoints
-router.post('/auto-generate', authorise(UserRole.SuperAdmin, UserRole.Manager, UserRole.HR), evalCtrl.autoGenerate);
-router.post('/generate-bulk', authorise(UserRole.SuperAdmin, UserRole.Manager, UserRole.HR), evalCtrl.generateBulk);
+router.post('/auto-generate', authorise(UserRole.SuperAdmin, UserRole.Admin, UserRole.Manager, UserRole.HR), evalCtrl.autoGenerate);
+router.post('/generate-bulk', authorise(UserRole.SuperAdmin, UserRole.Admin, UserRole.Manager, UserRole.HR), evalCtrl.generateBulk);
 router.get('/summary/:userId', evalCtrl.getSummary);
 router.get('/metrics/:userId', evalCtrl.getMetrics);
 
 export default router;
+

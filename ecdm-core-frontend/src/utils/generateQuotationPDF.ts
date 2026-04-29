@@ -244,3 +244,4 @@ export const generateQuotationPDF = (order: SalesOrderForPDF, action: 'view' | '
     return doc.output('blob');
   }
 };
+

@@ -337,3 +337,4 @@ export const getAttendanceFolders = async (startDate?: string, endDate?: string)
     const folders = await Attendance.aggregate(pipeline);
     return folders;
 };
+

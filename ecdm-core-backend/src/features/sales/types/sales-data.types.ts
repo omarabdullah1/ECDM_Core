@@ -42,3 +42,4 @@ export interface ISalesData {
 export interface ISalesDataDocument extends ISalesData, Document {
     _id: Types.ObjectId;
 }
+

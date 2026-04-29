@@ -148,3 +148,4 @@ export const previewMonthlySalaries = async (req: Request, res: Response, next: 
     next(e);
   }
 };
+

@@ -24,3 +24,4 @@ export const createSalarySchema = z.object({
 export const updateSalarySchema = createSalarySchema.partial();
 export type CreateSalaryInput = z.infer<typeof createSalarySchema>;
 export type UpdateSalaryInput = z.infer<typeof updateSalarySchema>;
+

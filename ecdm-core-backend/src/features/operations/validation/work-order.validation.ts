@@ -21,9 +21,10 @@ export const createWorkOrderSchema = z.object({
     rating:                z.string().optional().default(''),
     sparePartsId:          z.string().optional().default(''),
     sparePartsAvailability: z.nativeEnum(SparePartsAvailability).optional().default(SparePartsAvailability.Empty),
+    engineerId:            z.string().optional(),
     notes:                 z.string().optional().default(''),
     partsUsed:             z.array(z.object({
-        priceListId:     z.string().optional(),
+        inventoryId:     z.string().optional(),
         inventoryItemId: z.string().optional(),
         quantity:        z.number().min(1),
         unitCost:        z.number().min(0),
@@ -35,3 +36,5 @@ export const updateWorkOrderSchema = createWorkOrderSchema.partial().omit({ cust
 
 export type CreateWorkOrderInput = z.infer<typeof createWorkOrderSchema>;
 export type UpdateWorkOrderInput = z.infer<typeof updateWorkOrderSchema>;
+
+

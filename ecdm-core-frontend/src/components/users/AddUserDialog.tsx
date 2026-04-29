@@ -20,6 +20,10 @@ const formSchema = z.object({
     targetBudget: z.number().optional(),
     targetSales: z.number().optional(),
     maxDiscountPercentage: z.number().min(0).max(100).optional(),
+    workStartTime: z.string().optional(),
+    workEndTime: z.string().optional(),
+    gracePeriod: z.coerce.number().min(0).optional(),
+    halfDayThreshold: z.coerce.number().min(0).optional(),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -37,6 +41,7 @@ const ROLES = [
     { value: 'CustomerService', label: 'Customer Service' },
     { value: 'Marketing', label: 'Marketing' },
     { value: 'R&D', label: 'R&D' },
+    { value: 'Finance', label: 'Finance' },
 ] as const;
 
 interface AddUserDialogProps {
@@ -58,6 +63,10 @@ export default function AddUserDialog({ isOpen, onClose, onSuccess }: AddUserDia
         targetBudget: 0,
         targetSales: 0,
         maxDiscountPercentage: 0,
+        workStartTime: '09:00',
+        workEndTime: '17:00',
+        gracePeriod: 15,
+        halfDayThreshold: 4.5,
     });
     const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
     const [saving, setSaving] = useState(false);
@@ -115,6 +124,10 @@ export default function AddUserDialog({ isOpen, onClose, onSuccess }: AddUserDia
             targetBudget: 0,
             targetSales: 0,
             maxDiscountPercentage: 0,
+            workStartTime: '09:00',
+            workEndTime: '17:00',
+            gracePeriod: 15,
+            halfDayThreshold: 4.5,
         });
         setErrors({});
         setApiError('');
@@ -223,6 +236,27 @@ export default function AddUserDialog({ isOpen, onClose, onSuccess }: AddUserDia
                             </div>
                         </div>
 
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Shift Start Time</label>
+                                <Input
+                                    type="time"
+                                    name="workStartTime"
+                                    value={form.workStartTime}
+                                    onChange={handleChange}
+                                />
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Shift End Time</label>
+                                <Input
+                                    type="time"
+                                    name="workEndTime"
+                                    value={form.workEndTime}
+                                    onChange={handleChange}
+                                />
+                            </div>
+                        </div>
+
                         {form.role === 'Sales' && (
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-1">
@@ -239,6 +273,30 @@ export default function AddUserDialog({ isOpen, onClose, onSuccess }: AddUserDia
                                 </div>
                             </div>
                         )}
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none">Grace Period (Min)</label>
+                                <Input
+                                    type="number"
+                                    name="gracePeriod"
+                                    value={form.gracePeriod}
+                                    onChange={handleChange}
+                                    placeholder="15"
+                                />
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none">Half-day (Hrs)</label>
+                                <Input
+                                    type="number"
+                                    step="0.5"
+                                    name="halfDayThreshold"
+                                    value={form.halfDayThreshold}
+                                    onChange={handleChange}
+                                    placeholder="4.5"
+                                />
+                            </div>
+                        </div>
 
                         {apiError && (
                             <div className="flex items-center gap-2 p-3 rounded-xl bg-red-50 border border-red-100 text-red-600 text-[11px] font-medium">
@@ -270,3 +328,4 @@ export default function AddUserDialog({ isOpen, onClose, onSuccess }: AddUserDia
         </Dialog>
     );
 }
+

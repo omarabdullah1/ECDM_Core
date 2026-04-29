@@ -16,7 +16,7 @@ router.get('/projects',            ctrl.getAllProjects);
 router.get('/projects/:id',        ctrl.getProjectById);
 router.put('/projects/:id',        validate(updateProjectSchema), ctrl.updateProject);
 router.patch('/projects/:id',      validate(updateProjectSchema), ctrl.updateProject);
-router.delete('/projects/:id',     authorise(UserRole.SuperAdmin, UserRole.Manager, UserRole.Admin), ctrl.deleteProject);
+router.delete('/projects/:id',     authorise(UserRole.SuperAdmin, UserRole.Admin), ctrl.deleteProject);
 
 // ── R&D Task Routes ─────────────────────────────────────────────────
 router.post('/tasks',              validate(createTaskSchema), ctrl.createTask);
@@ -24,7 +24,7 @@ router.get('/tasks',               ctrl.getAllTasks);
 router.get('/tasks/:id',           ctrl.getTaskById);
 router.put('/tasks/:id',           validate(updateTaskSchema), ctrl.updateTask);
 router.patch('/tasks/:id',         validate(updateTaskSchema), ctrl.updateTask);
-router.delete('/tasks/:id',        ctrl.deleteTask); // Allow authenticated users to delete tasks
+router.delete('/tasks/:id',        authorise(UserRole.SuperAdmin, UserRole.Admin), ctrl.deleteTask);
 
 // ── R&D Document Routes ─────────────────────────────────────────────
 router.post('/documents',          validate(createDocumentSchema), docCtrl.createDocument);
@@ -34,3 +34,4 @@ router.patch('/documents/:id',     validate(updateDocumentSchema), docCtrl.updat
 router.delete('/documents/:id',    docCtrl.deleteDocument); // Creator only (enforced in service)
 
 export default router;
+

@@ -18,6 +18,7 @@ export interface IOrderContext {
     customerPhone?: string;
     customerId?: string;
     engineerName?: string;
+    technicianName?: string;
     visitDate?: Date;
     scheduledVisitDate?: Date;
     actualVisitDate?: Date;
@@ -54,6 +55,7 @@ export interface IFollowUp {
     
     // Tracking
     updatedBy?:           Types.ObjectId;    // → User (who last modified)
+    csPerson?:            string;            // Email of the CS person who first modified this record
     createdAt:            Date;
     updatedAt:            Date;
 }
@@ -61,3 +63,4 @@ export interface IFollowUp {
 export interface IFollowUpDocument extends IFollowUp, Document {
     _id: Types.ObjectId;
 }
+

@@ -14,7 +14,7 @@ interface PurchaseOrderDetailsDialogProps {
     onSuccess: () => void;
 }
 
-interface PriceListOption {
+interface InventoryOption {
     _id: string;
     itemName: string;
     unitPrice: number;
@@ -28,16 +28,18 @@ export default function PurchaseOrderDetailsDialog({ po, onClose, onSuccess }: P
     const [supplierName, setSupplierName] = useState(po.supplierName);
     const [selectedItems, setSelectedItems] = useState(po.items.map(item => ({
         ...item,
-        priceListId: typeof item.priceListId === 'object' ? (item.priceListId as any)._id : item.priceListId
+        inventoryId: typeof item.inventoryId === 'object' && item.inventoryId !== null ? (item.inventoryId as any)._id : item.inventoryId
     })));
     const [saving, setSaving] = useState(false);
     
     // For adding new items during edit
-    const [priceList, setPriceList] = useState<PriceListOption[]>([]);
+    const [Inventory, setInventory] = useState<InventoryOption[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [loadingCatalog, setLoadingCatalog] = useState(false);
 
-    const canEdit = po.status === 'PendingFinance' && (user?.role === 'Admin' || user?.role === 'SuperAdmin' || user?._id === po.createdBy._id);
+    const isAdmin = user?.role === 'Admin' || user?.role === 'SuperAdmin';
+    const canEdit = isAdmin || (po.status === 'PendingFinance' && user?._id === po.createdBy._id);
+    const hasFinancialAccess = isAdmin;
 
     useEffect(() => {
         if (isEditing) {
@@ -48,8 +50,8 @@ export default function PurchaseOrderDetailsDialog({ po, onClose, onSuccess }: P
     const fetchCatalog = async () => {
         setLoadingCatalog(true);
         try {
-            const { data } = await api.get('/operations/price-list?limit=100');
-            setPriceList(data.data.data || []);
+            const { data } = await api.get('/operations/inventory?limit=100');
+            setInventory(data.data.data || []);
         } catch (err) {
             toast.error('Failed to load item catalog');
         } finally {
@@ -57,12 +59,12 @@ export default function PurchaseOrderDetailsDialog({ po, onClose, onSuccess }: P
         }
     };
 
-    const addItem = (item: PriceListOption) => {
-        if (selectedItems.find(si => si.priceListId === item._id)) {
+    const addItem = (item: InventoryOption) => {
+        if (selectedItems.find(si => si.inventoryId === item._id)) {
             return toast.error('Item already in list');
         }
         setSelectedItems([...selectedItems, {
-            priceListId: item._id,
+            inventoryId: item._id,
             itemName: item.itemName,
             quantity: 1,
             unitPrice: item.unitPrice || 0,
@@ -72,7 +74,7 @@ export default function PurchaseOrderDetailsDialog({ po, onClose, onSuccess }: P
 
     const updateItem = (id: string, field: 'quantity' | 'unitPrice', value: number) => {
         setSelectedItems(selectedItems.map(si => {
-            if (si.priceListId === id) {
+            if (si.inventoryId === id) {
                 const updated = { ...si, [field]: value };
                 updated.total = updated.quantity * updated.unitPrice;
                 return updated;
@@ -82,11 +84,11 @@ export default function PurchaseOrderDetailsDialog({ po, onClose, onSuccess }: P
     };
 
     const removeItem = (id: string) => {
-        setSelectedItems(selectedItems.filter(si => si.priceListId !== id));
+        setSelectedItems(selectedItems.filter(si => si.inventoryId !== id));
     };
 
     const handleSave = async () => {
-        if (!supplierName) return toast.error('Supplier name is required');
+        if (hasFinancialAccess && !supplierName) return toast.error('Supplier name is required');
         if (selectedItems.length === 0) return toast.error('At least one item required');
 
         setSaving(true);
@@ -123,7 +125,7 @@ export default function PurchaseOrderDetailsDialog({ po, onClose, onSuccess }: P
 
     const totalAmount = selectedItems.reduce((acc, curr) => acc + curr.total, 0);
 
-    const filteredCatalog = priceList.filter(item => 
+    const filteredCatalog = Inventory.filter(item => 
         item.itemName.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
@@ -175,7 +177,7 @@ export default function PurchaseOrderDetailsDialog({ po, onClose, onSuccess }: P
                                 
                                 <div className="space-y-3">
                                     {selectedItems.map((item, idx) => (
-                                        <div key={item.priceListId} className={`flex gap-4 items-end p-4 rounded-2xl border transition-all ${
+                                        <div key={item.inventoryId ? `${item.inventoryId}-${idx}` : `item-${idx}`} className={`flex gap-4 items-end p-4 rounded-2xl border transition-all ${
                                             isEditing ? 'bg-white border-[hsl(var(--primary))]/20 shadow-sm' : 'bg-gray-50/50 border-gray-100'
                                         }`}>
                                             <div className="flex-1 min-w-0">
@@ -187,36 +189,40 @@ export default function PurchaseOrderDetailsDialog({ po, onClose, onSuccess }: P
                                                             <Input 
                                                                 type="number" min="1" 
                                                                 value={item.quantity ?? ''} 
-                                                                onChange={(e) => updateItem(item.priceListId, 'quantity', Number(e.target.value))}
+                                                                onChange={(e) => updateItem(item.inventoryId, 'quantity', Number(e.target.value))}
                                                                 className="h-9 px-3 text-sm font-bold bg-white"
                                                             />
                                                         ) : (
                                                             <div className="h-9 flex items-center px-1 text-sm font-black">{item.quantity} units</div>
                                                         )}
                                                     </div>
-                                                    <div className="space-y-1 flex-1">
-                                                        <label className="text-[9px] font-bold text-gray-400 uppercase">Unit Price ($)</label>
-                                                        {isEditing ? (
-                                                            <Input 
-                                                                type="number" step="0.01" 
-                                                                value={item.unitPrice ?? ''} 
-                                                                onChange={(e) => updateItem(item.priceListId, 'unitPrice', Number(e.target.value))}
-                                                                className="h-9 px-3 text-sm font-bold bg-white"
-                                                            />
-                                                        ) : (
-                                                            <div className="h-9 flex items-center px-1 text-sm font-black">${item.unitPrice?.toLocaleString()}</div>
-                                                        )}
-                                                    </div>
-                                                    <div className="space-y-1 w-28 text-right pr-2">
-                                                        <label className="text-[9px] font-bold text-gray-400 uppercase">Subtotal</label>
-                                                        <div className="h-9 flex items-center justify-end text-sm font-black text-[hsl(var(--primary))]">
-                                                            ${(item.quantity * item.unitPrice).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                                                        </div>
-                                                    </div>
+                                                    {hasFinancialAccess && (
+                                                        <>
+                                                            <div className="space-y-1 flex-1">
+                                                                <label className="text-[9px] font-bold text-gray-400 uppercase">Unit Price ($)</label>
+                                                                {isEditing ? (
+                                                                    <Input 
+                                                                        type="number" step="0.01" 
+                                                                        value={item.unitPrice ?? ''} 
+                                                                        onChange={(e) => updateItem(item.inventoryId, 'unitPrice', Number(e.target.value))}
+                                                                        className="h-9 px-3 text-sm font-bold bg-white"
+                                                                    />
+                                                                ) : (
+                                                                    <div className="h-9 flex items-center px-1 text-sm font-black">${item.unitPrice?.toLocaleString()}</div>
+                                                                )}
+                                                            </div>
+                                                            <div className="space-y-1 w-28 text-right pr-2">
+                                                                <label className="text-[9px] font-bold text-gray-400 uppercase">Subtotal</label>
+                                                                <div className="h-9 flex items-center justify-end text-sm font-black text-[hsl(var(--primary))]">
+                                                                    ${(item.quantity * item.unitPrice).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                                                </div>
+                                                            </div>
+                                                        </>
+                                                    )}
                                                 </div>
                                             </div>
                                             {isEditing && (
-                                                <button onClick={() => removeItem(item.priceListId)} className="p-2.5 rounded-xl hover:bg-red-50 text-gray-300 hover:text-red-500 transition-colors">
+                                                <button onClick={() => removeItem(item.inventoryId)} className="p-2.5 rounded-xl hover:bg-red-50 text-gray-300 hover:text-red-500 transition-colors">
                                                     <Trash2 className="w-4 h-4" />
                                                 </button>
                                             )}
@@ -249,7 +255,7 @@ export default function PurchaseOrderDetailsDialog({ po, onClose, onSuccess }: P
                                             >
                                                 <div className="min-w-0">
                                                     <p className="text-[11px] font-bold truncate pr-2" title={catalogItem.itemName}>{catalogItem.itemName}</p>
-                                                    <p className="text-[9px] text-gray-400 font-bold">${catalogItem.unitPrice}</p>
+                                                    {hasFinancialAccess && <p className="text-[9px] text-gray-400 font-bold">${catalogItem.unitPrice}</p>}
                                                 </div>
                                                 <Plus className="w-3.5 h-3.5 text-gray-300 group-hover:text-emerald-500 group-hover:scale-125 transition-transform flex-shrink-0" />
                                             </button>
@@ -262,20 +268,22 @@ export default function PurchaseOrderDetailsDialog({ po, onClose, onSuccess }: P
                         {/* Right: Meta details */}
                         <div className="space-y-6">
                             <div className="p-6 rounded-3xl bg-[hsl(var(--primary))]/5 border border-[hsl(var(--primary))]/10 space-y-5">
-                                <div className="space-y-1.5">
-                                    <label className="text-[10px] font-black text-[hsl(var(--primary))] uppercase tracking-widest flex items-center gap-2 px-1">
-                                        <MapPin className="w-3.5 h-3.5" /> Supplier Information
-                                    </label>
-                                    {isEditing ? (
-                                        <Input 
-                                            value={supplierName}
-                                            onChange={(e) => setSupplierName(e.target.value)}
-                                            className="font-bold bg-white"
-                                        />
-                                    ) : (
-                                        <div className="px-1 text-sm font-black">{po.supplierName}</div>
-                                    )}
-                                </div>
+                                {hasFinancialAccess && (
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-black text-[hsl(var(--primary))] uppercase tracking-widest flex items-center gap-2 px-1">
+                                            <MapPin className="w-3.5 h-3.5" /> Supplier Information
+                                        </label>
+                                        {isEditing ? (
+                                            <Input 
+                                                value={supplierName}
+                                                onChange={(e) => setSupplierName(e.target.value)}
+                                                className="font-bold bg-white"
+                                            />
+                                        ) : (
+                                            <div className="px-1 text-sm font-black">{po.supplierName || 'Not specified'}</div>
+                                        )}
+                                    </div>
+                                )}
 
                                 <div className="space-y-1.5">
                                     <label className="text-[10px] font-black text-[hsl(var(--primary))] uppercase tracking-widest flex items-center gap-2 px-1">
@@ -284,12 +292,14 @@ export default function PurchaseOrderDetailsDialog({ po, onClose, onSuccess }: P
                                     <div className="px-1 text-sm font-black capitalize">{po.createdBy.firstName} {po.createdBy.lastName}</div>
                                 </div>
 
-                                <div className="pt-4 border-t border-[hsl(var(--primary))]/10">
-                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Grand Total</label>
-                                    <div className="text-4xl font-black text-[hsl(var(--primary))] mt-2 tabular-nums">
-                                        ${totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                {hasFinancialAccess && (
+                                    <div className="pt-4 border-t border-[hsl(var(--primary))]/10">
+                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Grand Total</label>
+                                        <div className="text-4xl font-black text-[hsl(var(--primary))] mt-2 tabular-nums">
+                                            ${totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                        </div>
                                     </div>
-                                </div>
+                                )}
                             </div>
 
                             {/* Status Timeline / History teaser */}
@@ -387,3 +397,5 @@ const X = ({ className }: { className?: string }) => (
         <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
     </svg>
 );
+
+

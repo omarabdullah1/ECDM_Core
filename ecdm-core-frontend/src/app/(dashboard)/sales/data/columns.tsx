@@ -1,5 +1,5 @@
 'use client';
-import { Edit2, Trash2, History } from 'lucide-react';
+import { Edit2, Trash2, History, Eye } from 'lucide-react';
 
 /**
  * Sales Data (Data Leads) Table - Column Definitions
@@ -134,6 +134,10 @@ interface SalesDataColumnsConfig {
   onEdit?: (row: SalesData) => void;
   onDelete?: (row: SalesData) => void;
   onHistory?: (row: SalesData) => void;
+  currentUser?: {
+    _id: string;
+    role: string;
+  } | null;
 }
 
 export const createSalesDataColumns = (config?: SalesDataColumnsConfig) => {
@@ -388,7 +392,7 @@ export const createSalesDataColumns = (config?: SalesDataColumnsConfig) => {
     },
 
     // ─────────────────────────────────────────────────────────────────────────
-    // 16. SalesPerson ID (Display name from populated salesPerson)
+    // 16. SalesPerson (Email shown in column)
     // ─────────────────────────────────────────────────────────────────────────
     {
       key: 'salesPerson',
@@ -398,13 +402,9 @@ export const createSalesDataColumns = (config?: SalesDataColumnsConfig) => {
         const salesPerson = row.salesPerson;
         if (!salesPerson) return <span className="text-gray-400">-</span>;
         
-        const fullName = [salesPerson.firstName, salesPerson.lastName]
-          .filter(Boolean)
-          .join(' ') || salesPerson._id;
-        
         return (
-          <span className="text-sm">
-            {fullName}
+          <span className="text-sm" title={salesPerson.email}>
+            {salesPerson.email || '-'}
           </span>
         );
       },
@@ -431,39 +431,50 @@ export const createSalesDataColumns = (config?: SalesDataColumnsConfig) => {
       key: 'actions',
       header: 'Actions',
       className: 'md:w-[1%] md:whitespace-nowrap',
-      render: (row: SalesData) => (
-        <div className="flex flex-wrap items-center gap-2">
-          {onEdit && (
-            <button
-              onClick={() => onEdit(row)}
-              className="p-1.5 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded text-blue-500 transition-colors"
-              title="Edit"
-            >
-              <Edit2 className="h-4 w-4" />
-            </button>
-          )}
-          
-          {onDelete && (
-            <button
-              onClick={() => onDelete(row)}
-              className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded text-red-500 transition-colors"
-              title="Delete"
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
-          )}
-          
-          {onHistory && (
-            <button
-              onClick={() => onHistory(row)}
-              className="p-1.5 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded text-purple-500 transition-colors"
-              title="History"
-            >
-              <History className="h-4 w-4" />
-            </button>
-          )}
-        </div>
-      ),
+      render: (row: SalesData) => {
+        const isOwner = row.salesPerson?._id === config?.currentUser?._id;
+        const isAdmin = config?.currentUser?.role === 'SuperAdmin' || config?.currentUser?.role === 'Admin';
+        const isUnassigned = !row.salesPerson;
+        const canEdit = isUnassigned || isOwner || isAdmin;
+
+        return (
+          <div className="flex flex-wrap items-center gap-2">
+            {onEdit && (
+              <button
+                onClick={() => onEdit(row)}
+                className={`p-1.5 rounded transition-colors ${
+                  canEdit 
+                    ? 'hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-500' 
+                    : 'hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-500'
+                }`}
+                title={canEdit ? "Edit" : "Preview"}
+              >
+                {canEdit ? <Edit2 className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            )}
+            
+            {onDelete && isAdmin && (
+              <button
+                onClick={() => onDelete(row)}
+                className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded text-red-500 transition-colors"
+                title="Delete"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            )}
+            
+            {onHistory && (
+              <button
+                onClick={() => onHistory(row)}
+                className="p-1.5 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded text-purple-500 transition-colors"
+                title="History"
+              >
+                <History className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+        );
+      },
     },
   ];
 };
@@ -473,3 +484,4 @@ export const createSalesDataColumns = (config?: SalesDataColumnsConfig) => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default createSalesDataColumns;
+

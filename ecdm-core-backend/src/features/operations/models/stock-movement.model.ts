@@ -18,3 +18,4 @@ stockMovementSchema.index({ type:      1 });
 stockMovementSchema.index({ createdAt: -1 });
 
 export default model<IStockMovementDocument>('StockMovement', stockMovementSchema);
+

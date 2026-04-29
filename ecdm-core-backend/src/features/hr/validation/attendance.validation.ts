@@ -34,3 +34,4 @@ export const updateAttendanceSchema = z.object({
 
 export type CreateAttendanceInput = z.infer<typeof createAttendanceSchema>['body'];
 export type UpdateAttendanceInput = z.infer<typeof updateAttendanceSchema>['body'];
+

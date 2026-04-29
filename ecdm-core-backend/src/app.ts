@@ -32,6 +32,7 @@ import salesFollowUpRoutes from './features/sales/routes/sales-followup.routes';
 import salesLeadsRoutes from './features/sales/routes/sales-leads.routes';
 import salesOrderRoutes from './features/sales/routes/sales-order.routes';
 import salesTargetRoutes from './features/sales/routes/sales-target.routes';
+import salesCustomerRoutes from './features/sales/routes/sales-customer.routes';
 
 // ── Customer domain ─────────────────────────────────────────────────
 import customerOrderRoutes from './features/customer/routes/customer-order.routes';
@@ -40,7 +41,7 @@ import followUpRoutes from './features/customer/routes/follow-up.routes';
 
 // ── Operations domain ───────────────────────────────────────────────
 import inventoryPlusRoutes from './features/operations/routes/inventory-plus.routes';
-import priceListRoutes from './features/operations/routes/price-list.routes';
+import inventoryRoutes from './features/operations/routes/inventory.routes';
 import reportRoutes from './features/operations/routes/report.routes';
 import workOrderRoutes from './features/operations/routes/work-order.routes';
 import purchaseOrderRoutes from './features/operations/routes/purchase-order.routes';
@@ -131,8 +132,12 @@ app.get('/api/health', (_req, res) => {
     res.json({ success: true, data: { status: 'ok' }, message: 'ECDM Core is running 🚀' });
 });
 
+// ── Audit Middleware (logs mutations) ──────────────────────────────
+app.use(auditMiddleware);
+
 // ── API routes ──────────────────────────────────────────────────────
 app.use('/api/auth', authRoutes);
+app.use('/api/users', authRoutes);  // Alias so /api/users/me works for profile updates
 
 // Shared
 app.use('/api/shared/customers',  sharedCustomerRoutes);
@@ -151,6 +156,7 @@ app.use('/api/sales/data',        salesDataRoutes);
 app.use('/api/sales/orders',      salesOrderRoutes);
 app.use('/api/sales/follow-ups',  salesFollowUpRoutes);
 app.use('/api/sales/targets',     salesTargetRoutes);
+app.use('/api/sales/customers',   salesCustomerRoutes);
 
 // Customer
 app.use('/api/customer/orders',     customerOrderRoutes);
@@ -161,7 +167,7 @@ app.use('/api/customer/feedback',   feedbackRoutes);
 app.use('/api/operations/work-orders',    workOrderRoutes);
 app.use('/api/operations/inventory-plus',  inventoryPlusRoutes);
 app.use('/api/operations/report',          reportRoutes);
-app.use('/api/operations/price-list',      priceListRoutes);
+app.use('/api/operations/inventory',       inventoryRoutes);
 app.use('/api/operations/purchase-orders', purchaseOrderRoutes);
 
 // Dashboard
@@ -188,10 +194,9 @@ app.use('/api/admin/audit-logs', auditLogRoutes);
 app.use('/api/erp/invoices', invoiceRoutes);
 app.use('/api/erp/tasks', taskRoutes);
 
-// ── Audit Middleware (logs sensitive operations) ──────────────────
-app.use(auditMiddleware);
 
 // ── Global error handler (must be last) ─────────────────────────────
 app.use(errorHandler);
 
 export default app;
+

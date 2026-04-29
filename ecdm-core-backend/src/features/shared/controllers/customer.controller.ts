@@ -1,12 +1,13 @@
 import { Request, Response, NextFunction } from 'express';
 import * as svc from '../services/customer.service';
 import { sendSuccess } from '../../../utils/apiResponse';
+import User from '../../auth/auth.model';
 
 export const create  = async (req: Request, res: Response, next: NextFunction) => { try { sendSuccess(res, { customer: await svc.createCustomer(req.body) }, 'Customer created', 201); } catch (e) { next(e); } };
-export const getAll  = async (req: Request, res: Response, next: NextFunction) => { try { sendSuccess(res, await svc.getCustomers(req.query)); } catch (e) { next(e); } };
+export const getAll  = async (req: Request, res: Response, next: NextFunction) => { try { sendSuccess(res, await svc.getCustomers(req.query, req.user)); } catch (e) { next(e); } };
 export const getById = async (req: Request, res: Response, next: NextFunction) => { try { sendSuccess(res, { customer: await svc.getCustomerById(String(req.params.id)) }); } catch (e) { next(e); } };
-export const getHistory = async (req: Request, res: Response, next: NextFunction) => { try { sendSuccess(res, { history: await svc.getCustomerHistory(String(req.params.id)) }); } catch (e) { next(e); } };
-export const getReport = async (req: Request, res: Response, next: NextFunction) => { try { sendSuccess(res, await svc.getCustomerReport(String(req.params.id))); } catch (e) { next(e); } };
+export const getHistory = async (req: Request, res: Response, next: NextFunction) => { try { sendSuccess(res, { history: await svc.getCustomerHistory(String(req.params.id), req.user) }); } catch (e) { next(e); } };
+export const getReport = async (req: Request, res: Response, next: NextFunction) => { try { sendSuccess(res, await svc.getCustomerReport(String(req.params.id), req.user)); } catch (e) { next(e); } };
 
 /**
  * PUT /api/shared/customers/:id
@@ -15,7 +16,25 @@ export const getReport = async (req: Request, res: Response, next: NextFunction)
  */
 export const update  = async (req: Request, res: Response, next: NextFunction) => { 
     try { 
-        sendSuccess(res, { customer: await svc.updateCustomer(String(req.params.id), req.body) }, 'Customer updated'); 
+        const customer = await svc.getCustomerById(String(req.params.id));
+        const user = req.user;
+        const updateData = { ...req.body };
+
+        const isCS = user?.role === 'Customer Service' || user?.role === 'CustomerService';
+        if (isCS) {
+            const userEmail = user?.email || (await User.findById(user?.userId).select('email').lean())?.email;
+            
+            // Lock Check
+            if (customer.csPerson && customer.csPerson !== userEmail) {
+                return next(new (require('../../../utils/apiError').AppError)('This record is locked by another Customer Service person. You can only preview it.', 403));
+            }
+            // Auto-assign owner on first edit
+            if (!customer.csPerson && userEmail) {
+                updateData.csPerson = userEmail;
+            }
+        }
+
+        sendSuccess(res, { customer: await svc.updateCustomer(String(req.params.id), updateData) }, 'Customer updated'); 
     } catch (e: any) {
         // Handle MongoDB duplicate key error (E11000)
         if (e.code === 11000 && e.keyPattern?.customerId) {
@@ -89,3 +108,4 @@ export const patchMissingIds = async (req: Request, res: Response, next: NextFun
         next(e);
     }
 };
+

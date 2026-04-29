@@ -26,3 +26,4 @@ router.post('/commit', syncController.commit);
 router.post('/bulk-delete', isAdmin, syncController.bulkDelete);
 
 export default router;
+

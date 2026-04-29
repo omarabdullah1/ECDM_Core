@@ -17,8 +17,15 @@ const ADMIN_ROLES: UserRole[] = [UserRole.SuperAdmin, UserRole.Manager];
 /**
  * Check if a user has admin privileges
  */
-export const isAdminUser = (userRole: UserRole): boolean => {
-    return ADMIN_ROLES.includes(userRole);
+export const isAdminUser = (userRole: UserRole | string): boolean => {
+    return ADMIN_ROLES.includes(userRole as UserRole);
+};
+
+/**
+ * Check if a user is a field operation member (restricted access)
+ */
+export const isOperationMember = (role: UserRole | string): boolean => {
+    return ['MaintenanceEngineer', 'Technician'].includes(role);
 };
 
 /**
@@ -81,7 +88,7 @@ export const interceptUpdate = async (
         const changesNeedingApproval: Record<string, unknown> = {};
 
         // System/immutable fields that should never be directly updated or require approval
-        const systemFields = ['_id', '__v', 'createdAt', 'updatedAt'];
+        const systemFields = ['_id', '__v', 'createdAt', 'updatedAt', 'updatedBy', 'createdBy'];
 
         // Operational fields that NEVER require admin approval (routine business operations)
         // These are workflow/status fields that users need to update freely as part of their daily work
@@ -115,7 +122,18 @@ export const interceptUpdate = async (
             'quotation',  // Dynamic quotation builder object
             'quotationStatus',
             'isTechnicalInspectionRequired',
-            'technicalInspectionDate'
+            'technicalInspectionDate',
+            // Customer Order fields
+            'technicianId',
+            'technicianName',
+            'actualVisitDate',
+            'devicePickupType',
+            'deal',
+            'startDate',
+            'endDate',
+            'deviceReturnedDate',
+            'csPerson',
+            'scheduledVisitDate'
         ];
 
         // Convert document to plain object for comparison
@@ -346,10 +364,14 @@ export const createInterceptorMiddleware = (
             const directUpdates: Record<string, unknown> = {};
             const changesNeedingApproval: Record<string, unknown> = {};
 
-            const systemFields = ['_id', '__v', 'createdAt', 'updatedAt'];
+            const systemFields = ['_id', '__v', 'createdAt', 'updatedAt', 'updatedBy', 'createdBy'];
 
             // Operational fields that NEVER require admin approval (routine business operations)
-            const exemptFields = ['status', 'notes', 'reason', 'issue', 'salesPerson', 'reviewNotes'];
+            const exemptFields = [
+                'status', 'notes', 'reason', 'issue', 'salesPerson', 'reviewNotes',
+                'technicianId', 'technicianName', 'actualVisitDate', 'devicePickupType', 
+                'deal', 'startDate', 'endDate', 'deviceReturnedDate', 'csPerson', 'scheduledVisitDate'
+            ];
 
             const originalData = document.toObject ? document.toObject() : document;
 

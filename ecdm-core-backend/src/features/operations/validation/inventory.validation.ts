@@ -1,14 +1,14 @@
 import { z } from 'zod';
 
 /**
- * PriceList Validation Schemas
+ * Inventory Validation Schemas
  */
 
 const CATEGORY_VALUES = ['Maintenance', 'General supply', 'Supply and installation'] as const;
 
 // ─── Create ───────────────────────────────────────────────────────────────────
 
-export const createPriceListSchema = z.object({
+export const createInventorySchema = z.object({
     body: z.object({
         itemName: z
             .string({ required_error: 'Item name is required' })
@@ -36,7 +36,7 @@ export const createPriceListSchema = z.object({
 
 // ─── Update ───────────────────────────────────────────────────────────────────
 
-export const updatePriceListSchema = z.object({
+export const updateInventorySchema = z.object({
     body: z.object({
         itemName: z.string().min(1).max(200).optional(),
         specification: z.string().max(2000).optional(),
@@ -55,5 +55,6 @@ export const updatePriceListSchema = z.object({
 
 // ─── Type Exports ─────────────────────────────────────────────────────────────
 
-export type CreatePriceListInput = z.infer<typeof createPriceListSchema>['body'];
-export type UpdatePriceListInput = z.infer<typeof updatePriceListSchema>['body'];
+export type CreateInventoryInput = z.infer<typeof createInventorySchema>['body'];
+export type UpdateInventoryInput = z.infer<typeof updateInventorySchema>['body'];
+

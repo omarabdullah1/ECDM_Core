@@ -3,8 +3,13 @@ import Attendance from '../models/attendance.model';
 import WorkOrder from '../../operations/models/work-order.model';
 import SalesOrder from '../../sales/models/sales-order.model';
 import SalesLead from '../../sales/models/sales-lead.model';
+import SalesTarget from '../../sales/models/sales-target.model';
 import { AppError } from '../../../utils/apiError';
 import { Types } from 'mongoose';
+import { Salary } from '../../finance/models/salary.model';
+import RndTask from '../../rnd/models/rnd-task.model';
+import FollowUp from '../../customer/models/follow-up.model';
+import MarketingLead from '../../marketing/models/marketing-lead.model';
 
 /**
  * Employee Service - HR Module
@@ -138,14 +143,30 @@ export const get360Profile = async (id: string) => {
         .limit(50);
 
     // Calculate performance metrics
-    const performanceStats = calculatePerformanceStats(workOrders);
+    const workOrderStats = calculatePerformanceStats(workOrders);
 
-    // Calculate Sales KPIs if employee is in Sales role
+    // Calculate Sales KPIs if employee is in Sales/Manager/Admin role
     let salesKPIs = null;
-    if (employee.role === 'Sales') {
+    if (employee.role === 'Sales' || employee.role === 'Manager' || employee.role === 'Admin' || employee.role === 'SuperAdmin') {
         const salesPersonName = `${employee.firstName} ${employee.lastName}`;
         salesKPIs = await getSalesKPIs(realId, salesPersonName);
     }
+
+    // Calculate Marketing KPIs if employee is in Marketing/Manager/Admin role
+    let marketingKPIs = null;
+    if (employee.role === 'Marketing' || employee.role === 'Manager' || employee.role === 'Admin' || employee.role === 'SuperAdmin') {
+        marketingKPIs = await getMarketingKPIs(realId);
+    }
+
+    // 4. Standardized Performance Stats
+    const performanceStats = await calculateStandardizedPerformance(
+        realId, 
+        employee.role, 
+        attendanceStats, 
+        workOrderStats, 
+        salesKPIs,
+        marketingKPIs
+    );
 
     return {
         employee,
@@ -155,9 +176,12 @@ export const get360Profile = async (id: string) => {
         },
         workOrders: {
             records: workOrders,
-            stats: performanceStats,
+            stats: workOrderStats,
         },
         salesKPIs,
+        marketingKPIs,
+        performanceStats,
+        salaries: await Salary.find({ employeeId: new Types.ObjectId(realId) }).sort({ year: -1, month: -1 }).limit(12),
     };
 };
 
@@ -175,19 +199,28 @@ export const get360Profile = async (id: string) => {
 const getSalesKPIs = async (salespersonId: string, salesPersonName?: string) => {
     const employee = await User.findById(salespersonId).select('targetSales firstName lastName email');
 
-    // Tasks Completed: ANY follow-up status is 'Accepted' (Won) OR 'Not Potential' in any stage
+    // Monthly context for KPIs
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+    const currentMonth = now.getMonth() + 1;
+    const currentYear = now.getFullYear();
+
+    // Tasks Completed (Monthly): ANY follow-up status is 'Accepted' (Won) OR 'Not Potential'
     const tasksCompleted = await SalesOrder.countDocuments({
         salesPerson: new Types.ObjectId(salespersonId),
+        createdAt: { $gte: startOfMonth, $lte: endOfMonth },
         $or: [
-            { quotationStatusFirstFollowUp: { $in: ['Accepted', 'Not Potential'] } },
-            { statusSecondFollowUp: { $in: ['Accepted', 'Not Potential'] } },
-            { finalStatusThirdFollowUp: { $in: ['Accepted', 'Not Potential'] } },
+            { quotationStatusFirstFollowUp: { $in: ['Accepted', 'Not Potential', 'Scheduled'] } },
+            { statusSecondFollowUp: { $in: ['Accepted', 'Not Potential', 'Scheduled'] } },
+            { finalStatusThirdFollowUp: { $in: ['Accepted', 'Not Potential', 'Scheduled'] } },
         ],
     });
 
-    // Open Orders: NONE of the three follow-up stages is 'Accepted' (Won)
+    // Open Orders (Monthly): NONE of the three follow-up stages is 'Accepted' (Won)
     const openOrders = await SalesOrder.countDocuments({
         salesPerson: new Types.ObjectId(salespersonId),
+        createdAt: { $gte: startOfMonth, $lte: endOfMonth },
         quotationStatusFirstFollowUp: { $nin: ['Accepted'] },
         statusSecondFollowUp: { $nin: ['Accepted'] },
         finalStatusThirdFollowUp: { $nin: ['Accepted'] },
@@ -204,9 +237,10 @@ const getSalesKPIs = async (salespersonId: string, salesPersonName?: string) => 
 
     console.log(`[SalesKPIs] User ${salespersonId}: Tasks Completed = ${tasksCompleted}, Open Orders = ${openOrders}, Active Leads = ${activeLeads}`);
 
-    // Achieved Amount: Sum of quotation.grandTotal for won orders (ANY follow-up stage = 'Accepted')
+    // Achieved Amount (Monthly): Sum of quotation.grandTotal for won orders
     const wonOrders = await SalesOrder.find({
         salesPerson: new Types.ObjectId(salespersonId),
+        createdAt: { $gte: startOfMonth, $lte: endOfMonth },
         $or: [
             { quotationStatusFirstFollowUp: 'Accepted' },
             { statusSecondFollowUp: 'Accepted' },
@@ -216,9 +250,17 @@ const getSalesKPIs = async (salespersonId: string, salesPersonName?: string) => 
 
     const achievedAmount = wonOrders.reduce((sum, order) => {
         const amount = order.quotation?.grandTotal || 0;
-        console.log(`[SalesKPIs] Won Order ${order.salesOrderId}: grandTotal = ${amount}`);
         return sum + amount;
     }, 0);
+
+    // Get Target for this month from SalesTarget collection, fallback to User.targetSales
+    const targetDoc = await SalesTarget.findOne({
+        salespersonId: new Types.ObjectId(salespersonId),
+        month: currentMonth,
+        year: currentYear
+    });
+
+    const targetSales = targetDoc ? targetDoc.targetAmount : (employee?.targetSales || 0);
 
     console.log(`[SalesKPIs] User ${salespersonId}: Achieved Amount = ${achievedAmount}`);
 
@@ -236,7 +278,7 @@ const getSalesKPIs = async (salespersonId: string, salesPersonName?: string) => 
         tasksCompleted,
         openOrders,
         activeLeads,
-        targetSales: employee?.targetSales || 0,
+        targetSales,
         achievedAmount,
         attendanceRate: attendanceStats.monthly.presentRate,
         salesOrders: salesOrders.map(order => ({
@@ -251,6 +293,31 @@ const getSalesKPIs = async (salespersonId: string, salesPersonName?: string) => 
             quotation: order.quotation,
             createdAt: order.createdAt,
         })),
+    };
+};
+
+/**
+ * Get Marketing KPIs for a marketing person
+ */
+const getMarketingKPIs = async (marketingPersonId: string) => {
+    const employee = await User.findById(marketingPersonId).select('targetBudget');
+
+    const totalLeads = await MarketingLead.countDocuments({
+        assignedTo: new Types.ObjectId(marketingPersonId)
+    });
+
+    const convertedLeads = await MarketingLead.find({
+        assignedTo: new Types.ObjectId(marketingPersonId),
+        status: 'Converted'
+    });
+
+    const achievedAmount = convertedLeads.reduce((sum, lead) => sum + (lead.value || 0), 0);
+
+    return {
+        totalLeads,
+        convertedLeadsCount: convertedLeads.length,
+        targetBudget: employee?.targetBudget || 0,
+        achievedAmount,
     };
 };
 
@@ -346,6 +413,109 @@ const calculatePerformanceStats = (workOrders: any[]) => {
 };
 
 /**
+ * Standardized Performance Calculation based on Role
+ */
+const calculateStandardizedPerformance = async (
+    userId: string, 
+    role: string, 
+    attendanceStats?: any, 
+    workOrderStats?: any, 
+    salesKPIs?: any,
+    marketingKPIs?: any
+) => {
+    let totalTasks = 0;
+    let completed = 0;
+    let punctualityRate = attendanceStats?.monthly?.presentRate || 0;
+
+    const userObjectId = new Types.ObjectId(userId);
+
+    switch (role) {
+        case 'Sales':
+            // Use pre-calculated sales KPIs if available
+            if (salesKPIs) {
+                // totalTasks = tasksCompleted (finalized) + openOrders (pending) + activeLeads (pending)
+                totalTasks = (salesKPIs.tasksCompleted || 0) + (salesKPIs.openOrders || 0) + (salesKPIs.activeLeads || 0);
+                completed = salesKPIs.tasksCompleted || 0;
+            } else {
+                const userDetails = await User.findById(userId).select('firstName lastName fullName email');
+                const userFullName = userDetails?.fullName || '';
+                const userEmail = userDetails?.email || '';
+
+                const orderOrConditions: any[] = [{ salesPersonId: userId }];
+                if (userFullName) orderOrConditions.push({ salesPersonName: { $regex: new RegExp(userFullName, 'i') } });
+                if (userEmail) orderOrConditions.push({ salesPersonEmail: userEmail });
+
+                const salesOrders = await SalesOrder.find({ $or: orderOrConditions });
+                
+                const leadOrConditions: any[] = [{ assignedTo: userId }];
+                if (userFullName) leadOrConditions.push({ assignedToName: { $regex: new RegExp(userFullName, 'i') } });
+                
+                const salesLeads = await SalesLead.find({ $or: leadOrConditions });
+
+                totalTasks = salesOrders.length + salesLeads.length;
+                completed = salesOrders.filter((so: any) => 
+                    so.quotationStatusFirstFollowUp === 'Accepted' || so.quotationStatusFirstFollowUp === 'Not Potential' ||
+                    so.statusSecondFollowUp === 'Accepted' || so.statusSecondFollowUp === 'Not Potential' ||
+                    so.finalStatusThirdFollowUp === 'Accepted' || so.finalStatusThirdFollowUp === 'Not Potential'
+                ).length + salesLeads.filter((sl: any) => sl.status === 'Converted' || sl.status === 'Won').length;
+            }
+            break;
+
+        case 'Operations':
+        case 'Maintenance':
+        case 'MaintenanceEngineer':
+        case 'Technician':
+            // Use pre-calculated work order stats if available
+            if (workOrderStats) {
+                totalTasks = workOrderStats.total || 0;
+                completed = workOrderStats.completed || 0;
+                punctualityRate = workOrderStats.punctualityRate || punctualityRate;
+            } else {
+                const workOrders = await WorkOrder.find({ updatedBy: userObjectId });
+                totalTasks = workOrders.length;
+                completed = workOrders.filter(wo => wo.taskCompleted === 'Yes').length;
+                const onTimeCount = workOrders.filter((wo: any) => wo.punctuality === 'Same time' || wo.punctuality === 'On Time').length;
+                punctualityRate = totalTasks > 0 ? Math.round((onTimeCount / totalTasks) * 100) : punctualityRate;
+            }
+            break;
+
+        case 'CustomerService':
+            const followUps = await FollowUp.find({ csr: userObjectId });
+            totalTasks = followUps.length;
+            completed = followUps.filter(f => f.status === 'Completed').length;
+            const csOnTimeCount = followUps.filter(f => f.punctuality === 'Same Visit Time').length;
+            punctualityRate = totalTasks > 0 ? Math.round((csOnTimeCount / totalTasks) * 100) : punctualityRate;
+            break;
+
+        case 'R&D':
+            const rndTasks = await RndTask.find({ assigneeId: userObjectId });
+            totalTasks = rndTasks.length;
+            completed = rndTasks.filter(t => t.status === 'Done').length;
+            break;
+
+        case 'Marketing':
+            if (marketingKPIs) {
+                totalTasks = marketingKPIs.totalLeads || 0;
+                completed = marketingKPIs.convertedLeadsCount || 0;
+            } else {
+                const leads = await MarketingLead.find({ assignedTo: userObjectId });
+                totalTasks = leads.length;
+                completed = leads.filter(l => l.status === 'Converted').length;
+            }
+            break;
+
+        default:
+            break;
+    }
+
+    return {
+        totalTasks,
+        completed,
+        punctualityRate,
+    };
+};
+
+/**
  * Update employee profile (HR fields)
  */
 export const updateProfile = async (id: string, data: {
@@ -408,3 +578,4 @@ export const linkAttendanceRecords = async (userId: string, employeeId: string) 
     
     return { linkedRecords: result.modifiedCount };
 };
+

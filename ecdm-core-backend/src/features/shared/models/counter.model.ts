@@ -27,3 +27,4 @@ export const getNextSequence = async (counterName: string): Promise<number> => {
 };
 
 export default Counter;
+

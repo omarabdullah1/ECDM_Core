@@ -7,6 +7,7 @@ import { UserRole } from '../features/auth/auth.types';
 export interface JwtPayload {
     userId: string;
     role: UserRole;
+    email: string;
 }
 
 declare global {
@@ -86,7 +87,7 @@ export const authorise = (...roles: (UserRole | string)[]) => {
  */
 export const isAdmin = (req: Request, _res: Response, next: NextFunction): void => {
     // Define admin roles - SuperAdmin has full access, Manager has admin-level access
-    const adminRoles: UserRole[] = [UserRole.SuperAdmin, UserRole.Manager];
+    const adminRoles: UserRole[] = [UserRole.SuperAdmin, UserRole.Admin];
     
     if (!req.user) {
         return next(new AppError('Forbidden: Authentication required', 401));
@@ -98,3 +99,4 @@ export const isAdmin = (req: Request, _res: Response, next: NextFunction): void 
     
     next();
 };
+

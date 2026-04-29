@@ -47,3 +47,4 @@ export const deleteInvoice = async (id: string): Promise<void> => {
     const invoice = await Invoice.findByIdAndDelete(id);
     if (!invoice) throw new AppError('Invoice not found', 404);
 };
+

@@ -363,3 +363,4 @@ export const handleSheetWebhook = async (data: SheetWebhookInput): Promise<{
 
     return { lead, isNew, forwardedToSales };
 };
+

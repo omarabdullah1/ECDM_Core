@@ -43,6 +43,7 @@ import {
     UserCog,
     Users,
     Wrench,
+    Tags,
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -55,7 +56,7 @@ const iconMap: Record<string, React.ComponentType<{ size?: number; className?: s
     Megaphone, Wrench, Star, Headphones, MessageSquare, ClipboardList, ClipboardCheck,
     CreditCard, Banknote,
     FileText, UserCog, FileEdit, Activity, Calendar, UserCheck, Archive,
-    Kanban, FolderKanban, TrendingUpDown, Briefcase, DollarSign,
+    Kanban, FolderKanban, TrendingUpDown, Briefcase, DollarSign, Tags,
 };
 
 interface NavChild { labelKey: string; href: string; icon: string; }
@@ -75,12 +76,14 @@ const NAV: NavItem[] = [
             { labelKey: 'salesLeads', href: '/sales/leads', icon: 'Users' },
             { labelKey: 'salesData', href: '/sales/data', icon: 'FileText' },
             { labelKey: 'salesOrders', href: '/sales/order', icon: 'ClipboardList' },
+            { labelKey: 'myCustomers', href: '/sales/my-customers', icon: 'UserCheck' },
             { labelKey: 'nonPotential', href: '/sales/non-potential', icon: 'Archive' },
         ]
     },
     {
         labelKey: 'customer', icon: 'Headphones', children: [
             { labelKey: 'customersList', href: '/customer/list', icon: 'Users' },
+            { labelKey: 'myCustomers', href: '/customer/my-customers', icon: 'UserCheck' },
             { labelKey: 'customerOrders', href: '/customer/orders', icon: 'Package' },
             { labelKey: 'customerFollowUp', href: '/customer/follow-up', icon: 'ClipboardList' },
             { labelKey: 'customerFeedback', href: '/customer/feedback', icon: 'MessageSquare' },
@@ -98,11 +101,12 @@ const NAV: NavItem[] = [
     {
         labelKey: 'operations', icon: 'Wrench', children: [
             { labelKey: 'workOrder', href: '/operations/work-order', icon: 'Wrench' },
-            { labelKey: 'priceList', href: '/operations/price-list', icon: 'FileText' },
+            { labelKey: 'inventory', href: '/operations/inventory', icon: 'FileText' },
             { labelKey: 'purchaseOrder', href: '/operations/purchase-order', icon: 'ShoppingCart' },
             { labelKey: 'reportOperation', href: '/operations/report', icon: 'Star' },
         ]
     },
+    { labelKey: 'priceList', href: '/price-list', icon: 'Tags' },
     {
         labelKey: 'hr', icon: 'UserCheck', children: [
             { labelKey: 'hrEmployees', href: '/hr/users', icon: 'Users' },
@@ -143,45 +147,99 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
     // ── RBAC: Filter navigation based on user role ─────────────────
     const getFilteredNav = () => {
         const role = user?.role;
-
         const adminRoles = ['Admin', 'SuperAdmin', 'Manager'];
-        if (adminRoles.includes(role || '')) {
+
+        // SuperAdmin has full access to everything
+        if (role === 'SuperAdmin') {
             return NAV;
         }
 
-        if (role === 'Sales') {
-            return NAV.filter(item => item.labelKey === 'sales');
-        }
+        // Helper to get restricted customer nav
+        const getRestrictedCustomerNav = (navItems: typeof NAV) => {
+            if (role === 'Customer Service' || role === 'CustomerService') return navItems;
+            return navItems.map(item => {
+                if (item.labelKey === 'customer') {
+                    return {
+                        ...item,
+                        children: item.children?.filter(child => {
+                            // These roles specifically cannot see the customersList
+                            const rolesDeniedList = ['Operations', 'Maintenance', 'MaintenanceEngineer', 'Technician'];
+                            if (rolesDeniedList.includes(role || '') && child.labelKey === 'customersList') return false;
+                            
+                            // Other restricted roles only see the list
+                            return child.labelKey === 'customersList';
+                        })
+                    };
+                }
+                return item;
+            }).filter(item => item.labelKey !== 'customer' || (item.children && item.children.length > 0));
+        };
 
-        if (role === 'Marketing') {
-            return NAV.filter(item => ['dashboard', 'marketing'].includes(item.labelKey));
-        }
+        const restrictedRoles = [
+            'Admin',
+            'Manager',
+            'Sales',
+            'Marketing',
+            'Customer Service',
+            'CustomerService',
+            'Operations',
+            'HR',
+            'Finance',
+            'Maintenance',
+            'MaintenanceEngineer',
+            'Technician'
+        ];
 
-        if (role === 'CustomerService' || role === 'Customer Service') {
-            return NAV.filter(item => ['dashboard', 'customer'].includes(item.labelKey));
-        }
+        if (restrictedRoles.includes(role || '')) {
+            let allowedKeys: string[] = [];
+            
+            // Only admins and managers see the dashboard
+            if (adminRoles.includes(role || '')) {
+                allowedKeys.push('dashboard');
+            }
 
-        if (role === 'Operations') {
-            return NAV.filter(item => ['dashboard', 'operations'].includes(item.labelKey));
-        }
+            if (role === 'Admin') allowedKeys.push('marketing', 'sales', 'customer', 'finance', 'operations', 'hr', 'priceList');
+            
+            if (role === 'Sales') allowedKeys.push('sales', 'priceList');
+            if (role === 'Marketing') allowedKeys.push('marketing');
+            if (role === 'Operations') allowedKeys.push('operations');
+            if (role === 'HR') allowedKeys.push('hr');
+            if (role === 'Finance') allowedKeys.push('finance', 'operations', 'priceList');
+            if (role === 'Maintenance' || role === 'MaintenanceEngineer') allowedKeys.push('operations');
+            if (role === 'Customer Service' || role === 'CustomerService') allowedKeys.push('customer');
+            if (role === 'Manager') {
+                // Manager now gets restricted like the others for customer, but sees other sections
+                return getRestrictedCustomerNav(NAV.filter(item => item.labelKey !== 'administration'));
+            }
 
-        if (role === 'HR') {
-            return NAV.filter(item => ['dashboard', 'hr'].includes(item.labelKey));
-        }
+            // Marketing is restricted from customer, and now Sales too (they have "My Customers")
+            // Marketing/Sales/Operations/Maintenance/Technician are restricted from customer list
+            const noCustomerGroupRoles = ['Marketing', 'Sales', 'Operations', 'Maintenance', 'MaintenanceEngineer', 'Technician'];
+            if (!allowedKeys.includes('customer') && !noCustomerGroupRoles.includes(role || '')) allowedKeys.push('customer');
 
-        if (role === 'Maintenance' || role === 'MaintenanceEngineer') {
-            return NAV.filter(item => ['dashboard', 'operations'].includes(item.labelKey));
+            const filteredNavItems = NAV.filter(item => allowedKeys.includes(item.labelKey)).map(item => {
+                if (item.labelKey === 'operations') {
+                    const rolesToRestrict = ['Operations', 'Maintenance', 'MaintenanceEngineer', 'Technician'];
+                    if (rolesToRestrict.includes(role || '')) {
+                        return {
+                            ...item,
+                            children: item.children?.filter(child => 
+                                child.labelKey !== 'purchaseOrder'
+                            )
+                        };
+                    }
+                }
+                return item;
+            });
+
+            return getRestrictedCustomerNav(filteredNavItems);
         }
 
         if (role === 'R&D_Engineer' || role === 'R&D') {
-            return NAV.filter(item => ['dashboard'].includes(item.labelKey));
+            return NAV.filter(item => adminRoles.includes(role || '') && ['dashboard'].includes(item.labelKey));
         }
 
-        if (role === 'Finance') {
-            return NAV.filter(item => ['dashboard', 'finance', 'operations'].includes(item.labelKey));
-        }
-
-        return NAV.filter(item => item.labelKey === 'dashboard');
+        return NAV.filter(item => adminRoles.includes(role || '') && item.labelKey === 'dashboard');
     };
 
     const filteredNav = getFilteredNav();
@@ -437,3 +495,4 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
         </aside>
     );
 }
+

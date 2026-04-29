@@ -27,3 +27,4 @@ export const updateInvoiceSchema = z.object({
 
 export type CreateInvoiceInput = z.infer<typeof createInvoiceSchema>;
 export type UpdateInvoiceInput = z.infer<typeof updateInvoiceSchema>;
+

@@ -39,7 +39,6 @@ export interface SalesLead {
   salesPerson: string;
   status: 'New' | 'Contacted' | 'Negotiation' | 'Closed';
   typeOfOrder: string;
-  salesPlatform: string;
   date: string;
   notes: string;
 }
@@ -48,7 +47,6 @@ export const iCls = 'flex h-9 w-full rounded-md border border-[hsl(var(--border)
 export const STATUSES = ['New', 'Contacted', 'Negotiation', 'Closed'] as const;
 export const ORDER_OPTIONS = ['', 'Yes', 'No'] as const;
 export const TYPE_OF_ORDER = ['Maintenance', 'General supplies', 'Supply and installation'];
-export const SALES_PLATFORM = ['Online', 'In Side', 'Phone', 'Out side', 'Data'];
 export type OrderOption = typeof ORDER_OPTIONS[number];
 
 // Status Badge Component with visual differentiation
@@ -68,7 +66,7 @@ const StatusBadge = ({ status }: { status: SalesLead['status'] }) => {
   );
 };
 
-const blankEdit: { issue: string; order: OrderOption; reason: string; notes: string; status: 'New' | 'Contacted' | 'Negotiation' | 'Closed'; address: string; region: string; typeOfOrder: string; salesPlatform: string } = { issue: '', order: '', reason: '', notes: '', status: 'New', address: '', region: '', typeOfOrder: '', salesPlatform: '' };
+const blankEdit: { issue: string; order: OrderOption; reason: string; notes: string; status: 'New' | 'Contacted' | 'Negotiation' | 'Closed'; address: string; region: string; typeOfOrder: string } = { issue: '', order: '', reason: '', notes: '', status: 'New', address: '', region: '', typeOfOrder: '' };
 
 export default function SalesLeadsPage() {
   const { user } = useAuthStore();
@@ -80,6 +78,7 @@ export default function SalesLeadsPage() {
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(false);
   const [editing, setEditing] = useState<SalesLead | null>(null);
+  const [initialEditMode, setInitialEditMode] = useState(false);
   const [form, setForm] = useState(blankEdit);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -107,8 +106,9 @@ export default function SalesLeadsPage() {
 
   useEffect(() => { fetch_(); }, [fetch_]);
 
-  const openE = (r: SalesLead) => {
+  const openE = (r: SalesLead, editMode = false) => {
     setEditing(r);
+    setInitialEditMode(editMode);
     
     // Ownership & RBAC Check
     const isAdmin = user?.role === 'Admin' || user?.role === 'SuperAdmin';
@@ -131,7 +131,6 @@ export default function SalesLeadsPage() {
       address: r.customerId?.address || '',  // Initialize from populated Customer
       region: r.customerId?.region || '',    // Initialize from populated Customer
       typeOfOrder: r.typeOfOrder || '',
-      salesPlatform: r.salesPlatform || '',
     });
     setError('');
     setModal(true);
@@ -344,7 +343,7 @@ export default function SalesLeadsPage() {
     return (
       <div className="flex flex-wrap gap-2">
         <button
-          onClick={() => openE(row)}
+          onClick={() => openE(row, true)}
           className={`p-1 transition-colors ${canEdit ? 'hover:text-[hsl(var(--primary))]' : 'hover:text-blue-500'}`}
           title={canEdit ? "Edit" : "Preview"}
         >
@@ -406,7 +405,7 @@ export default function SalesLeadsPage() {
         onPageChange={setPage}
         bulkDeleteEndpoint="/sales/leads/bulk-delete"
         onBulkDeleteSuccess={fetch_}
-        onRowClick={openE}
+        onRowClick={(r) => openE(r, false)}
         renderActions={renderActions}
         defaultVisibility={{
           "customerId.address": false,
@@ -429,6 +428,7 @@ export default function SalesLeadsPage() {
           !(user?.role === 'Admin' || user?.role === 'SuperAdmin') && 
           !(user && (user.email === editing.salesPerson || `${user.firstName} ${user.lastName}`.trim() === editing.salesPerson))
         }
+        initialEditMode={initialEditMode}
         onRequiresApproval={() => {
           setModal(false);
           setShowApprovalAlert(true);
@@ -477,3 +477,4 @@ export default function SalesLeadsPage() {
     </div>
   );
 }
+

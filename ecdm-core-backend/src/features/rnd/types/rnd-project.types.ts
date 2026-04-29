@@ -26,3 +26,4 @@ export interface IRndProject {
 export interface IRndProjectDocument extends IRndProject, Document {
     _id: Types.ObjectId;
 }
+

@@ -13,6 +13,8 @@ const formSchema = z.object({
   solvedIssue: z.enum(['Yes', 'No', '']).optional(),
   followUp: z.enum(['Yes', 'No', '']).optional(),
   ratingOperation: z.string().optional(),
+  ratingTechnician: z.string().optional(),
+  ratingEngineer: z.string().optional(),
   ratingCustomerService: z.string().optional(),
   notes: z.string().optional(),
 });
@@ -31,6 +33,7 @@ interface OrderContext {
   customerPhone?: string;
   customerId?: string;
   engineerName?: string;
+  technicianName?: string;
   visitDate?: string;
   scheduledVisitDate?: string;
   actualVisitDate?: string;
@@ -56,6 +59,8 @@ interface Feedback {
   solvedIssue?: string;
   followUp?: string;
   ratingOperation?: string;
+  ratingTechnician?: string;
+  ratingEngineer?: string;
   ratingCustomerService?: string;
   notes?: string;
   createdAt?: string;
@@ -112,6 +117,8 @@ export default function EditFeedbackDialog({ feedback, isNew, prefillData, onClo
       solvedIssue: feedback?.solvedIssue as 'Yes' | 'No' | '' || '',
       followUp: feedback?.followUp as 'Yes' | 'No' | '' || '',
       ratingOperation: feedback?.ratingOperation || '',
+      ratingTechnician: feedback?.ratingTechnician || '',
+      ratingEngineer: feedback?.ratingEngineer || '',
       ratingCustomerService: feedback?.ratingCustomerService || '',
       notes: feedback?.notes || '',
     },
@@ -125,6 +132,8 @@ export default function EditFeedbackDialog({ feedback, isNew, prefillData, onClo
       if (values.solvedIssue !== undefined) payload.solvedIssue = values.solvedIssue;
       if (values.followUp !== undefined) payload.followUp = values.followUp;
       if (values.ratingOperation !== undefined) payload.ratingOperation = values.ratingOperation;
+      if (values.ratingTechnician !== undefined) payload.ratingTechnician = values.ratingTechnician;
+      if (values.ratingEngineer !== undefined) payload.ratingEngineer = values.ratingEngineer;
       if (values.ratingCustomerService !== undefined) payload.ratingCustomerService = values.ratingCustomerService;
       if (values.notes !== undefined) payload.notes = values.notes;
 
@@ -241,6 +250,10 @@ export default function EditFeedbackDialog({ feedback, isNew, prefillData, onClo
                   <div className={readOnlyCls}>{String(getContextValue('engineerName') || (order as any)?.engineerName || '-')}</div>
                 </div>
                 <div>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter mb-1 block">Technician Name</label>
+                  <div className={readOnlyCls}>{String(getContextValue('technicianName') || '-')}</div>
+                </div>
+                <div>
                   <label className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter mb-1 block">Actual Visit Date</label>
                   <div className={readOnlyCls}>{formatDate(String(getContextValue('actualVisitDate') || getContextValue('visitDate') || (order as any)?.actualVisitDate))}</div>
                 </div>
@@ -279,10 +292,17 @@ export default function EditFeedbackDialog({ feedback, isNew, prefillData, onClo
                 </div>
 
                 <StarRating 
-                  label="Operation Rating" 
-                  value={form.watch('ratingOperation') || ''} 
+                  label="Technician Rating (Technical Visit)" 
+                  value={form.watch('ratingTechnician') || ''} 
                   disabled={effectivelyReadOnly} 
-                  onChange={(val) => form.setValue('ratingOperation', val)}
+                  onChange={(val) => form.setValue('ratingTechnician', val)}
+                />
+
+                <StarRating 
+                  label="Engineer Rating (Maintenance)" 
+                  value={form.watch('ratingEngineer') || ''} 
+                  disabled={effectivelyReadOnly} 
+                  onChange={(val) => form.setValue('ratingEngineer', val)}
                 />
 
                 <StarRating 
@@ -320,13 +340,15 @@ export default function EditFeedbackDialog({ feedback, isNew, prefillData, onClo
               {effectivelyReadOnly ? 'Close' : 'Cancel'}
             </Button>
             {effectivelyReadOnly ? (
-              <Button
-                type="button"
-                key="btn-edit" onClick={(e) => { e.preventDefault(); setInternalPreviewMode(false); }}
-                className="flex-1 px-8 rounded-xl bg-[hsl(var(--primary))] hover:opacity-90 transition-all shadow-md active:scale-95"
-              >
-                Edit Feedback
-              </Button>
+              !readOnly && (
+                <Button
+                  type="button"
+                  key="btn-edit" onClick={(e) => { e.preventDefault(); setInternalPreviewMode(false); }}
+                  className="flex-1 px-8 rounded-xl bg-[hsl(var(--primary))] hover:opacity-90 transition-all shadow-md active:scale-95"
+                >
+                  Edit Feedback
+                </Button>
+              )
             ) : (
               <Button
                 type="submit"
@@ -343,3 +365,4 @@ export default function EditFeedbackDialog({ feedback, isNew, prefillData, onClo
     </Dialog>
   );
 }
+

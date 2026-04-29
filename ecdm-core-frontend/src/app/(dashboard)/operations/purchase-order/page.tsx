@@ -1,5 +1,7 @@
 'use client';
 import { DataTable } from '@/components/ui/DataTable';
+import { useRouter } from 'next/navigation';
+import { useAuthStore } from '@/features/auth/useAuth';
 import { PageHeader } from '@/components/layout/PageHeader';
 import api from '@/lib/axios';
 import toast from 'react-hot-toast';
@@ -20,7 +22,19 @@ import PurchaseOrderActions from './PurchaseOrderActions';
  */
 
 export default function PurchaseOrderPage() {
+    const { user } = useAuthStore();
+    const isOperations = user?.role === 'Operations' || user?.role === 'Maintenance' || user?.role === 'MaintenanceEngineer' || user?.role === 'Technician';
+    const router = useRouter();
+
+    useEffect(() => {
+        if (isOperations) {
+            router.replace('/dashboard');
+            toast.error('Access Denied: Purchase Orders are restricted to Admin and Finance roles');
+        }
+    }, [isOperations, router]);
+
     const [rows, setRows] = useState<PurchaseOrder[]>([]);
+    if (isOperations) return null;
     const [total, setTotal] = useState(0);
     const [page, setPage] = useState(1);
     const [statusFilter, setStatusFilter] = useState('');
@@ -143,3 +157,4 @@ const Clock = ({ className }: { className?: string }) => (
         <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
     </svg>
 );
+

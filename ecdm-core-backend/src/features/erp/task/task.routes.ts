@@ -16,9 +16,10 @@ router.get('/:id', taskController.getById);
 router.put('/:id', validate(updateTaskSchema), taskController.update);
 router.delete(
     '/:id',
-    authorise(UserRole.SuperAdmin, UserRole.Manager),
+    authorise(UserRole.SuperAdmin, UserRole.Admin),
     taskController.remove,
 );
 router.post('/bulk-delete', isAdmin, taskController.bulkDelete);  // Admin-only bulk delete
 
 export default router;
+

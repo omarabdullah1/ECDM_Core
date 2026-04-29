@@ -52,6 +52,7 @@ export interface ICustomer {
     address?:   string;        // Optional address
     region?:    string;        // Optional region
     notes?:     string;        // General notes
+    csPerson?:  string;        // Email of the CS person who first modified this record
     createdAt:  Date;
     updatedAt:  Date;
 }
@@ -63,3 +64,4 @@ export interface ICustomerDocument extends ICustomer, Document {
 // Backward compatibility aliases
 export type IContact = ICustomer;
 export type IContactDocument = ICustomerDocument;
+

@@ -49,3 +49,4 @@ export const remove = async (id: string) => {
   const expense = await Expense.findByIdAndDelete(id);
   if (!expense) throw new AppError('Expense not found', 404);
 };
+

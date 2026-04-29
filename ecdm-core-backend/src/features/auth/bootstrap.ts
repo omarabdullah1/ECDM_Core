@@ -26,3 +26,4 @@ export const bootstrapAdmin = async (): Promise<void> => {
         console.error('❌ Bootstrap: Error creating default admin:', error);
     }
 };
+

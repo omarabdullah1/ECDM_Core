@@ -14,3 +14,4 @@ const categorySchema = new Schema<ICategoryDocument>(
 categorySchema.index({ name: 'text' });
 
 export default model<ICategoryDocument>('Category', categorySchema);
+

@@ -7,6 +7,7 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import { columns, CustomerOrder } from './columns';
 import EditCustomerOrderDialog from './EditCustomerOrderDialog';
 import toast from 'react-hot-toast';
+import { useAuthStore } from '@/features/auth/useAuth';
 
 export default function CustomerOrdersPage() {
   const [orders, setOrders] = useState<CustomerOrder[]>([]);
@@ -14,13 +15,26 @@ export default function CustomerOrdersPage() {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<CustomerOrder | null>(null);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false); const [initialEditMode, setInitialEditMode] = useState(false);
 
   const [fDeal, setFDeal] = useState('');
   const [fTypeOfOrder, setFTypeOfOrder] = useState('');
 
   const DEAL_OPTIONS = ['Pending', 'Approved', 'Rejected', 'Done'];
   const TYPE_OPTIONS = ['Maintenance', 'General supplies', 'Supply and installation'];
+
+  const { user } = useAuthStore();
+  const isAdminOrManager = user?.role === 'SuperAdmin' || user?.role === 'Admin' || user?.role === 'Manager';
+  const isCS = user?.role === 'Customer Service' || user?.role === 'CustomerService';
+
+  const canEdit = (row: CustomerOrder) => {
+    if (isAdminOrManager) return true;
+    if (isCS) {
+      if (!row.csPerson) return true; // Unlocked
+      if (row.csPerson === user?.email) return true; // Owner
+    }
+    return false;
+  };
 
   const filteredOrders = useMemo(() => {
     return orders.filter(o => {
@@ -52,8 +66,8 @@ export default function CustomerOrdersPage() {
   }, [fetchOrders]);
 
   // ─── Edit Handler ────────────────────────────────────────────────────────
-  const handleEdit = (order: CustomerOrder) => {
-    setSelectedOrder(order);
+  const handleEdit = (order: CustomerOrder, editMode = false) => {
+    setSelectedOrder(order); setInitialEditMode(editMode);
     setIsEditDialogOpen(true);
   };
 
@@ -109,7 +123,7 @@ export default function CustomerOrdersPage() {
           data={filteredOrders}
           columns={columns}
           loading={loading}
-          onRowClick={handleEdit}
+          onRowClick={(r) => handleEdit(r, false)}
           emptyMessage="No customer orders found."
           page={page}
           totalPages={totalPages}
@@ -117,8 +131,9 @@ export default function CustomerOrdersPage() {
           itemsPerPage={limit}
           onPageChange={setPage}
           meta={{
-            onEdit: handleEdit,
-            onDelete: handleDelete,
+            onEdit: (r, allowed = true) => handleEdit(r, allowed),
+            onDelete: (user?.role === 'SuperAdmin' || user?.role === 'Admin') ? handleDelete : undefined,
+            canEdit,
           }}
           defaultVisibility={{
             "customer.address": false,
@@ -142,9 +157,12 @@ export default function CustomerOrdersPage() {
         <EditCustomerOrderDialog
           order={selectedOrder}
           onClose={handleCloseEditDialog}
-          onSuccess={handleEditSuccess}
+          onSuccess={handleEditSuccess} 
+          initialEditMode={initialEditMode}
+          readOnly={!canEdit(selectedOrder)}
         />
       )}
     </div>
   );
 }
+

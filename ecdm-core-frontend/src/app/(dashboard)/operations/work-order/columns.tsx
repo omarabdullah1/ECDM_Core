@@ -71,6 +71,7 @@ interface CustomerOrder {
   issue?: string;
   scheduledVisitDate?: string;
   engineerName?: string;
+  technicianId?: User; // The technician selected by CS
   actualVisitDate?: string;
   devicePickupType?: string;
   startDate?: string;
@@ -103,10 +104,11 @@ export interface WorkOrder {
   sparePartsId?: string;
   sparePartsAvailability?: string;
   notes?: string;
+  engineerId?: string | User;
   
   // Parts usage (integration with Inventory)
   partsUsed?: {
-    inventoryItemId: string | { _id: string; itemName?: string };
+    inventoryId: string | { _id: string; itemName?: string; sparePartsId?: string };
     quantity: number;
     unitCost: number;
   }[];
@@ -525,14 +527,29 @@ export const columns: Column<WorkOrder>[] = [
     // SECTION 5: Parts & Notes - 3 Columns
     // ═════════════════════════════════════════════════════════════════════════
     
-    // 26. Spare Parts ID
+    // 26. Spare Parts (Consolidated from Inventory)
     {
       key: 'sparePartsId',
-      header: 'Spare Parts ID',
-      className: 'md:w-[1%] md:whitespace-nowrap',
+      header: 'Spare Parts',
+      className: 'md:w-[15%] md:max-w-[200px]',
       render: (row: WorkOrder) => {
+        if (row.partsUsed && row.partsUsed.length > 0) {
+          return (
+            <div className="flex flex-col gap-1">
+              {row.partsUsed.map((part, idx) => {
+                const inv = typeof part.inventoryId === 'object' ? part.inventoryId : null;
+                const label = inv ? `${inv.itemName} (${inv.sparePartsId || 'ID'})` : (part as any).itemName || 'Item';
+                return (
+                  <div key={idx} className="text-[10px] leading-tight bg-blue-50 dark:bg-blue-900/20 px-1.5 py-0.5 rounded border border-blue-100 dark:border-blue-800/30 truncate" title={label}>
+                    {part.quantity}x {label}
+                  </div>
+                );
+              })}
+            </div>
+          );
+        }
         return (
-          <span className="text-sm font-mono">
+          <span className="text-sm font-mono text-gray-400">
             {row.sparePartsId || '-'}
           </span>
         );
@@ -552,6 +569,7 @@ export const columns: Column<WorkOrder>[] = [
         if (value === 'Available') variant = 'success';
         else if (value === 'Not Available') variant = 'destructive';
         else if (value === 'Requested') variant = 'warning';
+        else if (value === 'Not Needed') variant = 'outline';
         
         return <Badge variant={variant}>{value}</Badge>;
       },
@@ -583,22 +601,38 @@ export const columns: Column<WorkOrder>[] = [
       render: (row: WorkOrder, meta?: any) => {
         return (
           <div className="flex flex-wrap items-center gap-2">
-            <button
-              onClick={() => meta?.onEdit?.(row)}
-              className="p-2 hover:bg-blue-500/10 rounded-lg transition-colors"
-              title="Edit Work Order"
-            >
-              <Edit className="h-4 w-4 text-blue-500" />
-            </button>
-            <button
-              onClick={() => meta?.onDelete?.(row._id)}
-              className="p-2 hover:bg-red-500/10 rounded-lg transition-colors"
-              title="Delete Work Order"
-            >
-              <Trash2 className="h-4 w-4 text-red-500" />
-            </button>
+            {meta?.onEdit ? (
+              <button
+                onClick={() => meta.onEdit(row)}
+                className="p-2 hover:bg-blue-500/10 rounded-lg transition-colors"
+                title="Edit Work Order"
+              >
+                <Edit className="h-4 w-4 text-blue-500" />
+              </button>
+            ) : (
+              <button
+                onClick={() => meta?.onPreview?.(row)}
+                className="p-2 hover:bg-gray-500/10 rounded-lg transition-colors"
+                title="Preview Work Order"
+              >
+                {/* We can use the Eye icon here, but we need to import it or use a lucide-react name */}
+                {/* Note: I need to import Eye at the top of the file */}
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-eye h-4 w-4 text-gray-500"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+            )}
+            {meta?.onDelete && (
+              <button
+                onClick={() => meta?.onDelete?.(row._id)}
+                className="p-2 hover:bg-red-500/10 rounded-lg transition-colors"
+                title="Delete Work Order"
+              >
+                <Trash2 className="h-4 w-4 text-red-500" />
+              </button>
+            )}
           </div>
         );
       },
     },
 ];
+
+

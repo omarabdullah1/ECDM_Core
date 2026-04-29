@@ -43,3 +43,4 @@ campaignSchema.pre('save', async function (next) {
 const Campaign: Model<ICampaignDocument> = 
     mongoose.models.Campaign || mongoose.model<ICampaignDocument>('Campaign', campaignSchema);
 export default Campaign;
+

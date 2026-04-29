@@ -497,3 +497,4 @@ export const commitSync = async (input: CommitInput): Promise<CommitResult> => {
 
     return result;
 };
+

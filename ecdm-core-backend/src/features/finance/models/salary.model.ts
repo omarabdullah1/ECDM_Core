@@ -58,3 +58,4 @@ const SalarySchema = new Schema<ISalary>({
 SalarySchema.index({ employeeId: 1, month: 1, year: 1 }, { unique: true });
 
 export const Salary = model<ISalary>('Salary', SalarySchema);
+

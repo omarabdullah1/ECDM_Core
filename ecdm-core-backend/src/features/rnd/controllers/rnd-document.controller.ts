@@ -83,3 +83,4 @@ export const deleteDocument = async (req: Request, res: Response, next: NextFunc
         next(e);
     }
 };
+

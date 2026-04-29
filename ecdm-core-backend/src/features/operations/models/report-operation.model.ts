@@ -84,3 +84,4 @@ const ReportOperation: Model<IReportOperationDocument> =
     mongoose.model<IReportOperationDocument>('ReportOperation', reportOperationSchema);
 
 export default ReportOperation;
+

@@ -13,7 +13,7 @@ export interface Translations {
     sales: string; salesLeads: string; salesData: string; salesFollowUps: string; salesOrders: string;
     customer: string; customersList: string; customerOrders: string; customerFollowUp: string; customerFeedback: string;
     finance: string; orderFinance: string; generalExpenses: string;
-    operations: string; workOrder: string; priceList: string; reportOperation: string;
+    operations: string; workOrder: string; Inventory: string; reportOperation: string;
     hr: string; hrEmployees: string; hrAttendance: string;
     rnd: string; personalBoard: string; rndProjects: string; myPerformance: string;
     administration: string; userManagement: string; modificationRequests: string; auditLogs: string;
@@ -27,7 +27,7 @@ export interface Translations {
         sales: string; salesLeads: string; salesData: string; salesFollowUps: string; salesOrders: string;
         customer: string; customersList: string; customerOrders: string; customerFollowUp: string; customerFeedback: string;
         finance: string; orderFinance: string; generalExpenses: string;
-        operations: string; workOrder: string; priceList: string; reportOperation: string;
+        operations: string; workOrder: string; Inventory: string; reportOperation: string;
     hr: string; hrEmployees: string; hrAttendance: string;
     rnd: string; personalBoard: string; rndProjects: string; myPerformance: string;
     administration: string; userManagement: string; modificationRequests: string; auditLogs: string;
@@ -151,7 +151,7 @@ export interface Translations {
       emptyState: string; deleteTitle: string; deleteMsg: string;
       notesPlaceholder: string;
     };
-    inventoryItems: {
+    InventoryItems: {
       title: string; subtitle: string; addBtn: string; itemName: string;
       stockNumber: string; stockCount: string; supplierDetails: string;
       supplierName: string; supplierPhone: string; supplierAddress: string;
@@ -248,7 +248,7 @@ const en: Translations = {
     orderFinance: 'Order Finance',
     operations: 'Operations',
     workOrder: 'Work Orders',
-    priceList: 'Price List',
+    Inventory: 'Inventory',
     reportOperation: 'Performance Reports',
     hr: 'HR',
     hrEmployees: 'Employees',
@@ -567,7 +567,7 @@ const en: Translations = {
       deleteMsg: 'This action cannot be undone.',
       notesPlaceholder: 'Customer comments…',
     },
-    inventoryItems: {
+    InventoryItems: {
       title: 'Inventory Items',
       subtitle: 'Spare parts & stock management',
       addBtn: '+ New Item',
@@ -689,3 +689,5 @@ const en: Translations = {
 };
 
 export default en;
+
+

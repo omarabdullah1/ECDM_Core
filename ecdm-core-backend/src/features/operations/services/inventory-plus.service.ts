@@ -1,18 +1,18 @@
 import mongoose from 'mongoose';
-import InventoryItem from '../models/inventory-item.model';
+import inventoryItem from '../models/inventory-item.model';
 import Category from '../models/category.model';
 import Product from '../models/product.model';
 import StockMovement from '../models/stock-movement.model';
 import { AppError } from '../../../utils/apiError';
 import {
-    CreateInventoryItemInput, UpdateInventoryItemInput,
+    CreateinventoryItemInput, UpdateinventoryItemInput,
     CreateCategoryInput, UpdateCategoryInput,
     CreateProductInput, UpdateProductInput,
     CreateStockMovementInput,
 } from '../validation/inventory-plus.validation';
 
-// ── InventoryItem ─────────────────────────────────────────────────────────────
-export const createItem = async (data: CreateInventoryItemInput) => InventoryItem.create(data);
+// ── inventoryItem ─────────────────────────────────────────────────────────────
+export const createItem = async (data: CreateinventoryItemInput) => inventoryItem.create(data);
 
 export const getAllItems = async (query: Record<string, unknown>) => {
     const { page = 1, limit = 10, status, category, search } = query;
@@ -23,26 +23,26 @@ export const getAllItems = async (query: Record<string, unknown>) => {
     if (search)   filter.itemName = { $regex: search, $options: 'i' };
 
     const [data, total] = await Promise.all([
-        InventoryItem.find(filter).populate('category', 'name').sort({ createdAt: -1 }).skip(skip).limit(Number(limit)),
-        InventoryItem.countDocuments(filter),
+        inventoryItem.find(filter).populate('category', 'name').sort({ createdAt: -1 }).skip(skip).limit(Number(limit)),
+        inventoryItem.countDocuments(filter),
     ]);
     return { data, pagination: { page: Number(page), limit: Number(limit), total, pages: Math.ceil(total / Number(limit)) } };
 };
 
 export const getItemById = async (id: string) => {
-    const item = await InventoryItem.findById(id).populate('category', 'name');
+    const item = await inventoryItem.findById(id).populate('category', 'name');
     if (!item) throw new AppError('Inventory item not found', 404);
     return item;
 };
 
-export const updateItem = async (id: string, data: UpdateInventoryItemInput) => {
-    const item = await InventoryItem.findByIdAndUpdate(id, data, { new: true, runValidators: true });
+export const updateItem = async (id: string, data: UpdateinventoryItemInput) => {
+    const item = await inventoryItem.findByIdAndUpdate(id, data, { new: true, runValidators: true });
     if (!item) throw new AppError('Inventory item not found', 404);
     return item;
 };
 
 export const deleteItem = async (id: string) => {
-    const item = await InventoryItem.findByIdAndDelete(id);
+    const item = await inventoryItem.findByIdAndDelete(id);
     if (!item) throw new AppError('Inventory item not found', 404);
 };
 
@@ -51,7 +51,7 @@ export const deleteItem = async (id: string) => {
  * Admin-only operation.
  */
 export const bulkDeleteItems = async (ids: string[]): Promise<{ deletedCount: number }> => {
-    const result = await InventoryItem.deleteMany({ _id: { $in: ids } });
+    const result = await inventoryItem.deleteMany({ _id: { $in: ids } });
     return { deletedCount: result.deletedCount };
 };
 
@@ -218,3 +218,5 @@ export const getStockMovementById = async (id: string) => {
     if (!item) throw new AppError('Stock movement not found', 404);
     return item;
 };
+
+

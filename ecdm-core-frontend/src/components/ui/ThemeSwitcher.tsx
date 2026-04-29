@@ -31,3 +31,4 @@ export default function ThemeSwitcher({ className = '', variant = 'full' }: Prop
         </button>
     );
 }
+

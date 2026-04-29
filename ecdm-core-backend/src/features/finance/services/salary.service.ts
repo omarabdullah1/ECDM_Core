@@ -388,3 +388,4 @@ export const previewSalaries = async (month: number, year: number): Promise<Prev
     previews,
   };
 };
+

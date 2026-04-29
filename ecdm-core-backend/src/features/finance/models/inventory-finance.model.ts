@@ -39,3 +39,4 @@ const InventoryFinanceSchema = new Schema<IInventoryFinance>({
 });
 
 export const InventoryFinance = model<IInventoryFinance>('InventoryFinance', InventoryFinanceSchema);
+

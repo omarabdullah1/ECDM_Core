@@ -34,10 +34,13 @@ interface SalesLead {
   _id: string;
   issue?: string;
   order?: string;
-  salesPerson?: string | { _id: string; firstName?: string; lastName?: string };
+  salesPerson?: string | { _id: string; firstName?: string; lastName?: string; email?: string };
   date?: string;
   typeOfOrder?: string;
   salesPlatform?: string;
+  status?: string;
+  reason?: string;
+  notes?: string;
 }
 
 interface SalesData {
@@ -47,9 +50,14 @@ interface SalesData {
     _id: string;
     firstName?: string;
     lastName?: string;
+    email?: string;
   };
   typeOfOrder?: string;
   salesPlatform?: string;
+  callOutcome?: string;
+  callDate?: string;
+  notes?: string;
+  order?: string;
 }
 
 export interface SalesOrder {
@@ -88,7 +96,7 @@ export interface SalesOrder {
       quantity: number;
       unitPrice: number;
       total: number;
-      priceListId?: string;
+      inventoryId?: string;
       dataSheetUrl?: string;
     }>;
     subTotal: number;
@@ -200,18 +208,18 @@ const handleDownloadQuotationBundle = async (row: any) => {
     // 2. Identify Datasheets
     let items = row.quotation?.items || [];
     
-    // Fallback for old orders: if items don't have dataSheetUrl, try to fetch from price list
+    // Fallback for old orders: if items don't have dataSheetUrl, try to fetch from Inventory
     const needsLookup = items.some((i: any) => !i.dataSheetUrl && i.description && i.description.includes('PL-'));
     
     if (needsLookup) {
       try {
-        const { data } = await api.get('/operations/price-list', { params: { limit: 1000 } });
-        const priceList = data?.data?.data || data?.data || [];
+        const { data } = await api.get('/operations/inventory', { params: { limit: 1000 } });
+        const Inventory = data?.data?.data || data?.data || [];
         
         items = items.map((item: any) => {
           if (!item.dataSheetUrl) {
             // Description format: "PL-XXXX — Item Name"
-            const match = priceList.find((p: any) => {
+            const match = Inventory.find((p: any) => {
               const itemId = p.sparePartsId || (typeof p._id === 'string' ? p._id.slice(-6) : 'ID');
               // Using same delimiter as in AddQuotationDialog
               const label = `${itemId} — ${p.itemName || 'Unnamed Item'}`;
@@ -224,7 +232,7 @@ const handleDownloadQuotationBundle = async (row: any) => {
           return item;
         });
       } catch (err) {
-        console.error('Fallback price list fetch failed:', err);
+        console.error('Fallback Inventory fetch failed:', err);
       }
     }
 
@@ -566,7 +574,7 @@ interface SalesOrderColumnsConfig {
 export const createSalesOrderColumns = (config?: SalesOrderColumnsConfig) => {
   const { onEdit, onDelete, onHistory, onCreateQuotation, currentUserId, currentUserRole } = config || {};
   
-  const adminRoles = ['Admin', 'SuperAdmin', 'Manager'];
+  const adminRoles = ['Admin', 'SuperAdmin'];
   const isAdmin = adminRoles.includes(currentUserRole || '');
   const isSalesRole = currentUserRole === 'Sales';
   
@@ -1224,3 +1232,5 @@ export const isOrderOwnedByUser = (row: SalesOrder, userId?: string): boolean =>
   const orderOwnerId = salesPersonFromData?._id || salesPersonDirect?._id || row.salesPersonId;
   return orderOwnerId === userId;
 };
+
+

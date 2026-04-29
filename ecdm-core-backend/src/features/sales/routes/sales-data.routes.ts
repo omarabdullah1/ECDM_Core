@@ -19,7 +19,8 @@ router.post('/',      validate(createSalesDataSchema), ctrl.create);
 router.get('/',       ctrl.getAll);
 router.get('/:id',    ctrl.getById);
 router.put('/:id',    validate(updateSalesDataSchema), ctrl.update);
-router.post('/bulk-delete', authorise(UserRole.SuperAdmin, UserRole.Manager), ctrl.bulkRemove);
-router.delete('/:id', authorise(UserRole.SuperAdmin, UserRole.Manager), ctrl.remove);
+router.post('/bulk-delete', authorise(UserRole.SuperAdmin, UserRole.Admin), ctrl.bulkRemove);
+router.delete('/:id', authorise(UserRole.SuperAdmin, UserRole.Admin), ctrl.remove);
 
 export default router;
+

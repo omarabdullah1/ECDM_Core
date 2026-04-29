@@ -385,3 +385,4 @@ export default function InvoiceApprovalDialog({ invoice: initialInvoice, open, o
         </Dialog>
     );
 }
+

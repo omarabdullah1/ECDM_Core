@@ -13,7 +13,7 @@ import Campaign from '../marketing/models/campaign.model';
 import Invoice from '../finance/models/invoice.model';
 import Product from '../operations/models/product.model';
 
-import InventoryItem from '../operations/models/inventory-item.model';
+import inventoryItem from '../operations/models/inventory-item.model';
 import { InventoryFinance } from '../finance/models/inventory-finance.model';
 import User from '../auth/auth.model';
 
@@ -79,7 +79,7 @@ export const getStats = async (_req: Request, res: Response, next: NextFunction)
                 $expr: { $lte: ['$currentStock', '$lowStockThreshold'] },
                 isActive: true,
             }),
-            InventoryItem.countDocuments({ status: { $in: ['Sold out', 'Repurchase needed'] } }),
+            inventoryItem.countDocuments({ status: { $in: ['Sold out', 'Repurchase needed'] } }),
 
             // ── Chart: Marketing leads by status ──────────────
             MarketingLead.aggregate([
@@ -302,3 +302,5 @@ export const getSummary = async (_req: Request, res: Response, next: NextFunctio
         next(err);
     }
 };
+
+

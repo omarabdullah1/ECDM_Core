@@ -37,6 +37,7 @@ const ar: Translations = {
     salesData: 'بيانات المبيعات',
     salesFollowUps: 'متابعات المبيعات',
     salesOrders: 'أوامر البيع',
+    myCustomers: 'عملائي',
     nonPotential: 'غير محتملين',
     customer: 'خدمات العملاء',
     customersList: 'قائمة العملاء',
@@ -50,7 +51,7 @@ const ar: Translations = {
     salaries: 'الرواتب',
     operations: 'العمليات',
     workOrder: 'أوامر العمل',
-    priceList: 'قائمة الأسعار',
+    inventory: 'المخزون',
     purchaseOrder: 'طلبات الشراء',
     reportOperation: 'تقارير الأداء',
     hr: 'الموارد البشرية',
@@ -371,7 +372,7 @@ const ar: Translations = {
       deleteMsg: 'لا يمكن التراجع عن هذا الإجراء.',
       notesPlaceholder: 'تعليقات العميل…',
     },
-    inventoryItems: {
+    InventoryItems: {
       title: 'أصناف المخزون',
       subtitle: 'إدارة قطع الغيار والمخزون',
       addBtn: '+ صنف جديد',
@@ -493,3 +494,5 @@ const ar: Translations = {
 };
 
 export default ar;
+
+

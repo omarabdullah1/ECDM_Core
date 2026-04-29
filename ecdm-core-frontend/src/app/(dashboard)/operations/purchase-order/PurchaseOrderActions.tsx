@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import { CheckCircle2, XCircle, Printer } from 'lucide-react';
 import { useState } from 'react';
 import type { PurchaseOrder } from './columns';
+import ApprovePurchaseOrderDialog from './ApprovePurchaseOrderDialog';
 
 interface PurchaseOrderActionsProps {
     po: PurchaseOrder;
@@ -14,6 +15,7 @@ interface PurchaseOrderActionsProps {
 export default function PurchaseOrderActions({ po, onActionSuccess }: PurchaseOrderActionsProps) {
     const { user } = useAuthStore();
     const [loading, setLoading] = useState(false);
+    const [showApproveModal, setShowApproveModal] = useState(false);
 
     if (!user) return null;
 
@@ -22,15 +24,20 @@ export default function PurchaseOrderActions({ po, onActionSuccess }: PurchaseOr
     const isOpsOrEng = ['Operations', 'MaintenanceEngineer'].includes(user.role);
 
     const handlePrint = () => {
+        // ... (existing handlePrint code remains unchanged) ...
         const printWindow = window.open('', '_blank');
         if (!printWindow) return;
+
+        const hasFinancialAccess = ['Admin', 'SuperAdmin'].includes(user.role);
 
         const itemsHtml = po.items.map(item => `
             <tr>
                 <td style="padding: 8px; border-bottom: 1px solid #eee;">${item.itemName || 'Item'}</td>
                 <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: center;">${item.quantity}</td>
+                ${hasFinancialAccess ? `
                 <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">$${item.unitPrice.toFixed(2)}</td>
                 <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">$${(item.quantity * item.unitPrice).toFixed(2)}</td>
+                ` : ''}
             </tr>
         `).join('');
 
@@ -62,7 +69,7 @@ export default function PurchaseOrderActions({ po, onActionSuccess }: PurchaseOr
                     
                     <div class="info">
                         <div>
-                            <p><strong>Supplier:</strong><br/>${po.supplierName}</p>
+                            <p><strong>Supplier:</strong><br/>${hasFinancialAccess ? po.supplierName : 'Authorized Supplier'}</p>
                             <p><strong>Date:</strong><br/>${new Date(po.createdAt).toLocaleDateString()}</p>
                         </div>
                         <div style="text-align: right;">
@@ -76,8 +83,10 @@ export default function PurchaseOrderActions({ po, onActionSuccess }: PurchaseOr
                             <tr>
                                 <th>Item Description</th>
                                 <th style="text-align: center;">Qty</th>
+                                ${hasFinancialAccess ? `
                                 <th style="text-align: right;">Unit Price</th>
                                 <th style="text-align: right;">Total</th>
+                                ` : ''}
                             </tr>
                         </thead>
                         <tbody>
@@ -85,10 +94,12 @@ export default function PurchaseOrderActions({ po, onActionSuccess }: PurchaseOr
                         </tbody>
                     </table>
 
+                    ${hasFinancialAccess ? `
                     <div class="total">
                         <span style="font-size: 14px; color: #666; font-weight: normal; margin-right: 15px;">GRAND TOTAL:</span>
                         $${po.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </div>
+                    ` : ''}
 
                     <div style="margin-top: 100px; border-top: 1px solid #eee; padding-top: 20px; font-size: 10px; color: #aaa; text-align: center;">
                         This is a computer-generated document. Authorized approval signatures are logged in the system.
@@ -124,11 +135,11 @@ export default function PurchaseOrderActions({ po, onActionSuccess }: PurchaseOr
                 <Printer className="w-4 h-4 text-gray-400" />
             </button>
 
-            {/* Finance Approval Actions */}
-            {po.status === 'PendingFinance' && (isFinance || isAdmin) && (
+            {/* Admin Approval Actions */}
+            {po.status === 'PendingFinance' && isAdmin && (
                 <>
                     <button
-                        onClick={() => handleAction('finance-approve', 'Approved')}
+                        onClick={() => setShowApproveModal(true)}
                         disabled={loading}
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-[10px] font-bold uppercase hover:bg-emerald-700 transition-all disabled:opacity-50 shadow-sm"
                     >
@@ -164,6 +175,14 @@ export default function PurchaseOrderActions({ po, onActionSuccess }: PurchaseOr
                     Action Completed
                 </span>
             )}
+
+            {showApproveModal && (
+                <ApprovePurchaseOrderDialog 
+                    po={po} 
+                    onClose={() => setShowApproveModal(false)} 
+                    onSuccess={onActionSuccess} 
+                />
+            )}
         </div>
     );
 }
@@ -173,3 +192,4 @@ const PackageCircle = ({ className }: { className?: string }) => (
         <path d="M12 2L12 7" /><path d="M12 22L12 17" /><path d="M12 12m-5 0a5 5 0 1 0 10 0a5 5 0 1 0 -10 0" /><path d="M17 12L22 12" /><path d="M7 12L2 12" />
     </svg>
 );
+

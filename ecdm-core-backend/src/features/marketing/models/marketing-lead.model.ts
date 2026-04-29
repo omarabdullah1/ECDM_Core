@@ -52,3 +52,4 @@ marketingLeadSchema.index({ campaign:   1 });
 const MarketingLead: Model<IMarketingLeadDocument> =
     mongoose.model<IMarketingLeadDocument>('MarketingLead', marketingLeadSchema);
 export default MarketingLead;
+

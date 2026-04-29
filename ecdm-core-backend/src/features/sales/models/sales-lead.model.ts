@@ -53,3 +53,4 @@ salesLeadSchema.index({ marketingLeadId: 1 });
 
 const SalesLead: Model<ISalesLeadDocument> = mongoose.model<ISalesLeadDocument>('SalesLead', salesLeadSchema);
 export default SalesLead;
+

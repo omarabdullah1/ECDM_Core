@@ -34,3 +34,4 @@ export function useLangHydrate() {
         if (!hydrated) hydrate();
     }, [hydrate, hydrated]);
 }
+

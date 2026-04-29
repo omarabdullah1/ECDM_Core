@@ -9,7 +9,7 @@ import { MovementType } from '../../operations/types/inventory-plus.types';
 import SalesOrder from '../../sales/models/sales-order.model';
 import CustomerOrder from '../../customer/models/customer-order.model';
 import WorkOrder from '../../operations/models/work-order.model';
-import * as priceListService from '../../operations/services/price-list.service';
+import * as InventoryService from '../../operations/services/inventory.service';
 
 const generateInvoiceNumber = async (): Promise<string> => {
     const count = await Invoice.countDocuments();
@@ -115,12 +115,12 @@ const deductStockForInvoice = async (invoice: IInvoiceDocument, userId: string) 
             }]);
         }
         
-        if (item.priceListId) {
+        if (item.inventoryId) {
             try {
-                await priceListService.adjustStock(String(item.priceListId), -item.quantity);
+                await InventoryService.adjustStock(String(item.inventoryId), -item.quantity);
             } catch (stockError) {
-                console.error(`⚠️ Failed to deduct PriceList stock for ${item.description}:`, (stockError as Error).message);
-                throw new AppError(`Insufficient PriceList stock for ${item.description}`, 400);
+                console.error(`⚠️ Failed to deduct Inventory stock for ${item.description}:`, (stockError as Error).message);
+                throw new AppError(`Insufficient Inventory stock for ${item.description}`, 400);
             }
         }
     }
@@ -250,7 +250,7 @@ export const generateFromOrder = async (incomingId: string): Promise<IInvoiceDoc
         description: item.description,
         quantity: item.quantity,
         unitPrice: item.unitPrice,
-        priceListId: item.priceListId
+        inventoryId: item.inventoryId
     })) || [];
 
     if (items.length === 0) {
@@ -258,7 +258,7 @@ export const generateFromOrder = async (incomingId: string): Promise<IInvoiceDoc
             description: (order as any).typeOfOrder || (order as any).issueDescription || "Order Service",
             quantity: 1,
             unitPrice: quotation?.grandTotal || 0,
-            priceListId: undefined
+            inventoryId: undefined
         });
     }
 
@@ -336,16 +336,16 @@ export const syncWorkOrderPartsWithInvoice = async (workOrderId: string, targetI
         });
     }
 
-    // Populate priceListId to get item names for invoice descriptions
-    const populatedWorkOrder = await WorkOrder.findById(workOrderId).populate('partsUsed.priceListId');
+    // Populate inventoryId to get item names for invoice descriptions
+    const populatedWorkOrder = await WorkOrder.findById(workOrderId).populate('partsUsed.inventoryId');
 
     // ── Build items from Work Order spare parts ONLY ──────────────────────────
     // Sales Order quotation items are intentionally excluded.
     const workOrderParts = (populatedWorkOrder?.partsUsed || []).map((p: any) => ({
-        description: p.priceListId?.itemName || 'Spare Part',
+        description: p.inventoryId?.itemName || 'Spare Part',
         quantity: p.quantity,
         unitPrice: p.unitCost,
-        priceListId: p.priceListId?._id || p.priceListId
+        inventoryId: p.inventoryId?._id || p.inventoryId
     }));
 
     if (workOrderParts.length === 0) {
@@ -377,3 +377,5 @@ export const syncWorkOrderPartsWithInvoice = async (workOrderId: string, targetI
         updatedWorkOrder
     };
 };
+
+

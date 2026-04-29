@@ -30,3 +30,4 @@ employeeSchema.index({ firstName: 'text', lastName: 'text', position: 'text' });
 
 const Employee: Model<IEmployeeDocument> = mongoose.model<IEmployeeDocument>('Employee', employeeSchema);
 export default Employee;
+

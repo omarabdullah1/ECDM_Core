@@ -46,6 +46,10 @@ export interface IUser {
     targetSales?: number;            // Target sales for sales reps
     maxDiscountPercentage?: number;   // Max allowed discount percentage
     commissionPercentage?: number;    // Default commission % for this employee (used in Order Finance)
+    workStartTime?: string;          // HR: Work start time (HH:mm)
+    workEndTime?: string;            // HR: Work end time (HH:mm)
+    gracePeriod?: number;            // HR: Grace period in minutes
+    halfDayThreshold?: number;       // HR: Hours threshold for half-day status
     refreshToken?: string;           // JWT refresh token for session management
     createdAt: Date;
     updatedAt: Date;
@@ -57,3 +61,4 @@ export interface IUserDocument extends IUser, Document {
     fullName: string; // virtual
     comparePassword(candidatePassword: string): Promise<boolean>;
 }
+

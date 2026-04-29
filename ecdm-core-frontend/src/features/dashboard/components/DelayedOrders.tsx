@@ -74,3 +74,4 @@ export default function DelayedOrders({ data }: Props) {
         </div>
     );
 }
+

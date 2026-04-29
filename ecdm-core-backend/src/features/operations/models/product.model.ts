@@ -27,3 +27,4 @@ productSchema.virtual('stockStatus').get(function (this: IProductDocument) {
 });
 
 export default model<IProductDocument>('Product', productSchema);
+

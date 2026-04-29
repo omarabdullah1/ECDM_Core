@@ -50,3 +50,4 @@ ExpenseSchema.pre('save', async function (next) {
 });
 
 export const Expense = model<IExpense>('Expense', ExpenseSchema);
+

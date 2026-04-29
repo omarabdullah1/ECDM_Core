@@ -106,3 +106,4 @@ export const deleteTask = async (id: string): Promise<void> => {
     const doc = await RndTask.findByIdAndDelete(id);
     if (!doc) throw new AppError('Task not found', 404);
 };
+

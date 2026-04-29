@@ -21,3 +21,4 @@ export const updateSalesFollowUpSchema = z.object({
 
 export type CreateSalesFollowUpInput = z.infer<typeof createSalesFollowUpSchema>;
 export type UpdateSalesFollowUpInput = z.infer<typeof updateSalesFollowUpSchema>;
+
